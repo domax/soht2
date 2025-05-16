@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && npm run deploy",
     "lint": "eslint .",
     "preview": "vite preview",
-    "format": "prettier --write \"**/*.+(js|jsx|ts|tsx|json|css|vue)\""
+    "format": "prettier --write \"**/*.+(js|jsx|ts|tsx|json|css|vue)\"",
+    "deploy": "npx del -f ../soht2-server/src/main/resources/public/* '!../**/version' && npx copyfiles -u 1 dist/* dist/**/* ../soht2-server/src/main/resources/public/"
   },
   "dependencies": {
     "react": "^19.1.0",
@@ -19,6 +20,8 @@
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",
+    "copyfiles": "^2.4.1",
+    "del-cli": "^6.0.0",
     "eslint": "^9.25.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.4.0",
