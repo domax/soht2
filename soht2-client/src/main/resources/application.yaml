@@ -1,0 +1,3 @@
+spring:
+  application.name: soht2-client
+  main.banner-mode: off

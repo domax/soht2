@@ -1,0 +1,79 @@
+plugins {
+  id 'java'
+  id 'application'
+  id 'jacoco'
+  id 'idea'
+  id 'com.diffplug.spotless' version "7.0.3"
+  id 'io.spring.dependency-management' version '1.1.7'
+  id 'org.springframework.boot' version '3.4.5'
+}
+
+repositories {
+  mavenCentral()
+}
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(21)
+  }
+}
+
+idea {
+  module {
+    downloadSources = true
+  }
+}
+
+configurations {
+  compileOnly {
+    extendsFrom annotationProcessor
+  }
+}
+
+dependencies {
+  implementation project(':soht2-common')
+  implementation 'org.springframework.boot:spring-boot-starter-security'
+  implementation 'org.springframework.boot:spring-boot-starter-webflux'
+  implementation 'org.springframework.boot:spring-boot-starter-actuator'
+  implementation 'io.vavr:vavr:0.10.6'
+  compileOnly 'org.projectlombok:lombok'
+  annotationProcessor 'org.projectlombok:lombok'
+  developmentOnly 'org.springframework.boot:spring-boot-devtools'
+  annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+  testImplementation 'org.springframework.boot:spring-boot-starter-test'
+  testImplementation 'io.projectreactor:reactor-test'
+  testImplementation 'org.springframework.security:spring-security-test'
+  testCompileOnly 'org.projectlombok:lombok'
+  testAnnotationProcessor 'org.projectlombok:lombok'
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+  useJUnitPlatform()
+  jvmArgs "-javaagent:${configurations.testRuntimeClasspath.find { it.name.contains('mockito-core') }}", '-Xshare:off'
+  finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+  dependsOn test
+  reports {
+    xml.required = false
+    csv.required = false
+  }
+}
+
+jacoco {
+  toolVersion = "0.8.13"
+}
+
+spotless {
+  java {
+    removeUnusedImports('cleanthat-javaparser-unnecessaryimport')
+    // apply a specific flavor of google-java-format
+    googleJavaFormat('1.27.0').reflowLongStrings(true).reorderImports(true)
+    // fix formatting of type annotations
+    formatAnnotations()
+    // make sure every file has the following copyright header.
+    licenseHeader '/* SOHT2 © Licensed under MIT $YEAR. */'
+  }
+}
