@@ -1,0 +1,17 @@
+tasks.register('clean', Exec) {
+  workingDir "${layout.projectDirectory}"
+  if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')) {
+    commandLine 'cmd', '/c', 'npm run clean'
+  } else {
+    commandLine "sh", "-c", "npm run clean"
+  }
+}
+
+tasks.register('build', Exec) {
+  workingDir "${layout.projectDirectory}"
+  if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')) {
+    commandLine 'cmd', '/c', 'npm run build'
+  } else {
+    commandLine "sh", "-c", "npm run build"
+  }
+}

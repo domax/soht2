@@ -1,3 +1,15 @@
 spring:
   application.name: soht2-server
   main.banner-mode: off
+
+server:
+  address: 0.0.0.0
+  shutdown: graceful
+  error.include-message: always
+  compression.enabled: true
+
+management.endpoints.web.exposure.include: '*'
+
+connector:
+  read-buffer-size: 16KB
+  socket-timeout: PT0.1S

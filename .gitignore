@@ -47,3 +47,4 @@ HELP.md
 /soht2-server/src/main/resources/public/*
 !/soht2-server/src/main/resources/public/version
 /soht2-server/src/main/resources/public/assets/
+application-local.yaml

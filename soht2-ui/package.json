@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "format": "prettier --write \"**/*.+(js|jsx|ts|tsx|json|css|vue)\"",
-    "deploy": "npx del -f ../soht2-server/src/main/resources/public/* '!../**/version' && npx copyfiles -u 1 dist/* dist/**/* ../soht2-server/src/main/resources/public/"
+    "clean": "npx del -f dist/ && npm run clean4deploy",
+    "clean4deploy": "npx del -f ../soht2-server/src/main/resources/public/* '!../**/version'",
+    "deploy": "npm run clean4deploy && npx copyfiles -u 1 dist/* dist/**/* ../soht2-server/src/main/resources/public/"
   },
   "dependencies": {
     "react": "^19.1.0",

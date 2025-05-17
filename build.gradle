@@ -5,3 +5,9 @@ subprojects {
   tasks.register('wrapper') {}
   tasks.register('prepareKotlinBuildScriptModel') {}
 }
+
+evaluationDependsOnChildren()
+Project ui = project('soht2-ui')
+Project server = project('soht2-server')
+//noinspection ConfigurationAvoidance
+server.tasks['build'].mustRunAfter(ui.tasks['build'])

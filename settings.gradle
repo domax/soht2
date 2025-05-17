@@ -1,4 +1,5 @@
 rootProject.name = 'soht2'
+include 'soht2-ui'
 include 'soht2-common'
 include 'soht2-server'
 include 'soht2-client'

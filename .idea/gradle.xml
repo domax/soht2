@@ -13,17 +13,21 @@
             <option value="$PROJECT_DIR$/soht2-client" />
             <option value="$PROJECT_DIR$/soht2-common" />
             <option value="$PROJECT_DIR$/soht2-server" />
+            <option value="$PROJECT_DIR$/soht2-ui" />
           </set>
         </option>
       </GradleProjectSettings>
       <GradleProjectSettings>
+        <option name="distributionType" value="LOCAL" />
         <option name="externalProjectPath" value="$PROJECT_DIR$/soht2-client" />
+        <option name="gradleHome" value="/usr/local/Cellar/gradle/8.14/libexec" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/soht2-client" />
             <option value="$PROJECT_DIR$/soht2-common" />
             <option value="$PROJECT_DIR$/soht2-server" />
+            <option value="$PROJECT_DIR$/soht2-ui" />
           </set>
         </option>
       </GradleProjectSettings>
@@ -37,6 +41,7 @@
             <option value="$PROJECT_DIR$/soht2-client" />
             <option value="$PROJECT_DIR$/soht2-common" />
             <option value="$PROJECT_DIR$/soht2-server" />
+            <option value="$PROJECT_DIR$/soht2-ui" />
           </set>
         </option>
       </GradleProjectSettings>
