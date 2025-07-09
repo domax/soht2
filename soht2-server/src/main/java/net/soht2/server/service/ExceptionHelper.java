@@ -1,13 +1,12 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.server.service;
 
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
-
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
+
+import static org.springframework.http.HttpStatus.*;
 
 /**
  * A utility class that provides methods for creating HTTP exceptions in a standardized way. This
@@ -23,6 +22,10 @@ public final class ExceptionHelper {
 
   public static HttpClientErrorException badRequest(String statusText) {
     return HttpClientErrorException.create(BAD_REQUEST, statusText, null, null, null);
+  }
+
+  public static HttpClientErrorException gone(String statusText) {
+    return HttpClientErrorException.create(GONE, statusText, null, null, null);
   }
 
   public static HttpServerErrorException serviceUnavailable(String statusText) {

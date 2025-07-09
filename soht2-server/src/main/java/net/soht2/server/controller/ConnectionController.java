@@ -11,7 +11,8 @@ import java.util.Collection;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.soht2.common.dto.ConnectionDto;
+import net.soht2.common.dto.SohtConnection;
+import net.soht2.server.model.ConnectionInfo;
 import net.soht2.server.service.ConnectionService;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -26,10 +27,13 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/api/connection")
 public class ConnectionController {
 
+  private static final String PATH_ID = "/{id}";
+
   private final ConnectionService connectionService;
 
+  @SuppressWarnings("resource")
   @PostMapping(produces = APPLICATION_JSON_VALUE)
-  public Mono<ConnectionDto> open(
+  public Mono<SohtConnection> open(
       @RequestParam("host") String targetHost,
       @RequestParam("port") Integer targetPort,
       ServerHttpRequest request) {
@@ -40,33 +44,35 @@ public class ConnectionController {
         .switchIfEmpty(Mono.error(() -> badRequest("No client host found")))
         .map(
             clientHost ->
-                ConnectionDto.builder()
-                    .username("system")
-                    .clientHost(clientHost)
-                    .targetHost(targetHost)
-                    .targetPort(targetPort)
-                    .build())
-        .map(connectionService::open);
+                connectionService
+                    .open(
+                        SohtConnection.builder()
+                            .username("system")
+                            .clientHost(clientHost)
+                            .targetHost(targetHost)
+                            .targetPort(targetPort)
+                            .build())
+                    .connection());
   }
 
   @GetMapping(produces = APPLICATION_JSON_VALUE)
-  public Mono<Collection<ConnectionDto>> list() {
+  public Mono<Collection<SohtConnection>> list() {
     return Mono.fromSupplier(connectionService::list);
   }
 
-  @GetMapping(path = "/{id}", produces = APPLICATION_OCTET_STREAM_VALUE)
+  @GetMapping(path = PATH_ID, produces = APPLICATION_OCTET_STREAM_VALUE)
   public Flux<DataBuffer> read(@PathVariable("id") UUID connectionId, ServerHttpResponse response) {
     return connectionService.read(connectionId, response.bufferFactory(), true);
   }
 
-  @PostMapping(path = "/{id}", consumes = APPLICATION_OCTET_STREAM_VALUE)
+  @PostMapping(path = PATH_ID, consumes = APPLICATION_OCTET_STREAM_VALUE)
   public Mono<Void> write(
       @PathVariable("id") UUID connectionId, @RequestBody Flux<DataBuffer> data) {
     return connectionService.write(connectionId, data);
   }
 
   @PutMapping(
-      path = "/{id}",
+      path = PATH_ID,
       produces = APPLICATION_OCTET_STREAM_VALUE,
       consumes = APPLICATION_OCTET_STREAM_VALUE)
   public Flux<DataBuffer> exchange(
@@ -78,7 +84,7 @@ public class ConnectionController {
         .thenMany(connectionService.read(connectionId, response.bufferFactory(), true));
   }
 
-  @DeleteMapping(path = "/{id}")
+  @DeleteMapping(path = PATH_ID)
   public Mono<Void> close(@PathVariable("id") UUID connectionId) {
     return Mono.fromRunnable(() -> connectionService.close(connectionId));
   }

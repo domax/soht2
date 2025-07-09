@@ -1,0 +1,52 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+title Sequence Diagram for Client-Server SOHT Communication
+
+'autonumber
+activate "SOHT Client"
+
+"SOHT Client" -> "Client Socket" **: open
+
+"SOHT Client" -> "SOHT Server" ++: open(target)
+"SOHT Server" -> "Target Socket" **: open
+"SOHT Server" --> "SOHT Client" --: opened
+
+alt exchange
+
+  loop while not closed
+
+    "SOHT Client" -> "Client Socket" ++: read
+    note right: reads with timeout
+    "SOHT Client" <-- "Client Socket" --: data1
+
+    "SOHT Client" -> "SOHT Server" ++: exchange(data1)
+
+    "SOHT Server" -> "Target Socket" ++: write(data1)
+    note right of "Target Socket": optional\nif data1 isn't empty
+    "SOHT Server" <-- "Target Socket" --: done
+
+    "SOHT Server" -> "Target Socket" ++: read
+    note right: reads with timeout
+    "SOHT Server" <-- "Target Socket" --: data2
+
+    "SOHT Client" <-- "SOHT Server" --: return(data2)
+
+    "SOHT Client" -> "Client Socket" ++: write(data2)
+    note right of "Client Socket": optional\nif data2 isn't empty
+    "SOHT Client" <-- "Client Socket" --: done
+
+  end loop
+
+else close
+
+  "SOHT Client" -> "SOHT Server" ++: close
+  "SOHT Server" -> "Target Socket": close
+  destroy "Target Socket"
+  "SOHT Client" <-- "SOHT Server" --: closed
+
+  "SOHT Client" -> "Client Socket": close
+  destroy "Client Socket"
+
+end alt
+
+@enduml

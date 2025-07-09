@@ -1,3 +1,19 @@
 spring:
   application.name: soht2-client
-  main.banner-mode: off
+  main:
+    banner-mode: off
+    web-application-type: none
+  jackson:
+    date-format: com.fasterxml.jackson.databind.util.StdDateFormat
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+
+logging.level:
+  root: info
+  net.soht2.client: debug
+#  org.springframework.web.reactive.resource.ResourceWebHandler: error
+#  reactor.netty.http.server.HttpServerOperations: error

@@ -6,11 +6,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import lombok.val;
 import org.junit.jupiter.api.Test;
 
-class UserDtoTest {
+class SohtUserTest {
 
   @Test
   void checkUserName_OK() {
-    val user = UserDto.builder().username("a").password("b").build();
+    val user = SohtUser.builder().username("a").password("b").build();
     assertThat(user.username()).isEqualTo("a");
     assertThat(user.password()).isEqualTo("b");
   }

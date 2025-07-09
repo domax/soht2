@@ -1,0 +1,29 @@
+@startuml
+'https://plantuml.com/component-diagram
+title Component Diagram for SOHT Client-Server Architecture
+
+package "Client Host" {
+  "Port A'" -- [SOHT Client]
+  "Port B'" -- [SOHT Client]
+  note left of [SOHT Client]: may be configured to use\nany number of ports
+}
+
+package "Server Host" {
+  [SOHT Server] - "HTTP/S"
+
+  "Port A" - [Target Server A]
+  [SOHT Server] --> "Port A"
+
+  "Port B" - [Target Server B]
+  [SOHT Server] --> "Port B"
+
+  note left of [SOHT Server]: opened ports correspond\nto configured ones on client
+}
+
+[SOHT Client] ..> "HTTP/S"
+[SOHT Client] ..> [Proxy]
+[Proxy] ..> "HTTP/S"
+
+note left of Proxy: optional proxy\nfor HTTP requests
+
+@enduml

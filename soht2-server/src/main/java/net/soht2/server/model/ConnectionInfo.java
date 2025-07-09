@@ -10,18 +10,19 @@ import java.net.Socket;
 import lombok.Builder;
 import lombok.Value;
 import lombok.experimental.Accessors;
-import net.soht2.common.dto.ConnectionDto;
+import net.soht2.common.dto.SohtConnection;
 
 @Accessors(fluent = true)
 @Value
 public class ConnectionInfo implements Closeable {
-  ConnectionDto connection;
+
+  SohtConnection connection;
   Socket socket;
   InputStream inputStream;
   OutputStream outputStream;
 
   @Builder
-  private ConnectionInfo(ConnectionDto connection) {
+  private ConnectionInfo(SohtConnection connection) {
     this.connection = connection;
     this.socket =
         Try.of(() -> InetAddress.getByName(connection.targetHost()))

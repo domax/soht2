@@ -1,6 +1,14 @@
 spring:
   application.name: soht2-server
   main.banner-mode: off
+  jackson:
+    date-format: com.fasterxml.jackson.databind.util.StdDateFormat
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
 
 server:
   address: 0.0.0.0
@@ -13,3 +21,9 @@ management.endpoints.web.exposure.include: '*'
 connector:
   read-buffer-size: 16KB
   socket-timeout: PT0.1S
+
+logging.level:
+  root: info
+  net.soht2.server: debug
+  org.springframework.web.reactive.resource.ResourceWebHandler: error
+  reactor.netty.http.server.HttpServerOperations: error
