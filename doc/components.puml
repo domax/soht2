@@ -2,28 +2,88 @@
 'https://plantuml.com/component-diagram
 title Component Diagram for SOHT Client-Server Architecture
 
-package "Client Host" {
-  "Port A'" -- [SOHT Client]
-  "Port B'" -- [SOHT Client]
-  note left of [SOHT Client]: may be configured to use\nany number of ports
+'------------------------------------------------------------------------------
+' Client Host
+node "Client Host" {
+  interface "Port A" as CPA
+  interface "Port B" as CPB
+
+  component "Local Client" as CA
+  note top of CA {
+    Connects to
+    "Local Service"
+  }
+
+  component "SOHT Client" as SOHTC
+  note top of SOHTC {
+   May be configured to forward ports to any services.
+   "Port A" and "Port B" are forwarded here to
+   "Service Port A" and "Service Port B" respectively.
+  }
+
+  CPA = SOHTC
+  SOHTC = CPB
+
+  CA -( CPA
 }
 
-package "Server Host" {
-  [SOHT Server] - "HTTP/S"
+'------------------------------------------------------------------------------
+' Remote Client
+component "Remote Client" as CB
+note top of CB {
+  Connects to
+  "Remote Service"
+}
+CPB )- CB
 
-  "Port A" - [Target Server A]
-  [SOHT Server] --> "Port A"
+'------------------------------------------------------------------------------
+' Server Host
+node "Server Host" {
+  interface "HTTP(S)" as HTTPS
 
-  "Port B" - [Target Server B]
-  [SOHT Server] --> "Port B"
+  interface "Service\nPort A" as SPA
+  note top of SPA {
+    Forwarded
+    "Port A"
+  }
 
-  note left of [SOHT Server]: opened ports correspond\nto configured ones on client
+  component "Local Service" as SA
+  note top of SA {
+    Connected with
+    "Local Client"
+  }
+
+  component "SOHT Server" as SOHTS
+  note bottom of SOHTS {
+    Opened ports correspond to configured ones on "SOHT Client"
+  }
+
+  HTTPS == SOHTS
+  SA = SPA
+  SPA )- SOHTS
 }
 
-[SOHT Client] ..> "HTTP/S"
-[SOHT Client] ..> [Proxy]
-[Proxy] ..> "HTTP/S"
+'------------------------------------------------------------------------------
+' Remote Service
+interface "Service\nPort B" as SPB
+note top of SPB {
+  Forwarded
+  "Port B"
+}
+component "Remote Service" as SB
+note bottom of SB {
+  Connected with
+  "Remote Client"
+}
+SPB = SB
+SOHTS -( SPB
 
-note left of Proxy: optional proxy\nfor HTTP requests
+'------------------------------------------------------------------------------
+' Proxy
+SOHTC --> [Proxy]: <<http(s)>>
+[Proxy] --( HTTPS: <<http(s)>>
+note right of Proxy {
+  Optional proxy for HTTP requests
+}
 
 @enduml
