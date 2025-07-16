@@ -14,6 +14,12 @@ spring:
 
 logging.level:
   root: info
-  net.soht2.client: debug
-#  org.springframework.web.reactive.resource.ResourceWebHandler: error
-#  reactor.netty.http.server.HttpServerOperations: error
+
+soht2.client:
+  url: http://localhost:8080/api/connection
+  socket-accept-timeout: PT10S
+  socket-read-timeout: PT0.1S
+  read-buffer-size: 16KB
+  poll-strategy: exponent
+  #username: soht2
+  #password: password_of_soht2

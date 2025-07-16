@@ -4,4 +4,4 @@ package net.soht2.common.dto;
 import lombok.Builder;
 
 @Builder
-public record SohtUser(String username, String password) {}
+public record Soht2User(String username, String password) {}

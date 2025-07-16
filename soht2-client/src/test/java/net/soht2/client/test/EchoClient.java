@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-package net.soht2.server.test;
+package net.soht2.client.test;
 
 import io.vavr.control.Try;
 import java.io.*;
@@ -11,6 +11,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
+@SuppressWarnings({"UnusedReturnValue", "unused"})
 @Slf4j
 public class EchoClient implements Closeable {
 

@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.Builder;
 
-public record SohtConnection(
+public record Soht2Connection(
     UUID id,
     String username,
     String clientHost,
@@ -14,7 +14,8 @@ public record SohtConnection(
     LocalDateTime openedAt) {
 
   @Builder
-  private SohtConnection(String username, String clientHost, String targetHost, Integer targetPort) {
+  private Soht2Connection(
+      String username, String clientHost, String targetHost, Integer targetPort) {
     this(UUID.randomUUID(), username, clientHost, targetHost, targetPort, LocalDateTime.now());
   }
 }

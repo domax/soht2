@@ -16,14 +16,25 @@ server:
   error.include-message: always
   compression.enabled: true
 
-management.endpoints.web.exposure.include: '*'
-
-connector:
-  read-buffer-size: 16KB
-  socket-timeout: PT0.1S
+management:
+  endpoints:
+    web:
+      exposure.include: '*'
+      cors:
+        allowed-headers: '*'
+        allowed-methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - HEAD
+          - OPTIONS
+        allowed-origins: '*'
 
 logging.level:
   root: info
-  net.soht2.server: debug
-  org.springframework.web.reactive.resource.ResourceWebHandler: error
-  reactor.netty.http.server.HttpServerOperations: error
+
+soht2.server:
+  socket-timeout: PT0.1S
+  read-buffer-size: 16KB

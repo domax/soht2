@@ -1,12 +1,12 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.server.service;
 
+import static org.springframework.http.HttpStatus.*;
+
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
-
-import static org.springframework.http.HttpStatus.*;
 
 /**
  * A utility class that provides methods for creating HTTP exceptions in a standardized way. This
@@ -16,7 +16,7 @@ import static org.springframework.http.HttpStatus.*;
  * <p>This is a final class with a private constructor, ensuring it cannot be instantiated or
  * subclassed. The methods provided are static and can be accessed directly.
  */
-@SuppressWarnings("java:S4449")
+@SuppressWarnings({"java:S4449", "unused"})
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ExceptionHelper {
 

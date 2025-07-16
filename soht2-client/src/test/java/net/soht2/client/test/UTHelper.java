@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-package net.soht2.server.test;
+package net.soht2.client.test;
 
 import java.util.random.RandomGenerator;
 import lombok.AccessLevel;

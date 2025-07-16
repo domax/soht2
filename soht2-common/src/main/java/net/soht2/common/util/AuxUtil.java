@@ -1,3 +1,4 @@
+/* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.common.util;
 
 import java.util.Objects;

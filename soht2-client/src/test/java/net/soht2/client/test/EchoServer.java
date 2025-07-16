@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-package net.soht2.server.test;
+package net.soht2.client.test;
 
 import static java.util.concurrent.CompletableFuture.runAsync;
 
@@ -17,6 +17,7 @@ import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
+@SuppressWarnings("unused")
 @Slf4j
 @Accessors(fluent = true)
 public class EchoServer implements Closeable, Runnable {

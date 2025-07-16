@@ -1,0 +1,8 @@
+soht2.client:
+  connections:
+    - local-port: 12345
+      remote-host: remotehost
+      remote-port: 8080
+
+logging.level:
+  net.soht2.client: debug

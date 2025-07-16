@@ -49,3 +49,4 @@ HELP.md
 /soht2-server/src/main/resources/public/assets/
 application-local.yaml
 /.idea/codeInsightSettings.xml
+/.idea/dictionaries/project.xml
