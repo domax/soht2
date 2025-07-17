@@ -1,14 +1,21 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.client.service;
 
+import static java.util.Optional.ofNullable;
+import static net.soht2.common.compress.Compressor.compressorCache;
+import static org.springframework.http.HttpHeaders.ACCEPT_ENCODING;
+import static org.springframework.http.HttpHeaders.CONTENT_ENCODING;
+
 import io.vavr.control.Try;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import net.soht2.client.config.Soht2ClientProperties;
 import net.soht2.common.dto.Soht2Connection;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -29,6 +36,7 @@ public class Soht2Client {
   private static final String PATH_ID = "/{id}";
 
   private final RestClient restClient;
+  private final Soht2ClientProperties soht2ClientProperties;
 
   /**
    * Opens a connection to the specified remote host and port.
@@ -38,7 +46,7 @@ public class Soht2Client {
    * @return a {@link Try} containing the Soht2Connection if successful, or an error if it fails
    */
   public Try<Soht2Connection> open(String remoteHost, Integer remotePort) {
-    log.info("open: remoteHost={}, remotePort={}", remoteHost, remotePort);
+    log.debug("open: remoteHost={}, remotePort={}", remoteHost, remotePort);
     return Try.of(
             () ->
                 restClient
@@ -60,7 +68,7 @@ public class Soht2Client {
    */
   @SuppressWarnings("java:S1905")
   public Try<Void> close(UUID connectionId) {
-    log.info("close: id={}", connectionId);
+    log.debug("close: id={}", connectionId);
     return Try.of(
             () ->
                 restClient
@@ -68,16 +76,14 @@ public class Soht2Client {
                     .uri(PATH_ID, Map.of("id", connectionId))
                     .retrieve()
                     .toBodilessEntity())
-        .onSuccess(
-            response -> log.info("close: id={} - {}", connectionId, response.getStatusCode()))
-        .map(v -> (Void) null)
+        .onSuccess(re -> log.info("close: id={} - {}", connectionId, re.getStatusCode()))
+        .map(re -> (Void) null)
         .onFailure(
             e ->
                 log.atError()
                     .setMessage("close: id={} - {}")
                     .addArgument(connectionId)
-                    .addArgument(e)
-                    .setCause(e)
+                    .addArgument(e.toString())
                     .log());
   }
 
@@ -93,15 +99,24 @@ public class Soht2Client {
       Optional.of(data)
           .filter(v -> v.length > 0)
           .ifPresent(v -> log.trace("exchange: id={}, in.length={}", connectionId, v.length));
-    return Try.of(
-            () ->
+    return Try.of(() -> requestExchangeEntity(data))
+        .peek(
+            entity ->
+                log.trace("exchange: id={}, request.headers={}", connectionId, entity.getHeaders()))
+        .mapTry(
+            entity ->
                 restClient
                     .post()
                     .uri(PATH_ID, Map.of("id", connectionId))
-                    .body(data, PTR_BYTES)
+                    .headers(h -> h.putAll(entity.getHeaders()))
+                    .body(ofNullable(entity.getBody()).orElse(EMPTY), PTR_BYTES)
                     .retrieve()
-                    .body(PTR_BYTES))
-        .mapTry(bytes -> bytes == null ? EMPTY : bytes)
+                    .toEntity(PTR_BYTES))
+        .peek(
+            entity ->
+                log.trace(
+                    "exchange: id={}, response.headers={}", connectionId, entity.getHeaders()))
+        .mapTry(this::responseExchangeEntity)
         .onSuccess(
             bytes ->
                 Optional.of(bytes)
@@ -114,8 +129,32 @@ public class Soht2Client {
                 log.atError()
                     .setMessage("exchange: id={}, {}")
                     .addArgument(connectionId)
-                    .addArgument(e)
-                    .setCause(e)
+                    .addArgument(e.toString())
+                    // .setCause(e)
                     .log());
+  }
+
+  private HttpEntity<byte[]> requestExchangeEntity(byte[] body) {
+    val compression = soht2ClientProperties.getCompression();
+    val compressor = compressorCache.apply(compression.getType().name().toLowerCase());
+    val headers = new HttpHeaders();
+    headers.set(ACCEPT_ENCODING, compressor.getAcceptEncoding());
+    if (body.length >= compression.getMinRequestSize().toBytes()) {
+      val compressedBody = compressor.compress(body);
+      headers.setContentLength(compressedBody.length);
+      ofNullable(compressor.getContentEncoding()).ifPresent(v -> headers.set(CONTENT_ENCODING, v));
+      return new HttpEntity<>(compressedBody, headers);
+    }
+    return new HttpEntity<>(body, headers);
+  }
+
+  private byte[] responseExchangeEntity(HttpEntity<byte[]> entity) {
+    return Optional.of(entity.getHeaders()).map(h -> h.get(CONTENT_ENCODING)).stream()
+        .flatMap(Collection::stream)
+        .findAny()
+        .map(compressorCache::apply)
+        .map(compressor -> compressor.decompress(entity.getBody()))
+        .or(() -> ofNullable(entity.getBody()))
+        .orElse(EMPTY);
   }
 }

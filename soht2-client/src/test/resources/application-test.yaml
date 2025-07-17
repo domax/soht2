@@ -5,4 +5,5 @@ soht2.client:
       remote-port: 8080
 
 logging.level:
-  net.soht2.client: debug
+  net.soht2.common: trace
+  net.soht2.client: trace

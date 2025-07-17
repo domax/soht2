@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 
 import io.vavr.control.Try;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import net.soht2.client.config.Soht2ClientConfig;
@@ -58,14 +59,16 @@ class ConnectionServiceTest {
             Try.success(bytesOut1),
             Try.success(bytesOut2),
             Try.success(bytesEmpty),
-            Try.<byte[]>success(null),
+            Try.success(bytesEmpty),
+            Try.success(bytesEmpty),
             Try.<byte[]>failure(new RuntimeException("Test error")))
         .when(soht2Client)
         .exchange(any(UUID.class), any());
     doReturn(Try.success((Void) null)).when(soht2Client).close(any(UUID.class));
 
-    connectionService.startConnections();
-    //    await().until(() -> !connectionService.getConnectionIds(soht2.id()).isEmpty());
+    val socketStarted = new AtomicBoolean();
+    connectionService.startConnections(h -> socketStarted.set(true));
+    await().until(socketStarted::get);
     try (val echoClient =
         EchoClient.builder()
             .portNumber(host.getLocalPort())
@@ -74,6 +77,7 @@ class ConnectionServiceTest {
             .build()) {
       echoClient.shout(bytesIn);
       await().until(() -> connectionService.isServerOpen(soht2.id()));
+      await().until(() -> !connectionService.isServerOpen(soht2.id()));
     }
 
     verify(soht2Client).open(host.getRemoteHost(), host.getRemotePort());

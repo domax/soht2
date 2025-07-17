@@ -1,6 +1,8 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.client.service;
 
+import static java.util.Optional.ofNullable;
+
 import io.vavr.control.Try;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -11,6 +13,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -19,6 +22,7 @@ import lombok.val;
 import net.soht2.client.config.Soht2ClientProperties;
 import net.soht2.client.config.Soht2ClientProperties.HostProperties;
 import net.soht2.common.dto.Soht2Connection;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -33,9 +37,14 @@ public class ConnectionService {
   private final Map<UUID, SessionState> sessions = new ConcurrentHashMap<>();
 
   public CompletableFuture<Void> startConnections() {
+    return startConnections(null);
+  }
+
+  public CompletableFuture<Void> startConnections(
+      @Nullable Consumer<HostProperties> socketOpenedCallback) {
     return CompletableFuture.allOf(
             soht2ClientProperties.getConnections().stream()
-                .map(host -> CompletableFuture.runAsync(() -> connect(host)))
+                .map(host -> CompletableFuture.runAsync(() -> connect(host, socketOpenedCallback)))
                 .toArray(CompletableFuture[]::new))
         .thenRun(() -> log.info("startConnections: terminated"));
   }
@@ -45,15 +54,17 @@ public class ConnectionService {
   }
 
   @SneakyThrows
-  void connect(HostProperties host) {
+  void connect(HostProperties host, @Nullable Consumer<HostProperties> socketOpenedCallback) {
     log.info("connect: host={}", host);
 
     do {
       try (val serverSocket = new ServerSocket(host.getLocalPort())) {
         log.debug("connect: serverSocket={}", serverSocket);
+        ofNullable(socketOpenedCallback).ifPresent(cb -> cb.accept(host));
+
         val socket = serverSocket.accept();
         socket.setSoTimeout((int) soht2ClientProperties.getSocketReadTimeout().toMillis());
-        // socket.setKeepAlive(true);
+        // socket.setKeepAlive(true); //NOSONAR
         log.debug("connect: socket={}", socket);
 
         val state =
@@ -64,7 +75,7 @@ public class ConnectionService {
                 .out(socket.getOutputStream())
                 .build();
         sessions.put(state.connection.id(), state);
-        log.info("connect: connection={}", state.connection);
+        log.debug("connect: connection={}", state.connection);
 
         CompletableFuture.runAsync(() -> exchange(state));
       } catch (Exception e) {
@@ -84,8 +95,7 @@ public class ConnectionService {
       readSize.set(0);
       writeSize.set(0);
       Try.of(() -> state.in.read(buffer))
-          .filter(len -> len >= 0, () -> new SocketException("Connection reset"))
-          .filter(bufferLen -> bufferLen >= 0, v -> new SocketTimeoutException())
+          .filter(bufferLen -> bufferLen >= 0, () -> new SocketException("Connection reset"))
           .recover(SocketTimeoutException.class, 0)
           .andThen(readSize::set)
           .flatMap(
@@ -101,7 +111,6 @@ public class ConnectionService {
                       .orElse(Try.success(null))
                       .andThenTry(v -> writeSize.set(bytes.length)))
           .andThenTry(() -> delay(state, readSize.get() == 0 && writeSize.get() == 0))
-          .onFailure(e -> log.debug("exchange: id={} - {}", connectionId, e.toString()))
           .recoverWith(
               SocketException.class,
               e -> e.getMessage().equals("Connection reset") ? Try.failure(e) : Try.success(null))
@@ -121,8 +130,7 @@ public class ConnectionService {
         log.debug("delay: id={} - {}", state.connection.id(), delay);
         Thread.sleep(delay.toMillis());
       }
-    }
-    state.emptyExchangeCount.set(0);
+    } else state.emptyExchangeCount.set(0);
   }
 
   @Builder

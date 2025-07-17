@@ -95,7 +95,7 @@ class ConnectionControllerTest {
     val bytesIn = nonEmpty ? UTHelper.createBinData(bufferSize * 2 / 3) : bytesEmpty;
     val bytesOut = nonEmpty ? UTHelper.createBinData(bufferSize * 3 / 2) : bytesEmpty;
 
-    doReturn(Try.success(bytesOut)).when(soht2Service).exchange(any(UUID.class), any());
+    doReturn(Try.success(bytesOut)).when(soht2Service).exchange(any(UUID.class), any(), any());
 
     mockMvc
         .perform(
@@ -106,6 +106,6 @@ class ConnectionControllerTest {
         .andExpect(content().contentType(APPLICATION_OCTET_STREAM))
         .andExpect(content().bytes(bytesOut));
 
-    verify(soht2Service).exchange(sohtConnection.id(), bytesIn.length > 0 ? bytesIn : null);
+    verify(soht2Service).exchange(sohtConnection.id(), bytesIn.length > 0 ? bytesIn : null, null);
   }
 }

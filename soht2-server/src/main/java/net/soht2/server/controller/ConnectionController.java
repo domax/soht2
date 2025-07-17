@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.server.service.Soht2Service;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -49,8 +50,11 @@ public class ConnectionController {
       produces = APPLICATION_OCTET_STREAM_VALUE,
       consumes = APPLICATION_OCTET_STREAM_VALUE)
   public byte[] exchange(
-      @PathVariable("id") UUID connectionId, @RequestBody(required = false) byte[] data) {
-    return soht2Service.exchange(connectionId, data).get();
+      @PathVariable("id") UUID connectionId,
+      @RequestBody(required = false) byte[] data,
+      @RequestHeader(name = HttpHeaders.CONTENT_ENCODING, required = false)
+          String contentEncoding) {
+    return soht2Service.exchange(connectionId, data, contentEncoding).get();
   }
 
   @DeleteMapping(path = PATH_ID)

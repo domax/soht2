@@ -108,7 +108,7 @@ class Soht2ServiceTest {
                   bytes ->
                       EchoData.<byte[]>builder()
                           .original(bytes)
-                          .echoed(soht2Service.exchange(connectionId, bytes).get())
+                          .echoed(soht2Service.exchange(connectionId, bytes, null).get())
                           .build()))
           .forEach(data -> assertThat(data.echoed()).isEqualTo(data.original()));
     }

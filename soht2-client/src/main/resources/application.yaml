@@ -19,7 +19,14 @@ soht2.client:
   url: http://localhost:8080/api/connection
   socket-accept-timeout: PT10S
   socket-read-timeout: PT0.1S
-  read-buffer-size: 16KB
-  poll-strategy: exponent
+  read-buffer-size: 64KB
   #username: soht2
   #password: password_of_soht2
+  compression:
+    type: none
+    min-request-size: 2KB
+  poll:
+    strategy: exponent
+    initial-delay: PT0.1S
+    max-delay: PT5S
+    factor: 5

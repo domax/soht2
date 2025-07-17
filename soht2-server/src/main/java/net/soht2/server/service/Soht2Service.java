@@ -2,10 +2,12 @@
 package net.soht2.server.service;
 
 import static java.util.Optional.ofNullable;
+import static net.soht2.common.compress.Compressor.compressorCache;
 import static net.soht2.common.util.AuxUtil.peek;
 import static net.soht2.server.service.ExceptionHelper.gone;
 
 import io.vavr.control.Try;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,7 +42,7 @@ public class Soht2Service {
    * @return the same {@link Soht2Connection} object that was provided as input
    */
   public ServerConnection open(Soht2Connection soht2) {
-    log.info("open: soht2={}", soht2);
+    log.info("open: connection={}", soht2);
     val result =
         ServerConnection.builder()
             .soht2(soht2)
@@ -93,19 +95,19 @@ public class Soht2Service {
    * @return a {@link Try} containing the byte array received from the connection's input stream if
    *     the operation is successful, or an empty byte array in case of a timeout
    */
-  public Try<byte[]> exchange(UUID id, @Nullable byte[] data) {
-    if (log.isDebugEnabled())
+  public Try<byte[]> exchange(UUID id, @Nullable byte[] data, @Nullable String encoding) {
+    if (log.isTraceEnabled())
       ofNullable(data)
           .map(v -> v.length)
           .filter(v -> v > 0)
-          .ifPresent(v -> log.debug("exchange: id={}, in.length={}", id, v));
+          .ifPresent(v -> log.trace("exchange: id={}, in.length={}", id, v));
     return Try.of(() -> connections.get(id))
         .filter(Objects::nonNull, () -> gone("Connection " + id + " not found"))
         .filter(ServerConnection::isOpened, () -> gone("Connection " + id + " is closed"))
         .mapTry(
             connection -> {
               if (ofNullable(data).filter(v -> v.length > 0).isPresent()) {
-                connection.outputStream().write(data);
+                connection.outputStream().write(compressorCache.apply(encoding).decompress(data));
                 connection.outputStream().flush();
               }
               val buffer = new byte[(int) soht2ServerConfig.getReadBufferSize().toBytes()];
@@ -115,12 +117,14 @@ public class Soht2Service {
               return Arrays.copyOf(buffer, bufferLen);
             })
         .recover(SocketTimeoutException.class, e -> EMPTY)
+        .onFailure(e -> log.error("exchange: id={} - {}", id, e.toString()))
+        .recover(SocketException.class, e -> EMPTY)
         .andThenTry(
             bytes ->
                 ofNullable(bytes)
-                    .filter(v -> log.isDebugEnabled())
+                    .filter(v -> log.isTraceEnabled())
                     .map(v -> v.length)
                     .filter(v -> v > 0)
-                    .ifPresent(v -> log.debug("exchange: id={}, out.length={}", id, v)));
+                    .ifPresent(v -> log.trace("exchange: id={}, out.length={}", id, v)));
   }
 }

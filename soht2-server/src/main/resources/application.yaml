@@ -10,12 +10,6 @@ spring:
       fail-on-unknown-properties: false
     default-property-inclusion: non_null
 
-server:
-  address: 0.0.0.0
-  shutdown: graceful
-  error.include-message: always
-  compression.enabled: true
-
 management:
   endpoints:
     web:
@@ -35,6 +29,24 @@ management:
 logging.level:
   root: info
 
+server:
+  address: 0.0.0.0
+  shutdown: graceful
+  error.include-message: always
+  compression:
+    enabled: true
+    min-response-size: 2KB
+    mime-types:
+      - text/plain
+      - text/html
+      - text/xml
+      - text/css
+      - text/javascript
+      - application/json
+      - application/xml
+      - application/javascript
+      - application/octet-stream
+
 soht2.server:
   socket-timeout: PT0.1S
-  read-buffer-size: 16KB
+  read-buffer-size: 64KB

@@ -2,18 +2,21 @@
 package net.soht2.client.service;
 
 import java.time.Duration;
+import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.val;
 
-@RequiredArgsConstructor
+@Builder
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public final class LinearPollStrategy implements PollStrategy {
 
-  private static final Duration INITIAL = Duration.ofMillis(100);
-  private static final Duration MAX_DELAY = Duration.ofSeconds(10);
+  private final Duration initialDelay;
+  private final Duration maxDelay;
 
   @Override
   public Duration getDelay(int iteration) {
-    val delay = INITIAL.multipliedBy(iteration);
-    return delay.compareTo(MAX_DELAY) > 0 ? MAX_DELAY : delay;
+    val delay = initialDelay.multipliedBy(iteration);
+    return delay.compareTo(maxDelay) > 0 ? maxDelay : delay;
   }
 }

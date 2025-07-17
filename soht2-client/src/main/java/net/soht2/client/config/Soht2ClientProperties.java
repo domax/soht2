@@ -48,6 +48,64 @@ public class Soht2ClientProperties {
     EXPONENT
   }
 
+  /**
+   * Defines the type of compression applied to requests.
+   *
+   * <p>This enum specifies the different types of compression that can be applied to requests sent
+   * to the SOHT2 server.
+   */
+  public enum CompressionType {
+    /** No compression applied to requests. */
+    NONE,
+    /** GZIP compression applied to requests. */
+    GZIP,
+    /** DEFLATE compression applied to requests. */
+    DEFLATE
+  }
+
+  /**
+   * Properties for request compression.
+   *
+   * <p>This class holds the properties related to request compression, including what is a
+   * compression type, and the minimum request size for compression to be applied.
+   */
+  @Data
+  public static class CompressionProperties {
+
+    /**
+     * Whether request compression is enabled or, if enabled, which encoding is used.
+     *
+     * <p>In case of {@link CompressionType#DEFLATE}, only client requests are compressed, while
+     * server responses are not. In case of {@link CompressionType#GZIP}, both client requests and
+     * server responses are compressed.
+     */
+    private CompressionType type = CompressionType.NONE;
+
+    /** The threshold size in bytes above which compression is applied. */
+    private DataSize minRequestSize = DataSize.ofKilobytes(2);
+  }
+
+  /**
+   * Properties for polling configuration.
+   *
+   * <p>This class holds the properties related to polling the server, including initial delay,
+   * maximum delay, and factor for exponential backoff.
+   */
+  @Data
+  public static class PollProperties {
+    /** The strategy for polling the server for updates. */
+    private PollStrategyType strategy = PollStrategyType.EXPONENT;
+
+    /** The initial delay before the first poll request. Used in all supported strategies. */
+    private Duration initialDelay = Duration.ofSeconds(1);
+
+    /** The maximum delay between poll requests. Used in LINEAR and EXPONENT strategies. */
+    private Duration maxDelay = Duration.ofSeconds(30);
+
+    /** The factor by which the delay increases for EXPONENT strategy. */
+    private int factor = 5;
+  }
+
   /** The URL of the SOHT2 server API. */
   private URI url = URI.create("http://localhost:8080/api/connection");
 
@@ -66,9 +124,12 @@ public class Soht2ClientProperties {
   /** The size of the read buffer for incoming data. */
   private DataSize readBufferSize = DataSize.ofKilobytes(16);
 
-  /** The strategy for polling the server for updates. */
-  private PollStrategyType pollStrategy = PollStrategyType.EXPONENT;
-
   /** The list of host properties for connections to be established. */
   private Set<HostProperties> connections = new HashSet<>();
+
+  /** Properties for compression of requests. */
+  private CompressionProperties compression = new CompressionProperties();
+
+  /** Properties for polling configuration. */
+  private PollProperties poll = new PollProperties();
 }

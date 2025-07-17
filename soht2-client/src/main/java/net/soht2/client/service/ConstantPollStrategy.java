@@ -2,15 +2,18 @@
 package net.soht2.client.service;
 
 import java.time.Duration;
+import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
+@Builder
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ConstantPollStrategy implements PollStrategy {
 
-  private static final Duration DELAY = Duration.ofSeconds(1);
+  private final Duration delay;
 
   @Override
   public Duration getDelay(int iteration) {
-    return iteration == 0 ? Duration.ZERO : DELAY;
+    return iteration == 0 ? Duration.ZERO : delay;
   }
 }

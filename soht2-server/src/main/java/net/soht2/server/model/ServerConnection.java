@@ -17,6 +17,10 @@ import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import net.soht2.common.dto.Soht2Connection;
 
+/**
+ * Represents a connection to a SOHT2 server, encapsulating the socket and streams for
+ * communication. Implements {@link Closeable} to allow for resource management.
+ */
 @Slf4j
 @Accessors(fluent = true)
 @Value
@@ -35,6 +39,7 @@ public class ServerConnection implements Closeable {
   @Builder
   private ServerConnection(
       Soht2Connection soht2, int socketTimeout, Consumer<ServerConnection> postCloseAction) {
+    log.debug("new: connection={}", soht2);
     this.soht2 = soht2;
     this.socket =
         Try.of(() -> InetAddress.getByName(soht2.targetHost()))
@@ -42,19 +47,26 @@ public class ServerConnection implements Closeable {
             .andThenTry(s -> s.setSoTimeout(socketTimeout))
             // .andThenTry(s -> s.setKeepAlive(true))
             .get();
+    log.debug("new: socket={}", socket);
     this.inputStream = Try.of(socket::getInputStream).get();
     this.outputStream = Try.of(socket::getOutputStream).get();
     this.postCloseAction = postCloseAction;
     this.isOpened.set(true);
   }
 
+  /**
+   * Checks if the connection is currently opened.
+   *
+   * @return true if the connection is opened, false otherwise
+   */
   public boolean isOpened() {
     return isOpened.get();
   }
 
+  /** Closes the connection, releasing resources associated with the socket and streams. */
   @Override
   public void close() {
-    log.info("close: connection={}", soht2);
+    log.debug("close: connection={}", soht2);
     this.isOpened.set(false);
     Try.run(inputStream::close);
     Try.run(outputStream::close);

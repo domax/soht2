@@ -9,6 +9,7 @@ import java.util.Base64;
 import java.util.Optional;
 import java.util.stream.Stream;
 import lombok.Data;
+import lombok.val;
 import net.soht2.client.service.ConstantPollStrategy;
 import net.soht2.client.service.ExponentPollStrategy;
 import net.soht2.client.service.LinearPollStrategy;
@@ -26,13 +27,10 @@ import org.springframework.web.client.RestClient;
 public class Soht2ClientConfig {
 
   @Bean
-  RestClient restClient(Soht2ClientProperties properties, RestClient.Builder builder) {
-    // val httpClient = HttpClient.create().compress(true);
-    return builder
-        // .clientConnector(new ReactorClientHttpConnector(httpClient))
+  RestClient restClient(Soht2ClientProperties properties, RestClient.Builder restClientBuilder) {
+    return restClientBuilder
         .baseUrl(properties.getUrl().toString())
         .defaultHeader(ACCEPT, APPLICATION_JSON_VALUE, APPLICATION_OCTET_STREAM_VALUE)
-        // .defaultHeader(ACCEPT_ENCODING, "gzip") // TODO: add GZIP support
         .defaultRequest(
             rq ->
                 Optional.of(
@@ -48,10 +46,20 @@ public class Soht2ClientConfig {
 
   @Bean
   PollStrategy pollStrategy(Soht2ClientProperties properties) {
-    return switch (properties.getPollStrategy()) {
-      case CONSTANT -> new ConstantPollStrategy();
-      case LINEAR -> new LinearPollStrategy();
-      case EXPONENT -> new ExponentPollStrategy();
+    val poll = properties.getPoll();
+    return switch (poll.getStrategy()) {
+      case CONSTANT -> ConstantPollStrategy.builder().delay(poll.getInitialDelay()).build();
+      case LINEAR ->
+          LinearPollStrategy.builder()
+              .initialDelay(poll.getInitialDelay())
+              .maxDelay(poll.getMaxDelay())
+              .build();
+      case EXPONENT ->
+          ExponentPollStrategy.builder()
+              .initialDelay(poll.getInitialDelay())
+              .maxDelay(poll.getMaxDelay())
+              .factor(poll.getFactor())
+              .build();
     };
   }
 }
