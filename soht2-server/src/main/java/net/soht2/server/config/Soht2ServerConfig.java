@@ -19,7 +19,7 @@ import org.springframework.util.unit.DataSize;
 public class Soht2ServerConfig {
 
   /** The size of the read buffer for incoming data. */
-  private DataSize readBufferSize = DataSize.ofKilobytes(16);
+  private DataSize readBufferSize = DataSize.ofKilobytes(64);
 
   /** The timeout for server socket operations. */
   private Duration socketTimeout = Duration.ofMillis(100);

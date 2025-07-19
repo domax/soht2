@@ -113,6 +113,9 @@ public class ConnectionService {
           .andThenTry(() -> delay(state, readSize.get() == 0 && writeSize.get() == 0))
           .recoverWith(
               SocketException.class,
+              // Message "Connection reset" is expected in 2 cases:
+              // 1. The OS resets the socket connection.
+              // 2. This loop is interrupted by throwing a SocketException above.
               e -> e.getMessage().equals("Connection reset") ? Try.failure(e) : Try.success(null))
           .onFailure(
               e -> {

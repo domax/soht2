@@ -34,6 +34,7 @@ dependencies {
   implementation project(':soht2-common')
   implementation 'org.springframework.boot:spring-boot-starter-web'
   implementation 'io.vavr:vavr:0.10.6'
+  implementation 'org.apache.httpcomponents.client5:httpclient5'
   compileOnly 'org.projectlombok:lombok'
   annotationProcessor 'org.projectlombok:lombok'
   developmentOnly 'org.springframework.boot:spring-boot-devtools'

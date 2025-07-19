@@ -1,6 +1,7 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.client.config;
 
+import static java.util.Optional.ofNullable;
 import static org.springframework.http.HttpHeaders.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE;
@@ -15,9 +16,11 @@ import net.soht2.client.service.ExponentPollStrategy;
 import net.soht2.client.service.LinearPollStrategy;
 import net.soht2.client.service.PollStrategy;
 import org.apache.logging.log4j.util.Strings;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
@@ -27,8 +30,13 @@ import org.springframework.web.client.RestClient;
 public class Soht2ClientConfig {
 
   @Bean
-  RestClient restClient(Soht2ClientProperties properties, RestClient.Builder restClientBuilder) {
-    return restClientBuilder
+  RestClient restClient(
+      Soht2ClientProperties properties,
+      RestClient.Builder restClientBuilder,
+      @Autowired(required = false) ClientHttpRequestFactory clientHttpRequestFactory) {
+    return ofNullable(clientHttpRequestFactory)
+        .map(restClientBuilder::requestFactory)
+        .orElse(restClientBuilder)
         .baseUrl(properties.getUrl().toString())
         .defaultHeader(ACCEPT, APPLICATION_JSON_VALUE, APPLICATION_OCTET_STREAM_VALUE)
         .defaultRequest(

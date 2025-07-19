@@ -50,3 +50,4 @@ HELP.md
 application-local.yaml
 /.idea/codeInsightSettings.xml
 /.idea/dictionaries/project.xml
+/soht2-client/src/main/java/net/soht2/client/example/

@@ -106,6 +106,31 @@ public class Soht2ClientProperties {
     private int factor = 5;
   }
 
+  @Data
+  public static class ProxyProperties {
+    /** The host name or IP address of the proxy server. If omitted, then proxy won't be used. */
+    private String host;
+
+    /** The port number of the proxy server. */
+    private int port = 3128;
+
+    /**
+     * The optional username for authentication with the proxy server. If omitted, then a proxy
+     * without authentication will be used.
+     */
+    private String username;
+
+    /**
+     * The optional password for authentication with the proxy server. We don't recommend setting
+     * this property in your configuration file, use environment variable {@code
+     * SOHT2_CLIENT_PROXY_PASSWORD} instead.
+     */
+    private String password;
+
+    /** The domain for NTLM authentication with the proxy server. */
+    private String domain;
+  }
+
   /** The URL of the SOHT2 server API. */
   private URI url = URI.create("http://localhost:8080/api/connection");
 
@@ -122,7 +147,7 @@ public class Soht2ClientProperties {
   private Duration socketReadTimeout = Duration.ofMillis(100);
 
   /** The size of the read buffer for incoming data. */
-  private DataSize readBufferSize = DataSize.ofKilobytes(16);
+  private DataSize readBufferSize = DataSize.ofKilobytes(64);
 
   /** The list of host properties for connections to be established. */
   private Set<HostProperties> connections = new HashSet<>();
@@ -132,4 +157,7 @@ public class Soht2ClientProperties {
 
   /** Properties for polling configuration. */
   private PollProperties poll = new PollProperties();
+
+  /** Properties for proxy configuration. */
+  private ProxyProperties proxy = new ProxyProperties();
 }
