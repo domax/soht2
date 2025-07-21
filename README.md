@@ -84,7 +84,7 @@ TODO List
 
 - [X] Implement support for client side compression
 - [X] Add proxy support for the client side
-- [ ] Add removal of abandoned connections on the server side
+- [X] Add removal of abandoned connections on the server side
 - [ ] Finalize authentication and authorization mechanisms
 - [ ] Update sequence diagram
 - [ ] Update README.md with more details

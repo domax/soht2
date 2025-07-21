@@ -79,7 +79,7 @@ public class ConnectionService {
 
         CompletableFuture.runAsync(() -> exchange(state));
       } catch (Exception e) {
-        log.atError().setMessage("connect: {}").addArgument(e.toString()).setCause(e).log();
+        log.atError().setMessage("connect: {}").addArgument(e::toString).setCause(e).log();
       }
     } while (sessions.values().stream().map(v -> v.host).anyMatch(host::equals));
   }

@@ -45,8 +45,8 @@ public class EchoServer implements Closeable, Runnable {
   public void run() {
     try (val serverSocket = new ServerSocket(portNumber);
         val clientSocket = serverSocket.accept();
-        val out = new BufferedOutputStream(clientSocket.getOutputStream(), bufferSize);
-        val in = new BufferedInputStream(clientSocket.getInputStream(), bufferSize)) {
+        val out = clientSocket.getOutputStream();
+        val in = clientSocket.getInputStream()) {
       clientSocket.setSoTimeout(socketTimeout);
       isRunning.set(true);
       while (isRunning.get()) {

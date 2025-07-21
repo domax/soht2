@@ -50,3 +50,5 @@ server:
 soht2.server:
   socket-timeout: PT0.1S
   read-buffer-size: 64KB
+  abandoned-connections-timeout: PT1M
+  abandoned-connections-check-interval: PT5S

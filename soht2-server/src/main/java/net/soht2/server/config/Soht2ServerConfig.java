@@ -5,6 +5,7 @@ import java.time.Duration;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.util.unit.DataSize;
 
 /**
@@ -15,6 +16,7 @@ import org.springframework.util.unit.DataSize;
  */
 @Data
 @Configuration
+@EnableScheduling
 @ConfigurationProperties("soht2.server")
 public class Soht2ServerConfig {
 
@@ -23,4 +25,10 @@ public class Soht2ServerConfig {
 
   /** The timeout for server socket operations. */
   private Duration socketTimeout = Duration.ofMillis(100);
+
+  /** The timeout for abandoned connections, after which they will be forcibly closed. */
+  private Duration abandonedConnectionsTimeout = Duration.ofMinutes(1);
+
+  /** The interval at which the server checks for abandoned connections. */
+  private Duration abandonedConnectionsCheckInterval = Duration.ofSeconds(5);
 }

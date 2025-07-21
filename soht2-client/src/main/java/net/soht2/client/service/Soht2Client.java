@@ -57,7 +57,8 @@ public class Soht2Client {
                     .retrieve()
                     .body(Soht2Connection.class))
         .onSuccess(connection -> log.info("open: connection={}", connection))
-        .onFailure(e -> log.atError().setMessage("open: {}").addArgument(e).setCause(e).log());
+        .onFailure(
+            e -> log.atError().setMessage("open: {}").addArgument(e::toString).setCause(e).log());
   }
 
   /**
@@ -83,7 +84,7 @@ public class Soht2Client {
                 log.atError()
                     .setMessage("close: id={} - {}")
                     .addArgument(connectionId)
-                    .addArgument(e.toString())
+                    .addArgument(e::toString)
                     .log());
   }
 
@@ -129,7 +130,7 @@ public class Soht2Client {
                 log.atError()
                     .setMessage("exchange: id={}, {}")
                     .addArgument(connectionId)
-                    .addArgument(e.toString())
+                    .addArgument(e::toString)
                     // .setCause(e)
                     .log());
   }

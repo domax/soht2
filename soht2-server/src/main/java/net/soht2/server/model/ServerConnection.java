@@ -7,7 +7,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -34,6 +37,11 @@ public class ServerConnection implements Closeable {
   InputStream inputStream;
   OutputStream outputStream;
   Consumer<ServerConnection> postCloseAction;
+
+  @Getter(AccessLevel.NONE)
+  AtomicReference<LocalDateTime> lastActivity = new AtomicReference<>(LocalDateTime.now());
+
+  @Getter(AccessLevel.NONE)
   AtomicBoolean isOpened = new AtomicBoolean();
 
   @Builder
@@ -61,6 +69,30 @@ public class ServerConnection implements Closeable {
    */
   public boolean isOpened() {
     return isOpened.get();
+  }
+
+  /** Updates the last activity timestamp to the current time. */
+  public void lastActivity(LocalDateTime dateTime) {
+    lastActivity.set(dateTime);
+  }
+
+  /**
+   * Returns the duration since the last activity on this connection.
+   *
+   * @return the duration since the last activity
+   */
+  public Duration activityAge() {
+    return Duration.between(lastActivity.get(), LocalDateTime.now());
+  }
+
+  /**
+   * Returns the age of the connection, calculated as the duration between when the connection was
+   * opened and the last activity.
+   *
+   * @return the duration since the connection was opened
+   */
+  public Duration connectionAge() {
+    return Duration.between(soht2.openedAt(), lastActivity.get());
   }
 
   /** Closes the connection, releasing resources associated with the socket and streams. */

@@ -9,6 +9,7 @@ import static net.soht2.server.service.ExceptionHelper.gone;
 import io.vavr.control.Try;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import net.soht2.common.dto.Soht2Connection;
 import net.soht2.server.config.Soht2ServerConfig;
 import net.soht2.server.model.ServerConnection;
 import org.springframework.lang.Nullable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 /**
@@ -100,10 +102,11 @@ public class Soht2Service {
       ofNullable(data)
           .map(v -> v.length)
           .filter(v -> v > 0)
-          .ifPresent(v -> log.trace("exchange: id={}, in.length={}", id, v));
+          .ifPresent(v -> log.trace("exchange: id={}, in.length={}, encoding={}", id, v, encoding));
     return Try.of(() -> connections.get(id))
         .filter(Objects::nonNull, () -> gone("Connection " + id + " not found"))
         .filter(ServerConnection::isOpened, () -> gone("Connection " + id + " is closed"))
+        .andThenTry(c -> c.lastActivity(LocalDateTime.now()))
         .mapTry(
             connection -> {
               if (ofNullable(data).filter(v -> v.length > 0).isPresent()) {
@@ -126,5 +129,29 @@ public class Soht2Service {
                     .map(v -> v.length)
                     .filter(v -> v > 0)
                     .ifPresent(v -> log.trace("exchange: id={}, out.length={}", id, v)));
+  }
+
+  /**
+   * Closes all connections that have been abandoned for a duration longer than the configured
+   * timeout. This method is scheduled to run periodically to ensure that stale connections are
+   * cleaned up.
+   */
+  @SuppressWarnings("java:S3864")
+  @Scheduled(fixedRateString = "${soht2.server.abandoned-connections-check-interval}")
+  public void closeAbandonedConnections() {
+    val ttl = soht2ServerConfig.getAbandonedConnectionsTimeout();
+    connections.values().stream()
+        .filter(ServerConnection::isOpened)
+        .peek(
+            c ->
+                log.atDebug()
+                    .setMessage("closeAbandonedConnections: id={}, age={}/{}")
+                    .addArgument(() -> c.soht2().id())
+                    .addArgument(c::activityAge)
+                    .addArgument(c::connectionAge)
+                    .log())
+        .filter(c -> c.activityAge().compareTo(ttl) >= 0)
+        .peek(c -> log.warn("closeAbandonedConnections: connection={}", c.soht2()))
+        .forEach(ServerConnection::close);
   }
 }

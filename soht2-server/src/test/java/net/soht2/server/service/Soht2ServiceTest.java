@@ -3,18 +3,20 @@ package net.soht2.server.service;
 
 import static io.vavr.API.unchecked;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
+import static net.soht2.server.test.UTHelper.createBinData;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.vavr.Tuple;
 import io.vavr.control.Try;
+import java.io.ByteArrayOutputStream;
+import java.util.List;
 import java.util.stream.Stream;
-import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.server.config.Soht2ServerConfig;
 import net.soht2.server.test.EchoClient;
 import net.soht2.server.test.EchoServer;
-import net.soht2.server.test.UTHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,21 +55,16 @@ class Soht2ServiceTest {
                 .bufferSize(bufferSize)
                 .build();
         val client = new EchoClient(server)) {
-      Stream.of(UTHelper.createBinData(DATA_SIZE), UTHelper.createBinData(DATA_SIZE))
+      Stream.of(createBinData(DATA_SIZE), createBinData(DATA_SIZE))
+          // give it at least 0.5 seconds to make sure the server is processed a whole buffer
           .peek(v -> Try.run(() -> Thread.sleep(500)).get())
           .peek(v -> assertThat(server.isRunning()).isTrue())
           .map(
               unchecked(
                   bytes ->
                       // wrap to thread to prove a client.shout() has access to the socket
-                      supplyAsync(
-                              () ->
-                                  EchoData.<byte[]>builder()
-                                      .original(bytes)
-                                      .echoed(client.shout(bytes))
-                                      .build())
-                          .get()))
-          .forEach(data -> assertThat(data.echoed()).isEqualTo(data.original()));
+                      supplyAsync(() -> Tuple.of(bytes, client.shout(bytes))).get()))
+          .forEach(data -> assertThat(data._1).isEqualTo(data._2));
     }
   }
 
@@ -95,27 +92,23 @@ class Soht2ServiceTest {
           .extracting(Soht2Connection::id)
           .isEqualTo(connectionId);
 
-      // the exchange method works correctly here
-      // only if binData size is equal or less than bufferSize
-      Stream.of(
-              UTHelper.createBinData(bufferSize),
-              UTHelper.createBinData(bufferSize * 2 / 3),
-              new byte[0])
-          .peek(v -> Try.run(() -> Thread.sleep(500)).get())
+      val inputList =
+          List.of(createBinData(bufferSize), createBinData(bufferSize * 2 / 3), new byte[0]);
+      val resultSize = inputList.stream().mapToInt(v -> v.length).sum();
+
+      val expected = new ByteArrayOutputStream(resultSize);
+      inputList.forEach(v -> Try.run(() -> expected.write(v)).get());
+
+      val actual = new ByteArrayOutputStream(resultSize);
+      inputList.stream()
+          .peek(v -> Try.run(() -> Thread.sleep(100)).get())
           .peek(v -> assertThat(server.isRunning()).isTrue())
-          .map(
-              unchecked(
-                  bytes ->
-                      EchoData.<byte[]>builder()
-                          .original(bytes)
-                          .echoed(soht2Service.exchange(connectionId, bytes, null).get())
-                          .build()))
-          .forEach(data -> assertThat(data.echoed()).isEqualTo(data.original()));
+          .map(data -> soht2Service.exchange(connectionId, data, null).get())
+          .forEach(data -> Try.run(() -> actual.write(data)).get());
+
+      assertThat(actual.toByteArray()).isEqualTo(expected.toByteArray());
     }
 
     assertThat(soht2Service.list()).isEmpty();
   }
-
-  @Builder
-  record EchoData<T>(T original, T echoed) {}
 }
