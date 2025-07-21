@@ -17,7 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.server.config.Soht2ServerConfig;
-import net.soht2.server.model.ServerConnection;
 import org.springframework.lang.Nullable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -48,7 +47,7 @@ public class Soht2Service {
     val result =
         ServerConnection.builder()
             .soht2(soht2)
-            .socketTimeout((int) soht2ServerConfig.getSocketTimeout().toMillis())
+            .socketTimeout((int) soht2ServerConfig.getSocketReadTimeout().toMillis())
             .postCloseAction(ci -> connections.remove(ci.soht2().id()))
             .build();
     connections.put(soht2.id(), result);

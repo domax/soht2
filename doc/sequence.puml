@@ -1,52 +1,52 @@
 @startuml
 'https://plantuml.com/sequence-diagram
-title Sequence Diagram for Client-Server SOHT Communication
+title Sequence Diagram for Client-Server SOHT2 Connection
 
 'autonumber
-activate "SOHT Client"
+activate "SOHT2 Client"
 
-"SOHT Client" -> "SOHT Server" ++: open target
-"SOHT Server" -> "Target Socket" **: open
-"SOHT Server" --> "SOHT Client" --: done
+"SOHT2 Client" -> "Client Socket" **: open socket
 
-"SOHT Client" -> "Client Socket" **: open
+"SOHT2 Client" -> "SOHT2 Server" ++: open session
+"SOHT2 Server" -> "Target Socket" **: open socket
+"SOHT2 Server" --> "SOHT2 Client" --: done
 
 alt exchange
 
-  loop while not closed
+  loop while connection is open and no errors
 
-    "SOHT Client" -> "Client Socket" ++: read buffer
-    note left of "Client Socket": reads to buffer with timeout
-    "SOHT Client" <-- "Client Socket" --: return data1
+    "SOHT2 Client" -> "Client Socket" ++: read buffer
+    note right of "Client Socket": reads to buffer with timeout
+    "SOHT2 Client" <-- "Client Socket" --: return data_in
 
-    "SOHT Client" -> "SOHT Server" ++: exchange data1
+    "SOHT2 Client" -> "SOHT2 Server" ++: exchange data_in
 
-    "SOHT Server" -> "Target Socket" ++: write data1
-    note right of "Target Socket": optional - if data1 isn't empty
-    "SOHT Server" <-- "Target Socket" --: done
+    "SOHT2 Server" -> "Target Socket" ++: write data_in
+    note left of "Target Socket": optional - if data_in isn't empty
+    "SOHT2 Server" <-- "Target Socket" --: done
 
-    "SOHT Server" -> "Target Socket" ++: read buffer
-    note right of "Target Socket": reads to buffer with timeout
-    "SOHT Server" <-- "Target Socket" --: return data2
+    "SOHT2 Server" -> "Target Socket" ++: read buffer
+    note left of "Target Socket": reads to buffer with timeout
+    "SOHT2 Server" <-- "Target Socket" --: return data_out
 
-    "SOHT Client" <-- "SOHT Server" --: return data2
+    "SOHT2 Client" <-- "SOHT2 Server" --: return data_out
 
-    "SOHT Client" -> "Client Socket" ++: write data2
-    note left of "Client Socket": optional - if data2 isn't empty
-    "SOHT Client" <-- "Client Socket" --: done
+    "SOHT2 Client" -> "Client Socket" ++: write data_out
+    note right of "Client Socket": optional - if data_out isn't empty
+    "SOHT2 Client" <-- "Client Socket" --: done
 
-    "SOHT Client" -> "SOHT Client": delay
-    note right: computed from 0 to maxPollingDelay
+    "SOHT2 Client" -> "SOHT2 Client": delay
+    note right: computed from 0 to poll.maxDelay
 
   end loop
 
-else close
+else on connection close or error
 
-  "SOHT Client" -> "Client Socket" !!: close
+  "SOHT2 Client" -> "SOHT2 Server" ++: close session
+  "SOHT2 Server" -> "Target Socket" !!: close socket
+  "SOHT2 Client" <-- "SOHT2 Server" --: done
 
-  "SOHT Client" -> "SOHT Server" ++: close
-  "SOHT Server" -> "Target Socket" !!: close
-  "SOHT Client" <-- "SOHT Server" --: done
+  "SOHT2 Client" -> "Client Socket" !!: close socket
 
 end alt
 

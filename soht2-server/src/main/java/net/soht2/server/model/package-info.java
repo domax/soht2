@@ -1,4 +1,0 @@
-@NonNullApi
-package net.soht2.server.model;
-
-import org.springframework.lang.NonNullApi;

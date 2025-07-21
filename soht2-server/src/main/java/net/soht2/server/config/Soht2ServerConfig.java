@@ -23,8 +23,8 @@ public class Soht2ServerConfig {
   /** The size of the read buffer for incoming data. */
   private DataSize readBufferSize = DataSize.ofKilobytes(64);
 
-  /** The timeout for server socket operations. */
-  private Duration socketTimeout = Duration.ofMillis(100);
+  /** The timeout for server socket read operations. */
+  private Duration socketReadTimeout = Duration.ofMillis(100);
 
   /** The timeout for abandoned connections, after which they will be forcibly closed. */
   private Duration abandonedConnectionsTimeout = Duration.ofMinutes(1);

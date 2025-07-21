@@ -64,7 +64,7 @@ public class ConnectionService {
 
         val socket = serverSocket.accept();
         socket.setSoTimeout((int) soht2ClientProperties.getSocketReadTimeout().toMillis());
-        // socket.setKeepAlive(true); //NOSONAR
+        socket.setKeepAlive(true);
         log.debug("connect: socket={}", socket);
 
         val state =

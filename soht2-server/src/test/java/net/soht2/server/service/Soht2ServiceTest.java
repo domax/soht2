@@ -42,7 +42,7 @@ class Soht2ServiceTest {
 
   @BeforeEach
   void beforeEach() {
-    socketTimeout = (int) soht2ServerConfig.getSocketTimeout().toMillis();
+    socketTimeout = (int) soht2ServerConfig.getSocketReadTimeout().toMillis();
     bufferSize = (int) soht2ServerConfig.getReadBufferSize().toBytes();
   }
 

@@ -1,6 +1,6 @@
 @startuml
 'https://plantuml.com/component-diagram
-title Component Diagram for SOHT Client-Server Architecture
+title Component Diagram for SOHT2 Client-Server Architecture
 
 '------------------------------------------------------------------------------
 ' Client Host
@@ -14,7 +14,7 @@ node "Client Host" {
     "Local Service"
   }
 
-  component "SOHT Client" as SOHTC
+  component "SOHT2 Client" as SOHTC
   note top of SOHTC {
    May be configured to forward ports to any services.
    "Port A" and "Port B" are forwarded here to
@@ -53,7 +53,7 @@ node "Server Host" {
     "Local Client"
   }
 
-  component "SOHT Server" as SOHTS
+  component "SOHT2 Server" as SOHTS
   note bottom of SOHTS {
     Opened ports correspond to configured ones on "SOHT Client"
   }

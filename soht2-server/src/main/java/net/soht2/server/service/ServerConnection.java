@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-package net.soht2.server.model;
+package net.soht2.server.service;
 
 import io.vavr.control.Try;
 import java.io.Closeable;
@@ -53,7 +53,7 @@ public class ServerConnection implements Closeable {
         Try.of(() -> InetAddress.getByName(soht2.targetHost()))
             .mapTry(inet -> new Socket(inet, soht2.targetPort()))
             .andThenTry(s -> s.setSoTimeout(socketTimeout))
-            // .andThenTry(s -> s.setKeepAlive(true))
+            .andThenTry(s -> s.setKeepAlive(true))
             .get();
     log.debug("new: socket={}", socket);
     this.inputStream = Try.of(socket::getInputStream).get();

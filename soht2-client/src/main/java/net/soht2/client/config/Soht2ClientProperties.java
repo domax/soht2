@@ -75,9 +75,8 @@ public class Soht2ClientProperties {
     /**
      * Whether request compression is enabled or, if enabled, which encoding is used.
      *
-     * <p>In case of {@link CompressionType#DEFLATE}, only client requests are compressed, while
-     * server responses are not. In case of {@link CompressionType#GZIP}, both client requests and
-     * server responses are compressed.
+     * <p>In the case of DEFLATE, only client requests are compressed, while server responses are
+     * not. In the case of GZIP, both client requests and server responses are compressed.
      */
     private CompressionType type = CompressionType.NONE;
 
@@ -122,8 +121,8 @@ public class Soht2ClientProperties {
 
     /**
      * The optional password for authentication with the proxy server. We don't recommend setting
-     * this property in your configuration file, use environment variable {@code
-     * SOHT2_CLIENT_PROXY_PASSWORD} instead.
+     * this property in your configuration file, use environment variable
+     * SOHT2_CLIENT_PROXY_PASSWORD instead.
      */
     private String password;
 
@@ -139,9 +138,6 @@ public class Soht2ClientProperties {
 
   /** The optional password for basic authentication with the SOHT2 server. */
   private String password;
-
-  /** The timeout for client socket accept connections. */
-  private Duration socketAcceptTimeout = Duration.ofSeconds(10);
 
   /** The timeout for client socket read operations. */
   private Duration socketReadTimeout = Duration.ofMillis(100);

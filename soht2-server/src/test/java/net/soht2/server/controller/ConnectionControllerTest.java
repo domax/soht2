@@ -15,7 +15,7 @@ import lombok.val;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.server.config.SecurityConfig;
 import net.soht2.server.config.Soht2ServerConfig;
-import net.soht2.server.model.ServerConnection;
+import net.soht2.server.service.ServerConnection;
 import net.soht2.server.service.Soht2Service;
 import net.soht2.server.test.UTHelper;
 import org.junit.jupiter.api.Test;

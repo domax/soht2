@@ -17,7 +17,6 @@ logging.level:
 
 soht2.client:
   url: http://localhost:8080/api/connection
-  socket-accept-timeout: PT10S
   socket-read-timeout: PT0.1S
   read-buffer-size: 64KB
   #username: soht2
