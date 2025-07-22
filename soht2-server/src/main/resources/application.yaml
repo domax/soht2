@@ -9,6 +9,7 @@ spring:
     deserialization:
       fail-on-unknown-properties: false
     default-property-inclusion: non_null
+  profiles.include: server
 
 management:
   endpoints:

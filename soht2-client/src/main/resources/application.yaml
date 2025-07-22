@@ -11,6 +11,7 @@ spring:
     deserialization:
       fail-on-unknown-properties: false
     default-property-inclusion: non_null
+  profiles.include: client
 
 logging.level:
   root: info
@@ -19,8 +20,6 @@ soht2.client:
   url: http://localhost:8080/api/connection
   socket-read-timeout: PT0.1S
   read-buffer-size: 64KB
-  #username: soht2
-  #password: password_of_soht2
   compression:
     type: none
     min-request-size: 2KB

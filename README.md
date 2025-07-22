@@ -51,7 +51,7 @@ Both the client and server components can be run using Java, so on both sides yo
    It is an optional file, and if it is not present, the server will use default values.
 3. Run the server with the following command:
     ```shell
-    java -Dspring.profiles.active=server -jar soht2-server-X.X.X.jar
+    java -jar soht2-server-X.X.X.jar
     ```
 
 ### Client Part
@@ -94,13 +94,11 @@ Both the client and server components can be run using Java, so on both sides yo
    _Be aware that this implementation does not support authentication for SOCKS5 proxy._
 3. Run the client with the following command:
     ```shell
-    java -Dspring.profiles.active=client -jar soht2-client-X.X.X.jar
+    java -jar soht2-client-X.X.X.jar
     ```
    Or, with SOCKS5 proxy:
     ```shell
-    java -Dspring.profiles.active=client \
-         -DsocksProxyHost=localhost -DsocksProxyPort=1080 \
-         -jar soht2-client-X.X.X.jar
+    java -DsocksProxyHost=localhost -DsocksProxyPort=1080 -jar soht2-client-X.X.X.jar
     ```
 4. If you don't have errors, you should be able to connect to the remote host through the tunnel.
    You can test it by running `telnet localhost 2022` (or whatever local port you defined in the
