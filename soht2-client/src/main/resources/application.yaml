@@ -1,5 +1,7 @@
 spring:
   application.name: soht2-client
+  profiles.include: client
+  devtools.add-properties: false
   main:
     banner-mode: off
     web-application-type: none
@@ -11,7 +13,6 @@ spring:
     deserialization:
       fail-on-unknown-properties: false
     default-property-inclusion: non_null
-  profiles.include: client
 
 logging.level:
   root: info

@@ -1,9 +1,9 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.common.compress;
 
-import io.vavr.Function1;
-
 import static java.util.Optional.ofNullable;
+
+import io.vavr.Function1;
 
 /**
  * Compressor interface defines methods for compressing and decompressing byte arrays.

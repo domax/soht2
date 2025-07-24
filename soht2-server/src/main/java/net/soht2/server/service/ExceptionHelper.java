@@ -5,8 +5,10 @@ import static org.springframework.http.HttpStatus.*;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * A utility class that provides methods for creating HTTP exceptions in a standardized way. This
@@ -20,15 +22,47 @@ import org.springframework.web.client.HttpServerErrorException;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ExceptionHelper {
 
-  public static HttpClientErrorException badRequest(String statusText) {
-    return HttpClientErrorException.create(BAD_REQUEST, statusText, null, null, null);
+  public static ResponseStatusException badRequest(String message) {
+    return createClientException(BAD_REQUEST, message);
   }
 
-  public static HttpClientErrorException gone(String statusText) {
-    return HttpClientErrorException.create(GONE, statusText, null, null, null);
+  public static ResponseStatusException unauthorized(String message) {
+    return createClientException(UNAUTHORIZED, message);
   }
 
-  public static HttpServerErrorException serviceUnavailable(String statusText) {
-    return HttpServerErrorException.create(SERVICE_UNAVAILABLE, statusText, null, null, null);
+  public static ResponseStatusException forbidden(String message) {
+    return createClientException(FORBIDDEN, message);
+  }
+
+  public static ResponseStatusException notFound(String message) {
+    return createClientException(NOT_FOUND, message);
+  }
+
+  public static ResponseStatusException gone(String message) {
+    return createClientException(GONE, message);
+  }
+
+  public static ResponseStatusException notImplemented(String message) {
+    return createServerException(NOT_IMPLEMENTED, message);
+  }
+
+  public static ResponseStatusException serviceUnavailable(String message) {
+    return createServerException(SERVICE_UNAVAILABLE, message);
+  }
+
+  private static ResponseStatusException createClientException(HttpStatus status, String message) {
+    return new ResponseStatusException(
+        status,
+        message,
+        HttpClientErrorException.create(
+            message, status, status.getReasonPhrase(), null, message.getBytes(), null));
+  }
+
+  private static ResponseStatusException createServerException(HttpStatus status, String message) {
+    return new ResponseStatusException(
+        status,
+        message,
+        HttpServerErrorException.create(
+            message, status, status.getReasonPhrase(), null, null, null));
   }
 }

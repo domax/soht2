@@ -1,0 +1,48 @@
+### Get list of connections
+GET {{base_url}}/api/connection
+Authorization: Basic {{admin_username}} {{admin_password}}
+#Authorization: Basic {{user1_username}} {{user1_password}}
+
+### Get users
+GET {{base_url}}/api/user
+Authorization: Basic {{admin_username}} {{admin_password}}
+#Authorization: Basic {{user1_username}} {{user1_password}}
+
+### Create a new regular user1
+POST {{base_url}}/api/user?username={{user1_username}}&password={{user1_password}}
+Authorization: Basic {{admin_username}} {{admin_password}}
+
+### Create a new regular user1 form
+POST {{base_url}}/api/user
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic {{admin_username}} {{admin_password}}
+
+username = {{user1_username}} &
+password = {{user1_password}}
+
+### Get a current user
+GET {{base_url}}/api/user/self
+Authorization: Basic {{user1_username}} {{user1_password}}
+
+### Change password for a user
+PUT localhost:8080/api/user/self?old={{admin_password}}&new={{user1_password}}
+Authorization: Basic {{user1_username}} {{user1_password}}
+
+### Create a new admin user
+POST {{base_url}}/api/user?username={{user2_username}}&password={{user2_password}}&role=admin
+Authorization: Basic {{admin_username}} {{admin_password}}
+
+### Update user2
+PUT {{base_url}}/api/user/{{user2_username}}?password={{user2_password}}&role=user
+Authorization: Basic {{admin_username}} {{admin_password}}
+
+### Delete a user1
+DELETE {{base_url}}/api/user/{{user1_username}}
+Authorization: Basic {{admin_username}} {{admin_password}}
+
+### Delete a user2
+DELETE {{base_url}}/api/user/{{user2_username}}?force=true
+Authorization: Basic {{admin_username}} {{admin_password}}
+
+###
+

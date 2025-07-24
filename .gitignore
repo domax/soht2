@@ -48,8 +48,11 @@ HELP.md
 !/soht2-server/src/main/resources/public/version
 /soht2-server/src/main/resources/public/assets/
 application-local.yaml
-**/main/resources/application-client.yaml
-**/main/resources/application-server.yaml
+/soht2-server/**/application-server.yaml
+/soht2-client/**/application-client.yaml
 /.idea/codeInsightSettings.xml
 /.idea/dictionaries/project.xml
 /soht2-client/src/main/java/net/soht2/client/example/
+*.mv.db
+*.trace.db
+/http-client.private.env.json

@@ -5,16 +5,19 @@ import static io.vavr.API.unchecked;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static net.soht2.server.test.UTHelper.createBinData;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 
-import io.vavr.Tuple;
 import io.vavr.control.Try;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import net.soht2.common.dto.Soht2Connection;
+import net.soht2.common.dto.Soht2User;
 import net.soht2.server.config.Soht2ServerConfig;
+import net.soht2.server.entity.UserEntity;
 import net.soht2.server.test.EchoClient;
 import net.soht2.server.test.EchoServer;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,13 +25,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SuppressWarnings("java:S2925")
 @Slf4j
 @SpringBootTest(classes = Soht2Service.class)
 @Import(Soht2ServerConfig.class)
 @ActiveProfiles("test")
+@WithMockUser(username = "system", password = "test", authorities = UserEntity.ROLE_ADMIN)
 class Soht2ServiceTest {
 
   static final int PORT_NUMBER = 12345;
@@ -37,17 +45,32 @@ class Soht2ServiceTest {
   @Autowired Soht2Service soht2Service;
   @Autowired Soht2ServerConfig soht2ServerConfig;
 
+  @MockitoBean Soht2UserService soht2UserService;
+
   int socketTimeout;
   int bufferSize;
+  Authentication authentication;
 
   @BeforeEach
   void beforeEach() {
     socketTimeout = (int) soht2ServerConfig.getSocketReadTimeout().toMillis();
     bufferSize = (int) soht2ServerConfig.getReadBufferSize().toBytes();
+    authentication = SecurityContextHolder.getContext().getAuthentication();
+
+    doReturn(Optional.of(UserEntity.builder().name("system").role(UserEntity.ROLE_ADMIN).build()))
+        .when(soht2UserService)
+        .getCachedUserEntity(anyString());
   }
 
   @Test
   void testEcho() {
+    val inputList = List.of(createBinData(DATA_SIZE), createBinData(DATA_SIZE));
+    val resultSize = inputList.stream().mapToInt(v -> v.length).sum();
+
+    val expected = new ByteArrayOutputStream(resultSize);
+    inputList.forEach(v -> Try.run(() -> expected.write(v)).get());
+
+    val actual = new ByteArrayOutputStream(resultSize);
     try (val server =
             EchoServer.builder()
                 .portNumber(PORT_NUMBER)
@@ -55,7 +78,7 @@ class Soht2ServiceTest {
                 .bufferSize(bufferSize)
                 .build();
         val client = new EchoClient(server)) {
-      Stream.of(createBinData(DATA_SIZE), createBinData(DATA_SIZE))
+      inputList.stream()
           // give it at least 0.5 seconds to make sure the server is processed a whole buffer
           .peek(v -> Try.run(() -> Thread.sleep(500)).get())
           .peek(v -> assertThat(server.isRunning()).isTrue())
@@ -63,8 +86,9 @@ class Soht2ServiceTest {
               unchecked(
                   bytes ->
                       // wrap to thread to prove a client.shout() has access to the socket
-                      supplyAsync(() -> Tuple.of(bytes, client.shout(bytes))).get()))
-          .forEach(data -> assertThat(data._1).isEqualTo(data._2));
+                      supplyAsync(() -> client.shout(bytes)).get()))
+          .forEach(data -> Try.run(() -> actual.write(data)).get());
+      assertThat(actual.toByteArray()).isEqualTo(expected.toByteArray());
     }
   }
 
@@ -79,14 +103,15 @@ class Soht2ServiceTest {
         val client =
             soht2Service.open(
                 Soht2Connection.builder()
-                    .username("system")
+                    .user(Soht2User.builder().username("system").build())
                     .clientHost("localhost")
                     .targetHost("localhost")
                     .targetPort(PORT_NUMBER)
-                    .build())) {
+                    .build(),
+                authentication)) {
       assertThat(client.isOpened()).isTrue();
       val connectionId = client.soht2().id();
-      assertThat(soht2Service.list())
+      assertThat(soht2Service.list(authentication))
           .hasSize(1)
           .first()
           .extracting(Soht2Connection::id)
@@ -109,6 +134,6 @@ class Soht2ServiceTest {
       assertThat(actual.toByteArray()).isEqualTo(expected.toByteArray());
     }
 
-    assertThat(soht2Service.list()).isEmpty();
+    assertThat(soht2Service.list(authentication)).isEmpty();
   }
 }

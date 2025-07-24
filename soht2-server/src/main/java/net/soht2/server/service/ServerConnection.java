@@ -29,7 +29,8 @@ import net.soht2.common.dto.Soht2Connection;
 @Value
 public class ServerConnection implements Closeable {
 
-  Soht2Connection soht2;
+  @Getter(AccessLevel.NONE)
+  AtomicReference<Soht2Connection> soht2 = new AtomicReference<>();
 
   @Getter(AccessLevel.NONE)
   Socket socket;
@@ -48,7 +49,7 @@ public class ServerConnection implements Closeable {
   private ServerConnection(
       Soht2Connection soht2, int socketTimeout, Consumer<ServerConnection> postCloseAction) {
     log.debug("new: connection={}", soht2);
-    this.soht2 = soht2;
+    this.soht2.set(soht2);
     this.socket =
         Try.of(() -> InetAddress.getByName(soht2.targetHost()))
             .mapTry(inet -> new Socket(inet, soht2.targetPort()))
@@ -60,6 +61,15 @@ public class ServerConnection implements Closeable {
     this.outputStream = Try.of(socket::getOutputStream).get();
     this.postCloseAction = postCloseAction;
     this.isOpened.set(true);
+  }
+
+  public Soht2Connection soht2() {
+    return soht2.get();
+  }
+
+  public void soht2(Soht2Connection soht2) {
+    log.debug("soht2: connection={}", soht2);
+    this.soht2.set(soht2);
   }
 
   /**
@@ -92,13 +102,13 @@ public class ServerConnection implements Closeable {
    * @return the duration since the connection was opened
    */
   public Duration connectionAge() {
-    return Duration.between(soht2.openedAt(), lastActivity.get());
+    return Duration.between(soht2.get().openedAt(), lastActivity.get());
   }
 
   /** Closes the connection, releasing resources associated with the socket and streams. */
   @Override
   public void close() {
-    log.debug("close: connection={}", soht2);
+    log.debug("close: connection={}", soht2.get());
     this.isOpened.set(false);
     Try.run(inputStream::close);
     Try.run(outputStream::close);

@@ -45,8 +45,14 @@ Both the client and server components can be run using Java, so on both sides yo
     soht2.server:
       socket-read-timeout: PT0.1S                # Timeout for socket read operations
       read-buffer-size: 64KB                     # Size of the read buffer for socket connections
-      abandoned-connections-timeout: PT1M        # Timeout for abandoned connections
-      abandoned-connections-check-interval: PT5S # Interval for checking abandoned connections
+      user-cache-ttl: PT10M                      # Time-to-live for user cache entries
+      database:                                  # Database configuration
+        path: ./soht2                            # Path to the database file
+        admin-username: "${DB_USER}"             # Username for the admin user
+        default-admin-password: "${DB_PASSWORD}" # Default password for the admin user
+      abandoned-connections:                     # Settings for abandoned connections
+        timeout: PT1M                            # Timeout for abandoned connections
+        check-interval: PT5S                     # Interval for checking abandoned connections
     ```
    It is an optional file, and if it is not present, the server will use default values.
 3. Run the server with the following command:
@@ -113,6 +119,8 @@ TODO List
 - [X] Add removal of abandoned connections on the server side
 - [X] Update sequence diagram
 - [X] Update README.md with more details
-- [ ] Finalize authentication and authorization mechanisms
+- [X] Finalize authentication and authorization mechanisms
+- [X] Add user controller for managing users
+- [ ] Add connection history support on the server side
 - [ ] Add more tests
 - [ ] Implement UI

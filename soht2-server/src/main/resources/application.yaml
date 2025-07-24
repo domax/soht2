@@ -1,5 +1,7 @@
 spring:
   application.name: soht2-server
+  profiles.include: server
+  devtools.add-properties: false
   main.banner-mode: off
   jackson:
     date-format: com.fasterxml.jackson.databind.util.StdDateFormat
@@ -9,7 +11,22 @@ spring:
     deserialization:
       fail-on-unknown-properties: false
     default-property-inclusion: non_null
-  profiles.include: server
+  datasource:
+    url: jdbc:h2:file:${soht2.server.database.path}
+    username: soht2
+    driver-class-name: org.h2.Driver
+    hikari:
+      auto-commit: false
+      driver-class-name: ${spring.datasource.driver-class-name}
+      maximum-pool-size: 5
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    open-in-view: true
+    hibernate.ddl-auto: update
+  cache:
+    cache-names: userCache
+    type: caffeine
+    caffeine.spec: maximumSize=1000,expireAfterWrite=${soht2.server.user-cache-ttl}
 
 management:
   endpoints:
@@ -22,7 +39,6 @@ management:
           - POST
           - PUT
           - DELETE
-          - PATCH
           - HEAD
           - OPTIONS
         allowed-origins: '*'
@@ -33,7 +49,10 @@ logging.level:
 server:
   address: 0.0.0.0
   shutdown: graceful
-  error.include-message: always
+  error:
+    include-message: always
+    include-stacktrace: on_param
+    include-exception: true
   compression:
     enabled: true
     min-response-size: 2KB
@@ -51,5 +70,10 @@ server:
 soht2.server:
   socket-read-timeout: PT0.1S
   read-buffer-size: 64KB
-  abandoned-connections-timeout: PT1M
-  abandoned-connections-check-interval: PT5S
+  user-cache-ttl: PT10M
+  database:
+    path: ./soht2
+    admin-username: admin
+  abandoned-connections:
+    timeout: PT1M
+    check-interval: PT5S
