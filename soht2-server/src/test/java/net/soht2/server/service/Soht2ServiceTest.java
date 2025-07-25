@@ -40,7 +40,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 class Soht2ServiceTest {
 
   static final int PORT_NUMBER = 12345;
-  static final int DATA_SIZE = 120000;
 
   @Autowired Soht2Service soht2Service;
   @Autowired Soht2ServerConfig soht2ServerConfig;
@@ -64,7 +63,7 @@ class Soht2ServiceTest {
 
   @Test
   void testEcho() {
-    val inputList = List.of(createBinData(DATA_SIZE), createBinData(DATA_SIZE));
+    val inputList = List.of(createBinData(bufferSize), createBinData(bufferSize));
     val resultSize = inputList.stream().mapToInt(v -> v.length).sum();
 
     val expected = new ByteArrayOutputStream(resultSize);

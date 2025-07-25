@@ -26,7 +26,7 @@ exposing them directly to the client.
 ![components.png](doc/components.png)
 
 Below is a simplified sequence diagram illustrating the flow of a connection request from the client
-to the server, and how the server processes this request to establish a tunnel to a remote host:
+to the server and how the server processes this request to establish a tunnel to a remote host:
 
 ![sequence.png](doc/sequence.png)
 
@@ -53,6 +53,9 @@ Both the client and server components can be run using Java, so on both sides yo
       abandoned-connections:                     # Settings for abandoned connections
         timeout: PT1M                            # Timeout for abandoned connections
         check-interval: PT5S                     # Interval for checking abandoned connections
+      open-api:                                  # OpenAPI configuration
+        server-url: http://localhost:8080        # Public URL of the OpenAPI server
+        server-description: SOHT2 OpenAPI Server # Description of the OpenAPI server
     ```
    It is an optional file, and if it is not present, the server will use default values.
 3. Run the server with the following command:
@@ -121,6 +124,7 @@ TODO List
 - [X] Update README.md with more details
 - [X] Finalize authentication and authorization mechanisms
 - [X] Add user controller for managing users
+- [X] Add OpenAPI documentation for the server API
 - [ ] Add connection history support on the server side
 - [ ] Add more tests
 - [ ] Implement UI

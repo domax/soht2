@@ -3,6 +3,7 @@ package net.soht2.server.config;
 
 import io.vavr.control.Try;
 import java.io.File;
+import java.net.URI;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.HexFormat;
@@ -43,6 +44,9 @@ public class Soht2ServerConfig implements InitializingBean {
   /** Properties for managing abandoned connections. */
   private AbandonedConnectionsProperties abandonedConnections =
       new AbandonedConnectionsProperties();
+
+  /** OpenAPI properties */
+  private OpenAPIProperties openApi = new OpenAPIProperties();
 
   @Override
   public void afterPropertiesSet() {
@@ -90,5 +94,20 @@ public class Soht2ServerConfig implements InitializingBean {
 
     /** The interval at which the server checks for abandoned connections. */
     private Duration checkInterval = Duration.ofSeconds(5);
+  }
+
+  /**
+   * Properties of the OpenAPI server.
+   *
+   * <p>These properties are used to generate OpenAPI documentation for the connector.
+   */
+  @Data
+  public static class OpenAPIProperties {
+
+    /** A public URL of the OpenAPI server */
+    private URI serverUrl;
+
+    /** A description of the OpenAPI server */
+    private String serverDescription;
   }
 }

@@ -25,14 +25,16 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.lang.Nullable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 
+/**
+ * Service for managing users in the SOHT2 server. This service provides methods to load user
+ * details, create, update, delete users, and manage user roles.
+ */
 @Slf4j
 @RequiredArgsConstructor
 @Service
@@ -40,7 +42,6 @@ public class Soht2UserService implements UserDetailsService {
 
   private static final String ERR_USER_NOT_FOUND = "User not found";
   private static final String ERR_USER_EMPTY = "User name must be provided";
-  private static final String ERR_USER_UNLOGGED = "No user logged in";
 
   private final Soht2ServerConfig soht2ServerConfig;
   private final UserEntityRepository userEntityRepository;
@@ -116,7 +117,8 @@ public class Soht2UserService implements UserDetailsService {
    *     provided, or if the specified user already exists
    */
   @Transactional
-  public Soht2User createUser(String name, String password, @Nullable String role) {
+  public Soht2User createUser(String name, String password, @Nullable String role)
+      throws HttpClientErrorException {
     log.debug("createUser: name={}, role={}", name, role);
     if (!hasText(name)) throw badRequest(ERR_USER_EMPTY);
     if ("self".equalsIgnoreCase(name)) throw badRequest("Cannot create user with name 'self'");
@@ -146,7 +148,8 @@ public class Soht2UserService implements UserDetailsService {
    *     role is invalid
    */
   @Transactional
-  public Soht2User updateUser(String name, @Nullable String password, @Nullable String role) {
+  public Soht2User updateUser(String name, @Nullable String password, @Nullable String role)
+      throws HttpClientErrorException {
     log.debug("updateUser: name={}, role={}", name, role);
     if (!hasText(name)) throw badRequest(ERR_USER_EMPTY);
     var userEntity =
@@ -180,7 +183,7 @@ public class Soht2UserService implements UserDetailsService {
    *     argument is {@code false}
    */
   @Transactional
-  public void deleteUser(String name, boolean force) {
+  public void deleteUser(String name, boolean force) throws HttpClientErrorException {
     log.debug("deleteUser: name={}", name);
     if (!hasText(name)) throw badRequest(ERR_USER_EMPTY);
     val userEntity =
@@ -220,21 +223,18 @@ public class Soht2UserService implements UserDetailsService {
   /**
    * Retrieves the details of the currently logged-in user.
    *
+   * @param authentication the current authentication object containing user details
    * @return a {@link Soht2User} object representing the current user
    * @throws HttpClientErrorException.Unauthorized if no user is logged in
    * @throws HttpClientErrorException.Forbidden if the user is not found
    */
   @Transactional(readOnly = true)
-  public Soht2User getSelf() {
+  public Soht2User getSelf(Authentication authentication) throws HttpClientErrorException {
     log.debug("getSelf");
-    return getCurrentUser()
-        .map(
-            currentUser ->
-                userEntityRepository
-                    .findByNameIgnoreCase(currentUser.name())
-                    .map(UserEntity::toSoht2User)
-                    .orElseThrow(() -> forbidden(ERR_USER_NOT_FOUND)))
-        .orElseThrow(() -> unauthorized(ERR_USER_UNLOGGED));
+    return userEntityRepository
+        .findByNameIgnoreCase(authentication.getName())
+        .map(UserEntity::toSoht2User)
+        .orElseThrow(() -> forbidden(ERR_USER_NOT_FOUND));
   }
 
   /**
@@ -243,6 +243,7 @@ public class Soht2UserService implements UserDetailsService {
    *
    * @param oldPassword the current password of the user
    * @param newPassword the new password to set for the user
+   * @param authentication the current authentication object containing user details
    * @return a {@link Soht2User} object representing the updated user
    * @throws HttpClientErrorException.BadRequest if the old or new password is not provided, or if
    *     they are the same
@@ -250,24 +251,25 @@ public class Soht2UserService implements UserDetailsService {
    * @throws HttpClientErrorException.Forbidden if the user is not found
    */
   @Transactional
-  public Soht2User changePassword(String oldPassword, String newPassword) {
+  public Soht2User changePassword(
+      String oldPassword, String newPassword, Authentication authentication)
+      throws HttpClientErrorException {
     log.debug(
         "changePassword: old.size={}, new.size={}", oldPassword.length(), newPassword.length());
     if (!hasText(oldPassword)) throw badRequest("Old password must be provided");
     if (!hasText(newPassword)) throw badRequest("New password must be provided");
     if (oldPassword.equals(newPassword))
       throw badRequest("New password must be different from old password");
-    val currentUser = getCurrentUser().orElseThrow(() -> unauthorized(ERR_USER_UNLOGGED));
     var userEntity =
         userEntityRepository
-            .findByNameIgnoreCase(currentUser.name())
+            .findByNameIgnoreCase(authentication.getName())
             .orElseThrow(() -> forbidden(ERR_USER_NOT_FOUND));
     if (!passwordEncoder.matches(oldPassword, userEntity.getPassword()))
       throw badRequest("Old password is incorrect");
 
     userEntity.setPassword(passwordEncoder.encode(newPassword));
     userEntity = userEntityRepository.save(userEntity);
-    userCache.evict(currentUser.name());
+    userCache.evict(authentication.getName());
 
     return userEntity.toSoht2User();
   }
@@ -281,12 +283,6 @@ public class Soht2UserService implements UserDetailsService {
                 Optional.of(r)
                     .filter(UserEntity.ROLES::contains)
                     .orElseThrow(() -> badRequest("Invalid role: " + r)));
-  }
-
-  static Optional<CurrentUser> getCurrentUser() {
-    return Optional.of(SecurityContextHolder.getContext())
-        .map(SecurityContext::getAuthentication)
-        .flatMap(Soht2UserService::getCurrentUser);
   }
 
   static Optional<CurrentUser> getCurrentUser(Authentication authentication) {

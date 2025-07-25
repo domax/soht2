@@ -1,8 +1,18 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.server.controller;
 
+import static org.springframework.http.HttpHeaders.CONTENT_ENCODING;
 import static org.springframework.http.MediaType.*;
 
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.servers.Server;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Collection;
 import java.util.UUID;
@@ -10,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.common.dto.Soht2User;
 import net.soht2.server.service.Soht2Service;
-import org.springframework.http.HttpHeaders;
 import org.springframework.lang.Nullable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -20,6 +29,15 @@ import org.springframework.web.bind.annotation.*;
  * Controller for managing SOHT2 connections. Provides endpoints to open, list, exchange data with,
  * and close connections.
  */
+// <editor-fold desc="OpenAPI Annotations">
+@OpenAPIDefinition(
+    info = @Info(title = "SOHT2 Server API", version = "1.0.0"),
+    servers = {
+      @Server(
+          url = "${soht2.server.open-api.server-url}",
+          description = "${soht2.server.open-api.server-description}")
+    })
+// </editor-fold>
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/connection")
@@ -39,6 +57,15 @@ public class ConnectionController {
    * @param request the HTTP request containing client information
    * @return a {@link Soht2Connection} object representing the opened connection
    */
+  // <editor-fold desc="OpenAPI Annotations">
+  @Tag(name = "Connection Requests")
+  @Operation(summary = "Opens a new SOHT2 connection to the specified target host and port.")
+  @SecurityRequirement(name = "Basic Authentication")
+  @ApiResponse(responseCode = "200")
+  @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(hidden = true)))
+  // </editor-fold>
   @SuppressWarnings("resource")
   @PostMapping(produces = APPLICATION_JSON_VALUE)
   public Soht2Connection open(
@@ -64,6 +91,14 @@ public class ConnectionController {
    * @param authentication the current authentication object containing user details
    * @return a collection of {@link Soht2Connection} objects representing the open connections
    */
+  // <editor-fold desc="OpenAPI Annotations">
+  @Tag(name = "Connection Requests")
+  @Operation(summary = "Lists all currently open SOHT2 connections.")
+  @SecurityRequirement(name = "Basic Authentication")
+  @ApiResponse(responseCode = "200")
+  @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(hidden = true)))
+  // </editor-fold>
   @GetMapping(produces = APPLICATION_JSON_VALUE)
   public Collection<Soht2Connection> list(Authentication authentication) {
     return soht2Service.list(authentication);
@@ -78,6 +113,16 @@ public class ConnectionController {
    * @param contentEncoding the content encoding of the data (optional)
    * @return the response data received from the connection
    */
+  // <editor-fold desc="OpenAPI Annotations">
+  @Tag(name = "Connection Requests")
+  @Operation(summary = "Exchanges data with the specified SOHT2 connection.")
+  @SecurityRequirement(name = "Basic Authentication")
+  @ApiResponse(responseCode = "200")
+  @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(hidden = true)))
+  // </editor-fold>
   @PreAuthorize("@soht2Service.isConnectionOwner(authentication, #connectionId)")
   @PostMapping(
       path = PATH_ID,
@@ -86,7 +131,7 @@ public class ConnectionController {
   public byte[] exchange(
       @PathVariable("id") UUID connectionId,
       @RequestBody(required = false) @Nullable byte[] data,
-      @RequestHeader(name = HttpHeaders.CONTENT_ENCODING, required = false) @Nullable String contentEncoding) {
+      @RequestHeader(name = CONTENT_ENCODING, required = false) @Nullable String contentEncoding) {
     return soht2Service.exchange(connectionId, data, contentEncoding).get();
   }
 
@@ -95,6 +140,16 @@ public class ConnectionController {
    *
    * @param connectionId the unique identifier of the connection to close
    */
+  // <editor-fold desc="OpenAPI Annotations">
+  @Tag(name = "Connection Requests")
+  @Operation(summary = "Closes the SOHT2 connection by the specified unique identifier.")
+  @SecurityRequirement(name = "Basic Authentication")
+  @ApiResponse(responseCode = "200")
+  @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(hidden = true)))
+  // </editor-fold>
   @PreAuthorize("@soht2Service.isConnectionOwner(authentication, #connectionId)")
   @DeleteMapping(path = PATH_ID)
   public void close(@PathVariable("id") UUID connectionId) {

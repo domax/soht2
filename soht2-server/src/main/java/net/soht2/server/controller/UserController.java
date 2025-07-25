@@ -3,6 +3,15 @@ package net.soht2.server.controller;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.servers.Server;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Collection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +20,7 @@ import net.soht2.server.entity.UserEntity;
 import net.soht2.server.service.Soht2UserService;
 import org.springframework.lang.Nullable;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -18,6 +28,15 @@ import org.springframework.web.bind.annotation.*;
  * deleting, and listing users, as well as retrieving the current user's information and changing
  * their password.
  */
+// <editor-fold desc="OpenAPI Annotations">
+@OpenAPIDefinition(
+    info = @Info(title = "SOHT2 Server API", version = "1.0.0"),
+    servers = {
+      @Server(
+          url = "${soht2.server.open-api.server-url}",
+          description = "${soht2.server.open-api.server-description}")
+    })
+// </editor-fold>
 @Slf4j
 @RequiredArgsConstructor
 @RestController
@@ -35,6 +54,14 @@ public class UserController {
    * @param role the role of the new user (optional)
    * @return the created {@link Soht2User} object
    */
+  // <editor-fold desc="OpenAPI Annotations">
+  @Tag(name = "User Requests")
+  @Operation(summary = "Creates a new user with the specified name, password, and role.")
+  @SecurityRequirement(name = "Basic Authentication")
+  @ApiResponse(responseCode = "200")
+  @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(hidden = true)))
+  // </editor-fold>
   @PreAuthorize("hasAuthority('" + UserEntity.ROLE_ADMIN + "')")
   @PostMapping(produces = APPLICATION_JSON_VALUE)
   public Soht2User create(
@@ -53,6 +80,16 @@ public class UserController {
    * @param role the new role for the user (optional)
    * @return the updated {@link Soht2User} object
    */
+  // <editor-fold desc="OpenAPI Annotations">
+  @Tag(name = "User Requests")
+  @Operation(summary = "Updates an existing user with the specified name, password, and role.")
+  @SecurityRequirement(name = "Basic Authentication")
+  @ApiResponse(responseCode = "200")
+  @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(hidden = true)))
+  // </editor-fold>
   @PreAuthorize("hasAuthority('" + UserEntity.ROLE_ADMIN + "')")
   @PutMapping(path = "/{name}", produces = APPLICATION_JSON_VALUE)
   public Soht2User update(
@@ -68,6 +105,16 @@ public class UserController {
    * @param name the username of the user to delete
    * @param force if true, forces deletion even if the user is currently connected
    */
+  // <editor-fold desc="OpenAPI Annotations">
+  @Tag(name = "User Requests")
+  @Operation(summary = "Deletes a user with the specified username.")
+  @SecurityRequirement(name = "Basic Authentication")
+  @ApiResponse(responseCode = "200")
+  @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(hidden = true)))
+  // </editor-fold>
   @PreAuthorize("hasAuthority('" + UserEntity.ROLE_ADMIN + "')")
   @DeleteMapping(path = "/{name}")
   public void delete(
@@ -81,6 +128,14 @@ public class UserController {
    *
    * @return a collection of {@link Soht2User} objects representing all users
    */
+  // <editor-fold desc="OpenAPI Annotations">
+  @Tag(name = "User Requests")
+  @Operation(summary = "Lists all users in the system.")
+  @SecurityRequirement(name = "Basic Authentication")
+  @ApiResponse(responseCode = "200")
+  @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(hidden = true)))
+  // </editor-fold>
   @PreAuthorize("hasAuthority('" + UserEntity.ROLE_ADMIN + "')")
   @GetMapping(produces = APPLICATION_JSON_VALUE)
   public Collection<Soht2User> list() {
@@ -92,9 +147,17 @@ public class UserController {
    *
    * @return the {@link Soht2User} object representing the current user
    */
+  // <editor-fold desc="OpenAPI Annotations">
+  @Tag(name = "User Requests")
+  @Operation(summary = "Retrieves the current user's information.")
+  @SecurityRequirement(name = "Basic Authentication")
+  @ApiResponse(responseCode = "200")
+  @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(hidden = true)))
+  // </editor-fold>
   @GetMapping(path = "/self", produces = APPLICATION_JSON_VALUE)
-  public Soht2User self() {
-    return soht2UserService.getSelf();
+  public Soht2User self(Authentication authentication) {
+    return soht2UserService.getSelf(authentication);
   }
 
   /**
@@ -104,9 +167,20 @@ public class UserController {
    * @param newPassword the new password to set for the user
    * @return the updated {@link Soht2User} object
    */
+  // <editor-fold desc="OpenAPI Annotations">
+  @Tag(name = "User Requests")
+  @Operation(summary = "Changes the password of the current user.")
+  @SecurityRequirement(name = "Basic Authentication")
+  @ApiResponse(responseCode = "200")
+  @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(hidden = true)))
+  @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(hidden = true)))
+  // </editor-fold>
   @PutMapping(path = "/self", produces = APPLICATION_JSON_VALUE)
   public Soht2User password(
-      @RequestParam("old") String oldPassword, @RequestParam("new") String newPassword) {
-    return soht2UserService.changePassword(oldPassword, newPassword);
+      @RequestParam("old") String oldPassword,
+      @RequestParam("new") String newPassword,
+      Authentication authentication) {
+    return soht2UserService.changePassword(oldPassword, newPassword, authentication);
   }
 }

@@ -4,6 +4,8 @@ package net.soht2.server.config;
 import static net.soht2.server.entity.UserEntity.ROLE_ADMIN;
 import static org.springframework.security.config.Customizer.withDefaults;
 
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.vavr.control.Try;
 import lombok.val;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.CorsEndpointProperties;
@@ -22,6 +24,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+@SecurityScheme(name = "Basic Authentication", type = SecuritySchemeType.HTTP, scheme = "basic")
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity

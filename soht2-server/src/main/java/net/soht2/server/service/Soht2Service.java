@@ -182,7 +182,7 @@ public class Soht2Service {
             c ->
                 log.atDebug()
                     .setMessage("closeAbandonedConnections: id={}, age={}/{}")
-                    .addArgument(() -> c.soht2().id())
+                    .addArgument(c.soht2()::id)
                     .addArgument(c::activityAge)
                     .addArgument(c::connectionAge)
                     .log())
@@ -209,8 +209,8 @@ public class Soht2Service {
 
   private ServerConnection updateConnectionWithUser(
       ServerConnection connection, Authentication authentication) {
-    getCurrentUser(authentication)
-        .flatMap(cu -> soht2UserService.getCachedUserEntity(cu.name()))
+    soht2UserService
+        .getCachedUserEntity(authentication.getName())
         .map(UserEntity::toSoht2User)
         .map(connection.soht2()::withUser)
         .ifPresent(connection::soht2);
