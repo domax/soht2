@@ -97,8 +97,15 @@ publishing {
     }
   }
   publications {
+//    mavenJava(MavenPublication) {
+//      from components.java
+//      artifact bootJar
+//    }
+    //noinspection GroovyAssignabilityCheck
     gpr(MavenPublication) {
-      from(components.java)
+      from components.java
+      //noinspection GroovyAssignabilityCheck
+      artifact bootJar
     }
   }
 }
