@@ -6,6 +6,7 @@ plugins {
   id 'com.diffplug.spotless' version "7.0.3"
   id 'io.spring.dependency-management' version '1.1.7'
   id 'org.springframework.boot' version '3.5.3'
+  id 'maven-publish'
 }
 
 repositories {
@@ -81,5 +82,23 @@ spotless {
     formatAnnotations()
     // make sure every file has the following copyright header.
     licenseHeader '/* SOHT2 © Licensed under MIT $YEAR. */'
+  }
+}
+
+publishing {
+  repositories {
+    maven {
+      name = "GitHubPackages"
+      url = uri("https://maven.pkg.github.com/domax/soht2")
+      credentials {
+        username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+        password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+      }
+    }
+  }
+  publications {
+    gpr(MavenPublication) {
+      from(components.java)
+    }
   }
 }
