@@ -39,6 +39,7 @@ Both the client and server components can be run using Java, so on both sides yo
 ### Server Part
 
 1. Get the latest release, e.g. `soht2-server-X.X.X.jar`
+   from [packages](https://github.com/domax/soht2/packages).
 2. Create/Edit the `application-server.yaml` file to configure the server settings, and
    place it in the same directory as the JAR file. Here is an example configuration:
     ```yaml
@@ -66,6 +67,7 @@ Both the client and server components can be run using Java, so on both sides yo
 ### Client Part
 
 1. Get the latest release, e.g. `soht2-client-X.X.X.jar`
+   from [packages](https://github.com/domax/soht2/packages).
 2. Create/Edit the `application-client.yaml` file to configure the client settings, and
    place it in the same directory as the JAR file. Here is an example configuration:
     ```yaml
