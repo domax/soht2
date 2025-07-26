@@ -178,7 +178,7 @@ In addition to the API, SOHT2 server provides the web consoles for managing user
     - URL: `https://${SOHT2_SERVER}/`
     - This console allows you to manage users and view connection history.
 2. Swagger UI
-    - URL: `https://${SOHT2_SERVER}/swagger-ui.html`
+    - URL: `https://${SOHT2_SERVER}/swagger-ui`
     - This console provides an interactive interface for the SOHT2 server API, allowing you to test
       endpoints and view API documentation.
 3. Database Browser

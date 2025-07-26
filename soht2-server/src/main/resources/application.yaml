@@ -75,3 +75,5 @@ soht2.server:
   abandoned-connections:
     timeout: PT1M
     check-interval: PT5S
+
+springdoc.swagger-ui.path: /swagger-ui
