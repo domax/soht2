@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.*;
  */
 // <editor-fold desc="OpenAPI Annotations">
 @OpenAPIDefinition(
-    info = @Info(title = "SOHT2 Server API", version = "1.0.0"),
+    info = @Info(title = "SOHT2 Server API", version = "0.0.1"),
     servers = {
       @Server(
           url = "${soht2.server.open-api.server-url}",
