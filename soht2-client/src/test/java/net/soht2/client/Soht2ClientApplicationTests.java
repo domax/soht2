@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 
-@SpringBootTest
+@SpringBootTest(properties = "soht2.client.connections=")
 class Soht2ClientApplicationTests {
 
   @Autowired ApplicationContext applicationContext;
