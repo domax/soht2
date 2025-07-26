@@ -5,7 +5,7 @@ plugins {
   id 'idea'
   id 'com.diffplug.spotless' version "7.0.3"
   id 'io.spring.dependency-management' version '1.1.7'
-  id 'org.springframework.boot' version '3.5.3'
+  id 'org.springframework.boot' version '3.5.4'
   id 'maven-publish'
 }
 
@@ -40,7 +40,7 @@ dependencies {
   implementation 'org.springframework.boot:spring-boot-starter-cache'
   implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
   implementation 'org.apache.commons:commons-lang3:3.18.0'
-  implementation 'io.vavr:vavr:0.10.6'
+  implementation 'io.vavr:vavr:0.10.7'
   implementation 'com.github.ben-manes.caffeine:caffeine'
   runtimeOnly 'com.h2database:h2'
   compileOnly 'org.projectlombok:lombok'

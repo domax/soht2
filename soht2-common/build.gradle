@@ -31,13 +31,13 @@ configurations {
 
 dependencyManagement {
   imports {
-    mavenBom("org.springframework.boot:spring-boot-dependencies:3.5.3")
+    mavenBom("org.springframework.boot:spring-boot-dependencies:3.5.4")
   }
 }
 
 dependencies {
   dependencies {
-    implementation 'io.vavr:vavr:0.10.6'
+    implementation 'io.vavr:vavr:0.10.7'
     compileOnly 'org.springframework:spring-core'
     compileOnly 'org.projectlombok:lombok'
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
