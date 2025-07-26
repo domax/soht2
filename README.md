@@ -146,7 +146,7 @@ After=syslog.target network.target
 EnvironmentFile=/opt/soht2/soht2-server.env
 User=ec2-user
 WorkingDirectory=/opt/soht2
-ExecStart=/usr/bin/java $JAVA_OPTS -jar /opt/api2/soht2-server.jar
+ExecStart=/usr/bin/java $JAVA_OPTS -jar /opt/soht2/soht2-server.jar
 SuccessExitStatus=143
 TimeoutStopSec=10
 Restart=on-failure
@@ -171,9 +171,20 @@ To get the service logs, you can use the following command:
 journalctl -u soht2-server -f
 ```
 
+#### SOHT2 Server Port
+
+By default, the SOHT2 server listens on port `8080`. If you need to change this port, you can add
+the following lines to the `application-server.yaml` file:
+
+```yaml
+server:
+  port: 8080 # Change this to your desired port number
+```
+
 #### Web Consoles
 
 In addition to the API, SOHT2 server provides the web consoles for managing users and connections:
+
 1. SOHT2 UI (_work is in progress_)
     - URL: `https://${SOHT2_SERVER}/`
     - This console allows you to manage users and view connection history.

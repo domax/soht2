@@ -35,7 +35,10 @@ public class SecurityConfig {
     return http.csrf(CsrfConfigurer::disable)
         .cors(withDefaults())
         .httpBasic(withDefaults())
-        .headers(h -> h.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
+        .headers(
+            h ->
+                h.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
+                    .contentSecurityPolicy(p -> p.policyDirectives("frame-src 'self'")))
         .authorizeHttpRequests(
             registry ->
                 registry

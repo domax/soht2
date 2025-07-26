@@ -156,4 +156,12 @@ public class Soht2ClientProperties {
 
   /** Properties for proxy configuration. */
   private ProxyProperties proxy = new ProxyProperties();
+
+  /**
+   * Whether to disable SSL verification.
+   *
+   * <p>This property is used to disable SSL certificate verification for HTTPS connections. It is
+   * useful for development and testing purposes but should not be used in production environments.
+   */
+  private boolean disableSslVerification = false;
 }

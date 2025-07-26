@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.auth.*;
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.io.HttpClientConnectionManager;
 import org.apache.hc.core5.http.HttpHost;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -66,7 +67,8 @@ public class ProxyConfig {
   @Bean
   ClientHttpRequestFactory clientHttpRequestFactory(
       Soht2ClientProperties properties,
-      @Autowired(required = false) CredentialsProvider credentialsProvider) {
+      @Autowired(required = false) CredentialsProvider credentialsProvider,
+      @Autowired(required = false) HttpClientConnectionManager httpClientConnectionManager) {
     return Try.of(properties::getProxy)
         .mapTry(p -> new HttpHost(p.getHost(), p.getPort()))
         .onSuccess(proxy -> log.info("clientHttpRequestFactory: proxy={}", proxy))
@@ -75,8 +77,10 @@ public class ProxyConfig {
                 HttpClients.custom()
                     .setProxy(proxy)
                     .setDefaultCredentialsProvider(credentialsProvider)
+                    .setConnectionManager(httpClientConnectionManager)
                     .build())
         .mapTry(HttpComponentsClientHttpRequestFactory::new)
+        .onSuccess(factory -> log.debug("clientHttpRequestFactory: {}", factory))
         .get();
   }
 }
