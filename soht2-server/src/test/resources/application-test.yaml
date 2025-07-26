@@ -1,4 +1,5 @@
 spring.datasource.url: jdbc:h2:mem:soht2
+soht2.server.default-admin-password: test
 logging.level:
   net.soht2.common: trace
   net.soht2.server: trace

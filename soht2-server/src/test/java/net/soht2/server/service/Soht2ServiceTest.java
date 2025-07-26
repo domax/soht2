@@ -24,7 +24,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -33,8 +32,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SuppressWarnings("java:S2925")
 @Slf4j
-@SpringBootTest(classes = Soht2Service.class)
-@Import(Soht2ServerConfig.class)
+@SpringBootTest /*(classes = Soht2Service.class)
+                @Import(Soht2ServerConfig.class)*/
 @ActiveProfiles("test")
 @WithMockUser(username = "system", password = "test", authorities = UserEntity.ROLE_ADMIN)
 class Soht2ServiceTest {
