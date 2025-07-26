@@ -43,6 +43,7 @@ bin/
 .DS_Store
 
 ### Project ###
+*.bak
 HELP.md
 /soht2-server/src/main/resources/public/*
 !/soht2-server/src/main/resources/public/version

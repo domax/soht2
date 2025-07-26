@@ -33,8 +33,8 @@ import org.springframework.web.bind.annotation.*;
     info = @Info(title = "SOHT2 Server API", version = "0.0.1"),
     servers = {
       @Server(
-          url = "${soht2.server.open-api.server-url}",
-          description = "${soht2.server.open-api.server-description}")
+          url = "${soht2.server.open-api-server-url}",
+          description = "SOHT2 OpenAPI Server")
     })
 // </editor-fold>
 @Slf4j

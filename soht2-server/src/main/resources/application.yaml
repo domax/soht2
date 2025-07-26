@@ -12,15 +12,13 @@ spring:
       fail-on-unknown-properties: false
     default-property-inclusion: non_null
   datasource:
-    url: jdbc:h2:file:${soht2.server.database.path}
-    username: soht2
-    driver-class-name: org.h2.Driver
+    url: jdbc:h2:file:${soht2.server.database-path}
+    username: ${soht2.server.admin-username}
+    password: ${soht2.server.default-admin-password}
     hikari:
       auto-commit: false
-      driver-class-name: ${spring.datasource.driver-class-name}
       maximum-pool-size: 5
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
     open-in-view: true
     hibernate.ddl-auto: update
   cache:
@@ -71,12 +69,9 @@ soht2.server:
   socket-read-timeout: PT0.1S
   read-buffer-size: 64KB
   user-cache-ttl: PT10M
-  database:
-    path: ./soht2
-    admin-username: admin
+  database-path: ./soht2
+  admin-username: admin
+  open-api-server-url: http://localhost:8080
   abandoned-connections:
     timeout: PT1M
     check-interval: PT5S
-  open-api:
-    server-url: http://localhost:8080
-    server-description: SOHT2 OpenAPI Server

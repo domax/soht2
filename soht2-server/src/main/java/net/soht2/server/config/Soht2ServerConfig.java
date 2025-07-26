@@ -1,19 +1,16 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.server.config;
 
-import io.vavr.control.Try;
 import java.io.File;
 import java.net.URI;
-import java.security.SecureRandom;
 import java.time.Duration;
-import java.util.HexFormat;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.util.StringUtils;
+import org.springframework.util.Assert;
 import org.springframework.util.unit.DataSize;
 
 /**
@@ -29,8 +26,14 @@ import org.springframework.util.unit.DataSize;
 @ConfigurationProperties("soht2.server")
 public class Soht2ServerConfig implements InitializingBean {
 
-  /** The properties for the SOHT2 database. */
-  private DatabaseProperties database = new DatabaseProperties();
+  /** The path to the database file. */
+  private File databasePath = new File("./soht2");
+
+  /** The default username with administrative permissions for the SOHT2 server. */
+  private String adminUsername = "admin";
+
+  /** The default password for the admin user. Randomly generated if not specified. */
+  private String defaultAdminPassword;
 
   /** The size of the read buffer for incoming data. */
   private DataSize readBufferSize = DataSize.ofKilobytes(64);
@@ -45,38 +48,15 @@ public class Soht2ServerConfig implements InitializingBean {
   private AbandonedConnectionsProperties abandonedConnections =
       new AbandonedConnectionsProperties();
 
-  /** OpenAPI properties */
-  private OpenAPIProperties openApi = new OpenAPIProperties();
+  /** A public URL of the OpenAPI server */
+  private URI openApiServerUrl;
 
   @Override
   public void afterPropertiesSet() {
-    if (!StringUtils.hasLength(database.getDefaultAdminPassword())) {
-      database.setDefaultAdminPassword(
-          Try.of(() -> new byte[10])
-              .andThenTry(b -> new SecureRandom().nextBytes(b))
-              .mapTry(HexFormat.of().withLowerCase()::formatHex)
-              .get());
-      log.warn("Generated default admin password: {}", database.getDefaultAdminPassword());
-    }
-  }
-
-  /**
-   * Properties for the SOHT2 database.
-   *
-   * <p>This class holds the properties related to the SOHT2 database, including the path to the
-   * database file and default administrative credentials.
-   */
-  @Data
-  public static class DatabaseProperties {
-
-    /** The path to the database file. */
-    private File path = new File("./soht2");
-
-    /** The default username with administrative permissions for the SOHT2 server. */
-    private String adminUsername = "admin";
-
-    /** The default password for the admin user. Randomly generated if not specified. */
-    private String defaultAdminPassword;
+    Assert.notNull(databasePath, "Database path must not be empty");
+    Assert.hasText(adminUsername, "Admin username must not be empty");
+    Assert.hasText(defaultAdminPassword, "Default admin password must not be empty");
+    log.debug("afterPropertiesSet: {}", this);
   }
 
   /**
@@ -94,20 +74,5 @@ public class Soht2ServerConfig implements InitializingBean {
 
     /** The interval at which the server checks for abandoned connections. */
     private Duration checkInterval = Duration.ofSeconds(5);
-  }
-
-  /**
-   * Properties of the OpenAPI server.
-   *
-   * <p>These properties are used to generate OpenAPI documentation for the connector.
-   */
-  @Data
-  public static class OpenAPIProperties {
-
-    /** A public URL of the OpenAPI server */
-    private URI serverUrl;
-
-    /** A description of the OpenAPI server */
-    private String serverDescription;
   }
 }

@@ -90,17 +90,17 @@ public class Soht2UserService implements UserDetailsService {
    */
   @Transactional
   public void checkAdminUserExists() {
+    val username = soht2ServerConfig.getAdminUsername().toLowerCase();
+    val password = soht2ServerConfig.getDefaultAdminPassword();
     val admin =
         userEntityRepository
-            .findByNameIgnoreCase(soht2ServerConfig.getDatabase().getAdminUsername())
+            .findByNameIgnoreCase(username)
             .orElseGet(
                 () ->
                     userEntityRepository.save(
                         UserEntity.builder()
-                            .name(soht2ServerConfig.getDatabase().getAdminUsername().toLowerCase())
-                            .password(
-                                passwordEncoder.encode(
-                                    soht2ServerConfig.getDatabase().getDefaultAdminPassword()))
+                            .name(username)
+                            .password(passwordEncoder.encode(password))
                             .role(UserEntity.ROLE_ADMIN)
                             .build()));
     log.debug("checkAdminUserExists: admin={}", admin);

@@ -44,21 +44,20 @@ Both the client and server components can be run using Java, so on both sides yo
    place it in the same directory as the JAR file. Here is an example configuration:
     ```yaml
     soht2.server:
-      socket-read-timeout: PT0.1S                # Timeout for socket read operations
-      read-buffer-size: 64KB                     # Size of the read buffer for socket connections
-      user-cache-ttl: PT10M                      # Time-to-live for user cache entries
-      database:                                  # Database configuration
-        path: ./soht2                            # Path to the database file
-        admin-username: "${DB_USER}"             # Username for the admin user
-        default-admin-password: "${DB_PASSWORD}" # Default password for the admin user
-      abandoned-connections:                     # Settings for abandoned connections
-        timeout: PT1M                            # Timeout for abandoned connections
-        check-interval: PT5S                     # Interval for checking abandoned connections
-      open-api:                                  # OpenAPI configuration
-        server-url: http://localhost:8080        # Public URL of the OpenAPI server
-        server-description: SOHT2 OpenAPI Server # Description of the OpenAPI server
+      socket-read-timeout: PT0.1S                  # Timeout for socket read operations
+      read-buffer-size: 64KB                       # Size of the read buffer for socket connections
+      user-cache-ttl: PT10M                        # Time-to-live for user cache entries
+      database-path: ./soht2                       # Path to the database file
+      admin-username: "${SOHT2_USR}"               # Username for the admin user
+      default-admin-password: "${SOHT2_PWD}"       # Default password for the admin user
+      open-api-server-url: https://${SOHT2_SERVER} # Public URL of the OpenAPI server
+      abandoned-connections:                       # Settings for abandoned connections
+        timeout: PT1M                              # Timeout for abandoned connections
+        check-interval: PT5S                       # Interval for checking abandoned connections
     ```
-   It is an optional file, and if it is not present, the server will use default values.
+   All settings are optional, but you have to define `soht2.server.database-path`,
+   `soht2.server.admin-username`, and `soht2.server.default-admin-password` to create database and
+   admin user for the server.
 3. Run the server with the following command:
     ```shell
     java -jar soht2-server-X.X.X.jar
@@ -75,8 +74,8 @@ Both the client and server components can be run using Java, so on both sides yo
       url: https://${SOHT2_SERVER}/api/connection # URL of the SOHT2 server API endpoint
       socket-read-timeout: PT0.1S     # Timeout for reading from socket connections
       read-buffer-size: 64KB          # Size of the read buffer for socket connections
-      username: "${SOHT2_USERNAME}"   # Username for authentication on SOHT2 server
-      password: "${SOHT2_PASSWORD}"   # Password for authentication on SOHT2 server
+      username: "${SOHT2_USR}"        # Username for authentication on SOHT2 server
+      password: "${SOHT2_PWD}"        # Password for authentication on SOHT2 server
       connections:                    # List of connections to establish - at least 1 item required
         - local-port: 2022            # Local port to listen on
           remote-host: ${REMOTE_HOST} # Remote host to connect to
@@ -92,16 +91,16 @@ Both the client and server components can be run using Java, so on both sides yo
       proxy:                          # HTTP or NTLM proxy configuration
         host: ${PROXY_HOST}           # If defined, the client sets up an HTTP proxy to this host
         port: ${PROXY_PORT}           # Port of the HTTP proxy host
-        username: "${PROXY_USERNAME}" # Optional, only for authenticated HTTP or NTLM proxy
-        password: "${PROXY_PASSWORD}" # Optional, only for authenticated HTTP or NTLM proxy
+        username: "${PROXY_USR}"      # Optional, only for authenticated HTTP or NTLM proxy
+        password: "${PROXY_PWD}"      # Optional, only for authenticated HTTP or NTLM proxy
         domain: "MYORG"               # Optional, only for NTLM proxy
     ```
    You have to define `soht2.client.url` and at least one connection in the
-   `soht2.client.connections` list.<br>
+   `soht2.client.connections` list. All the rest of properties are optional.<br>
    If you want to use an HTTP proxy, you can define the `soht2.client.proxy` section with
    appropriate values.<br>
    If you want to use SOCKS5 proxy, just add `-DsocksProxyHost=localhost -DsocksProxyPort=1080` to
-   the list of JVM options (see next step) - but set the appropriate host and port, of course.<br>
+   the list of JVM options (see next step) - but set the correct host and port, of course.<br>
    _Be aware that this implementation does not support authentication for SOCKS5 proxy._
 3. Run the client with the following command:
     ```shell
@@ -115,6 +114,78 @@ Both the client and server components can be run using Java, so on both sides yo
    You can test it by running `telnet localhost 2022` (or whatever local port you defined in the
    configuration) and then trying to connect to the remote host, e.g. `ssh -p 2022 user@localhost`
    for this example configuration.
+
+Tips & Tricks
+-------------
+
+### SOHT2 Server
+
+#### Create a Systemd Service
+
+In case if you start the SOHT2 server on a Linux (e.g., EC2 instance), you can create a systemd
+service to manage it. Suppose you put the `soht2-server-X.X.X.jar` file in the `/opt/soht2`
+directory and created the `application-server.yaml` file in the same directory.
+
+I'd recommend making a symlink to the JAR file, so you can update it later without changing the
+service configuration:
+
+```shell
+cd /opt/soht2
+ln -sf soht2-server-X.X.X.jar soht2-server.jar
+```
+
+Then login as a root and create the file `/etc/systemd/system/soht2-server.service` with the
+following content:
+
+```
+[Unit]
+Description=SOHT2 Server Service
+After=syslog.target network.target
+
+[Service]
+EnvironmentFile=/opt/soht2/soht2-server.env
+User=ec2-user
+WorkingDirectory=/opt/soht2
+ExecStart=/usr/bin/java $JAVA_OPTS -jar /opt/api2/soht2-server.jar
+SuccessExitStatus=143
+TimeoutStopSec=10
+Restart=on-failure
+RestartSec=5
+SyslogIdentifier=soht2-server
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then enable and run the service:
+
+```shell
+sudo systemctl enable soht2-server.service
+sudo systemctl start soht2-server.service
+sudo systemctl daemon-reload
+```
+
+To get the service logs, you can use the following command:
+
+```shell
+journalctl -u soht2-server -f
+```
+
+#### Web Consoles
+
+In addition to the API, SOHT2 server provides the web consoles for managing users and connections:
+1. SOHT2 UI (_work is in progress_)
+    - URL: `https://${SOHT2_SERVER}/`
+    - This console allows you to manage users and view connection history.
+2. Swagger UI
+    - URL: `https://${SOHT2_SERVER}/swagger-ui.html`
+    - This console provides an interactive interface for the SOHT2 server API, allowing you to test
+      endpoints and view API documentation.
+3. Database Browser
+    - URL: `https://${SOHT2_SERVER}/h2-console`
+    - This console allows you to view and manage the underlying database used by the SOHT2 server.
+      Username and password are the same as for the admin user defined in the
+      `application-server.yaml` file.
 
 TODO List
 ---------
