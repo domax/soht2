@@ -181,6 +181,33 @@ server:
   port: 8080 # Change this to your desired port number
 ```
 
+#### Change Context Path
+
+In case if you want to access to your SOHT2 server from a different context path (e.g., `/soht2`) to
+make it publicly accessible by URL like `https://example.com/soht2`, you may do two things:
+
+1. Change the context path in the `application-server.yaml` file:
+   ```yaml
+   server:
+     servlet:
+       context-path: /soht2
+   ```
+2. If you are using a reverse proxy (like Nginx or Apache), you can configure it to forward requests
+   from the desired context path to the SOHT2 server.
+   E.g., for Nginx add the following configuration:
+    ```nginx
+    location /soht2/ {
+      proxy_pass http://localhost:8080/soht2/;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header Host $host;
+      proxy_set_header X-Forwarded-Proto "https";
+    }
+    ```
+
+That way, you can access the SOHT2 server at `https://example.com/soht2/api/connection`, and it
+allows all the UI components to work correctly.
+
 #### Web Consoles
 
 In addition to the API, SOHT2 server provides the web consoles for managing users and connections:
@@ -209,6 +236,7 @@ TODO List
 - [X] Finalize authentication and authorization mechanisms
 - [X] Add user controller for managing users
 - [X] Add OpenAPI documentation for the server API
+- [ ] Add allowedTargets support on the server side (*:*, localhost:*, 192.168.0.*:22, etc.)
 - [ ] Add connection history support on the server side
 - [ ] Add more tests
 - [ ] Implement UI
