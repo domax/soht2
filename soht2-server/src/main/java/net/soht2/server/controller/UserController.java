@@ -3,14 +3,11 @@ package net.soht2.server.controller;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.servers.Server;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Collection;
 import lombok.RequiredArgsConstructor;
@@ -28,13 +25,6 @@ import org.springframework.web.bind.annotation.*;
  * deleting, and listing users, as well as retrieving the current user's information and changing
  * their password.
  */
-// <editor-fold desc="OpenAPI Annotations">
-@OpenAPIDefinition(
-    info = @Info(title = "SOHT2 Server API", version = "0.0.2"),
-    servers = {
-      @Server(url = "${soht2.server.open-api-server-url}", description = "SOHT2 OpenAPI Server")
-    })
-// </editor-fold>
 @Slf4j
 @RequiredArgsConstructor
 @RestController

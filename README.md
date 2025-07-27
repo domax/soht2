@@ -45,7 +45,7 @@ Both the client and server components can be run using Java, so on both sides yo
     ```yaml
     soht2.server:
       socket-read-timeout: PT0.1S                  # Timeout for socket read operations
-      read-buffer-size: 64KB                       # Size of the read buffer for socket connections
+      read-buffer-size: 1MB                        # Size of the read buffer for socket connections
       user-cache-ttl: PT10M                        # Time-to-live for user cache entries
       database-path: ./soht2                       # Path to the database file
       admin-username: "${SOHT2_USR}"               # Username for the admin user
@@ -73,7 +73,7 @@ Both the client and server components can be run using Java, so on both sides yo
     soht2.client:
       url: https://${SOHT2_SERVER}/api/connection # URL of the SOHT2 server API endpoint
       socket-read-timeout: PT0.1S     # Timeout for reading from socket connections
-      read-buffer-size: 64KB          # Size of the read buffer for socket connections
+      read-buffer-size: 1MB           # Size of the read buffer for socket connections
       username: "${SOHT2_USR}"        # Username for authentication on SOHT2 server
       password: "${SOHT2_PWD}"        # Password for authentication on SOHT2 server
       connections:                    # List of connections to establish - at least 1 item required
@@ -86,7 +86,7 @@ Both the client and server components can be run using Java, so on both sides yo
       poll:                           # Polling settings for the connections
         strategy: exponent            # Polling strategy for connections (exponent, linear, fixed)
         initial-delay: PT0.1S         # Initial delay before the first poll retry
-        max-delay: PT5S               # Maximum delay between retries
+        max-delay: PT1S               # Maximum delay between retries
         factor: 5                     # Factor for exponential backoff
       proxy:                          # HTTP or NTLM proxy configuration
         host: ${PROXY_HOST}           # If defined, the client sets up an HTTP proxy to this host
@@ -94,6 +94,7 @@ Both the client and server components can be run using Java, so on both sides yo
         username: "${PROXY_USR}"      # Optional, only for authenticated HTTP or NTLM proxy
         password: "${PROXY_PWD}"      # Optional, only for authenticated HTTP or NTLM proxy
         domain: "MYORG"               # Optional, only for NTLM proxy
+      disable-ssl-verification: false # Disable SSL verification for the connections
     ```
    You have to define `soht2.client.url` and at least one connection in the
    `soht2.client.connections` list. All the rest of properties are optional.<br>
@@ -208,6 +209,14 @@ make it publicly accessible by URL like `https://example.com/soht2`, you may do 
 That way, you can access the SOHT2 server at `https://example.com/soht2/api/connection`, and it
 allows all the UI components to work correctly.
 
+#### Fast Reset
+
+If you need to reset the SOHT2 server quickly, you can delete the database file specified in the
+`soht2.server.database-path` property in the `application-server.yaml` file (it has the `.mv.db`
+extension - e.g. `soht2.mv.db`) and restart service. This will remove all users and connections,
+allowing you to start fresh. However, be cautious as this action is irreversible and will delete all
+stored data.
+
 #### Web Consoles
 
 In addition to the API, SOHT2 server provides the web consoles for managing users and connections:
@@ -219,11 +228,6 @@ In addition to the API, SOHT2 server provides the web consoles for managing user
     - URL: `https://${SOHT2_SERVER}/swagger-ui`
     - This console provides an interactive interface for the SOHT2 server API, allowing you to test
       endpoints and view API documentation.
-3. Database Browser
-    - URL: `https://${SOHT2_SERVER}/h2-console`
-    - This console allows you to view and manage the underlying database used by the SOHT2 server.
-      Username and password are the same as for the admin user defined in the
-      `application-server.yaml` file.
 
 TODO List
 ---------
@@ -236,7 +240,7 @@ TODO List
 - [X] Finalize authentication and authorization mechanisms
 - [X] Add user controller for managing users
 - [X] Add OpenAPI documentation for the server API
-- [ ] Add allowedTargets support on the server side (*:*, localhost:*, 192.168.0.*:22, etc.)
+- [ ] Add allowedTargets support on the server side (`*:*`, `localhost:*`, `192.168.0.*:22`, etc.)
 - [ ] Add connection history support on the server side
 - [ ] Add more tests
 - [ ] Implement UI

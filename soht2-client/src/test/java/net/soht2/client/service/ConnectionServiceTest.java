@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import io.vavr.control.Try;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
@@ -76,8 +77,9 @@ class ConnectionServiceTest {
             .bufferSize(bufferSize)
             .build()) {
       echoClient.shout(bytesIn);
-      await().until(() -> connectionService.isServerOpen(soht2.id()));
-      await().until(() -> !connectionService.isServerOpen(soht2.id()));
+      await()
+          .pollDelay(Duration.ofSeconds(1))
+          .until(() -> !connectionService.isServerOpen(soht2.id()));
     }
 
     verify(soht2Client).open(host.getRemoteHost(), host.getRemotePort());

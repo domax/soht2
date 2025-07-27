@@ -12,6 +12,7 @@ import java.net.SocketTimeoutException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import lombok.Builder;
@@ -25,6 +26,10 @@ import net.soht2.common.dto.Soht2Connection;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service responsible for managing connections to SOHT2 servers. It handles starting and stopping
+ * connections, as well as data exchange between client and server.
+ */
 @Slf4j
 @RequiredArgsConstructor
 @Service
@@ -34,14 +39,27 @@ public class ConnectionService {
   private final Soht2Client soht2Client;
   private final PollStrategy pollStrategy;
 
+  private final AtomicBoolean isRunning = new AtomicBoolean();
   private final Map<UUID, SessionState> sessions = new ConcurrentHashMap<>();
 
+  /**
+   * Starts connections to the specified hosts defined in the client properties.
+   *
+   * @return a {@link CompletableFuture} that completes when all connections are started
+   */
   public CompletableFuture<Void> startConnections() {
     return startConnections(null);
   }
 
+  /**
+   * Starts connections to the specified hosts defined in the client properties.
+   *
+   * @param socketOpenedCallback a callback that is invoked when a socket connection is opened
+   * @return a {@link CompletableFuture} that completes when all connections are started
+   */
   public CompletableFuture<Void> startConnections(
       @Nullable Consumer<HostProperties> socketOpenedCallback) {
+    isRunning.set(true);
     return CompletableFuture.allOf(
             soht2ClientProperties.getConnections().stream()
                 .map(host -> CompletableFuture.runAsync(() -> connect(host, socketOpenedCallback)))
@@ -49,15 +67,34 @@ public class ConnectionService {
         .thenRun(() -> log.info("startConnections: terminated"));
   }
 
+  /** Gratefully stops all active connections. */
+  @SuppressWarnings("unused")
+  public void stopConnections() {
+    isRunning.set(false);
+  }
+
+  /**
+   * Checks if a server connection is open for the given connection ID.
+   *
+   * @param connectionId the unique identifier of the connection
+   * @return true if the server connection is open, false otherwise
+   */
   public boolean isServerOpen(UUID connectionId) {
     return sessions.containsKey(connectionId);
   }
 
+  /**
+   * Connects to the specified host and starts a server socket to accept incoming connections.
+   *
+   * @param host the properties of the host to connect to
+   * @param socketOpenedCallback an optional callback that is invoked when a socket connection is
+   *     opened
+   */
   @SneakyThrows
   void connect(HostProperties host, @Nullable Consumer<HostProperties> socketOpenedCallback) {
     log.info("connect: host={}", host);
 
-    do {
+    while (isRunning.get()) {
       try (val serverSocket = new ServerSocket(host.getLocalPort())) {
         log.debug("connect: serverSocket={}", serverSocket);
         ofNullable(socketOpenedCallback).ifPresent(cb -> cb.accept(host));
@@ -81,9 +118,14 @@ public class ConnectionService {
       } catch (Exception e) {
         log.atError().setMessage("connect: {}").addArgument(e::toString).setCause(e).log();
       }
-    } while (sessions.values().stream().map(v -> v.host).anyMatch(host::equals));
+    }
   }
 
+  /**
+   * Exchanges data between the client and server for the given session state.
+   *
+   * @param state the session state containing connection and I/O streams
+   */
   void exchange(SessionState state) {
     val connectionId = state.connection.id();
     val readSize = new AtomicInteger();

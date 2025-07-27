@@ -3,6 +3,7 @@ soht2.client:
     - local-port: 12345
       remote-host: remotehost
       remote-port: 8080
+  read-buffer-size: 16KB
 
 logging.level:
   net.soht2.common: trace

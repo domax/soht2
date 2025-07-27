@@ -1,6 +1,9 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.server.config;
 
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.servers.Server;
 import java.io.File;
 import java.net.URI;
 import java.time.Duration;
@@ -19,6 +22,13 @@ import org.springframework.util.unit.DataSize;
  * <p>This class holds the properties required to configure the SOHT2 server, including the read
  * buffer size and socket timeout.
  */
+// <editor-fold desc="OpenAPI Annotations">
+@OpenAPIDefinition(
+    info = @Info(title = "SOHT2 Server API", version = "0.0.3"),
+    servers = {
+      @Server(url = "${soht2.server.open-api-server-url}", description = "SOHT2 OpenAPI Server")
+    })
+// </editor-fold>
 @Slf4j
 @Data
 @Configuration

@@ -4,14 +4,11 @@ package net.soht2.server.controller;
 import static org.springframework.http.HttpHeaders.CONTENT_ENCODING;
 import static org.springframework.http.MediaType.*;
 
-import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.servers.Server;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Collection;
@@ -29,13 +26,6 @@ import org.springframework.web.bind.annotation.*;
  * Controller for managing SOHT2 connections. Provides endpoints to open, list, exchange data with,
  * and close connections.
  */
-// <editor-fold desc="OpenAPI Annotations">
-@OpenAPIDefinition(
-    info = @Info(title = "SOHT2 Server API", version = "0.0.2"),
-    servers = {
-      @Server(url = "${soht2.server.open-api-server-url}", description = "SOHT2 OpenAPI Server")
-    })
-// </editor-fold>
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/connection")

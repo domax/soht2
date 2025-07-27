@@ -25,9 +25,9 @@ spring:
     cache-names: userCache
     type: caffeine
     caffeine.spec: maximumSize=1000,expireAfterWrite=${soht2.server.user-cache-ttl}
-  h2.console:
-    enabled: true
-    settings.web-allow-others: true
+  #h2.console:
+  #  enabled: true
+  #  settings.web-allow-others: true
 
 management:
   endpoints:
@@ -71,7 +71,7 @@ server:
 
 soht2.server:
   socket-read-timeout: PT0.1S
-  read-buffer-size: 64KB
+  read-buffer-size: 1MB
   user-cache-ttl: PT10M
   database-path: ./soht2
   admin-username: admin

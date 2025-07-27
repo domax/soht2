@@ -1,7 +1,6 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.server.config;
 
-import static net.soht2.server.entity.UserEntity.ROLE_ADMIN;
 import static org.springframework.security.config.Customizer.withDefaults;
 
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -35,19 +34,10 @@ public class SecurityConfig {
     return http.csrf(CsrfConfigurer::disable)
         .cors(withDefaults())
         .httpBasic(withDefaults())
-        .headers(
-            h ->
-                h.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
-                    .contentSecurityPolicy(p -> p.policyDirectives("frame-src 'self'")))
+        .headers(h -> h.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
         .authorizeHttpRequests(
             registry ->
-                registry
-                    .requestMatchers("/api/**")
-                    .authenticated()
-                    .requestMatchers("/h2-console/**")
-                    .hasAuthority(ROLE_ADMIN)
-                    .anyRequest()
-                    .permitAll())
+                registry.requestMatchers("/api/**").authenticated().anyRequest().permitAll())
         .build();
   }
 

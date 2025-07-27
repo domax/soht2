@@ -20,12 +20,13 @@ logging.level:
 soht2.client:
   url: http://localhost:8080/api/connection
   socket-read-timeout: PT0.1S
-  read-buffer-size: 64KB
+  read-buffer-size: 1MB
   compression:
     type: none
     min-request-size: 2KB
   poll:
     strategy: exponent
     initial-delay: PT0.1S
-    max-delay: PT5S
+    max-delay: PT1S
     factor: 5
+  disable-ssl-verification: false
