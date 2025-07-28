@@ -30,10 +30,10 @@ Create an environment file `/opt/soht2/soht2-server.env` with the following cont
 where you need to replace the `SOHT2_SERVER`, `SOHT2_USR`, and `SOHT2_PWD` with your actual values:
 
 ```shell
-JAVA_OPTS="-Xmx256m -Duser.timezone=UTC" # Java options for the SOHT2 server
-SOHT2_SERVER="soht2.example.com"         # Public domain name of the SOHT2 server
-SOHT2_USR="admin"                        # Username for the admin user
-SOHT2_PWD="password"                     # Password for the admin user
+JAVA_OPTS="-Xmx256m -server"      # Java options for the SOHT2 server
+SOHT2_SERVER="soht2.example.com"  # Public domain name of the SOHT2 server
+SOHT2_USR="admin"                 # Username for the admin user
+SOHT2_PWD="password"              # Password for the admin user
 ```
 
 Make sure the environment file is available to the service user only (e.g., `ec2-user`):

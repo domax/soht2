@@ -57,3 +57,5 @@ application-local.yaml
 *.mv.db
 *.trace.db
 /http-client.private.env.json
+*.pid
+*.log

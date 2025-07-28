@@ -5,6 +5,9 @@ spring:
   main:
     banner-mode: off
     web-application-type: none
+  pid:
+    file: ./soht2-client.pid
+    fail-on-write-error: true
   jackson:
     date-format: com.fasterxml.jackson.databind.util.StdDateFormat
     serialization:

@@ -25,9 +25,6 @@ spring:
     cache-names: userCache
     type: caffeine
     caffeine.spec: maximumSize=1000,expireAfterWrite=${soht2.server.user-cache-ttl}
-  #h2.console:
-  #  enabled: true
-  #  settings.web-allow-others: true
 
 management:
   endpoints:
