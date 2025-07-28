@@ -15,6 +15,24 @@ accessible for users of all skill levels.
 It supports both client and server modes, allowing you to create a tunnel for outgoing connections
 or to accept incoming connections through an optional HTTP proxy.
 
+Disclaimer
+----------
+
+This project is not affiliated with or endorsed by the original SOHT project or its authors. It is
+an independent implementation that aims to provide similar functionality with modern Java practices.
+
+Also, this project is not a legal advice or a security solution. It is provided "as is" without any
+warranties or guarantees. Use it at your own risk.
+
+Please review the code and documentation carefully before using it in production environments.
+For any legal or security concerns, consult with a qualified professional.
+
+This project is intended for educational and informational purposes only.
+
+By using this project, you agree to the terms of the [MIT License](LICENSE.txt) and then merge it
+into the site-policy repo. This is to ensure that I can review and iterate on the changes before
+they are made public. I appreciate your understanding and cooperation in this process.
+
 How It Works
 ------------
 
@@ -240,7 +258,7 @@ TODO List
 - [X] Finalize authentication and authorization mechanisms
 - [X] Add user controller for managing users
 - [X] Add OpenAPI documentation for the server API
-- [ ] Add allowedTargets support on the server side (`*:*`, `localhost:*`, `192.168.0.*:22`, etc.)
-- [ ] Add connection history support on the server side
+- [ ] Add allowedTargets per user on the server side (`*:*`, `localhost:*`, `192.168.0.*:22`, etc.)
+- [ ] Add connection history on the server side
 - [ ] Add more tests
 - [ ] Implement UI
