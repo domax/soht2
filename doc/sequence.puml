@@ -36,7 +36,7 @@ alt exchange
     "SOHT2 Client" <-- "Client Socket" --: done
 
     "SOHT2 Client" -> "SOHT2 Client": delay
-    note right: computed from 0 to poll.maxDelay
+    note right: computed on empty data exchange from 0 to poll.maxDelay
 
   end loop
 
