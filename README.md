@@ -156,7 +156,7 @@ ln -sf soht2-server-X.X.X.jar soht2-server.jar
 Then login as a root and create the file `/etc/systemd/system/soht2-server.service` with the
 following content:
 
-```
+```properties
 [Unit]
 Description=SOHT2 Server Service
 After=syslog.target network.target
@@ -214,7 +214,7 @@ make it publicly accessible by URL like `https://example.com/soht2`, you may do 
 2. If you are using a reverse proxy (like Nginx or Apache), you can configure it to forward requests
    from the desired context path to the SOHT2 server.
    E.g., for Nginx add the following configuration:
-    ```nginx
+    ```nginx configuration
     location /soht2/ {
       proxy_pass http://localhost:8080/soht2/;
       proxy_set_header X-Real-IP $remote_addr;
