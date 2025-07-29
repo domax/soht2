@@ -1,6 +1,8 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.server.controller;
 
+import static net.soht2.server.controller.UserController.AUTH_REQ;
+import static net.soht2.server.entity.UserEntity.ROLE_ADMIN;
 import static org.springframework.http.HttpHeaders.CONTENT_ENCODING;
 import static org.springframework.http.MediaType.*;
 
@@ -47,7 +49,9 @@ public class ConnectionController {
    */
   // <editor-fold desc="OpenAPI Annotations">
   @Tag(name = "Connection Requests")
-  @Operation(summary = "Opens a new SOHT2 connection to the specified target host and port.")
+  @Operation(
+      summary = "Opens a new SOHT2 connection to the specified target host and port.",
+      description = AUTH_REQ)
   @SecurityRequirement(name = "Basic Authentication")
   @ApiResponse(responseCode = "200")
   @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(hidden = true)))
@@ -81,7 +85,13 @@ public class ConnectionController {
    */
   // <editor-fold desc="OpenAPI Annotations">
   @Tag(name = "Connection Requests")
-  @Operation(summary = "Lists all currently open SOHT2 connections.")
+  @Operation(
+      summary = "Lists all currently open SOHT2 connections.",
+      description =
+          "For user in "
+              + ROLE_ADMIN
+              + " role it returns all connections, "
+              + "for other users it returns only their own connections.")
   @SecurityRequirement(name = "Basic Authentication")
   @ApiResponse(responseCode = "200")
   @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(hidden = true)))
@@ -103,7 +113,9 @@ public class ConnectionController {
    */
   // <editor-fold desc="OpenAPI Annotations">
   @Tag(name = "Connection Requests")
-  @Operation(summary = "Exchanges data with the specified SOHT2 connection.")
+  @Operation(
+      summary = "Exchanges data with the specified SOHT2 connection.",
+      description = AUTH_REQ + " But only user who created connection can use it.")
   @SecurityRequirement(name = "Basic Authentication")
   @ApiResponse(responseCode = "200")
   @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(hidden = true)))
@@ -130,7 +142,9 @@ public class ConnectionController {
    */
   // <editor-fold desc="OpenAPI Annotations">
   @Tag(name = "Connection Requests")
-  @Operation(summary = "Closes the SOHT2 connection by the specified unique identifier.")
+  @Operation(
+      summary = "Closes the SOHT2 connection by the specified unique identifier.",
+      description = "Connection owner or user in " + ROLE_ADMIN + " role can close the connection.")
   @SecurityRequirement(name = "Basic Authentication")
   @ApiResponse(responseCode = "200")
   @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(hidden = true)))
@@ -138,7 +152,10 @@ public class ConnectionController {
   @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(hidden = true)))
   @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(hidden = true)))
   // </editor-fold>
-  @PreAuthorize("@soht2Service.isConnectionOwner(authentication, #connectionId)")
+  @PreAuthorize(
+      "@soht2Service.isConnectionOwner(authentication, #connectionId) || hasAuthority('"
+          + ROLE_ADMIN
+          + "')")
   @DeleteMapping(path = PATH_ID)
   public void close(@PathVariable("id") UUID connectionId) {
     soht2Service.close(connectionId);
