@@ -1,11 +1,12 @@
 SOHT2 - Socket Over HTTP Tunnel 2
 =================================
 
-[![GitHub License](https://img.shields.io/github/license/domax/soht2)](https://opensource.org/licenses/MIT "MIT License page")
 [![Made with Java](https://img.shields.io/badge/Java-21-blue?logo=openjdk&logoColor=white)](https://openjdk.org "OpenJDK homepage")
 [![Made with Spring Boot](https://img.shields.io/badge/SpringBoot-3-blue?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot "Spring Boot homepage")
 [![Made with TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript&logoColor=white)](https://typescriptlang.org "TypeScript homepage")
-[![Made with React](https://img.shields.io/badge/React-19-blue?logo=react&logoColor=white)](https://reactjs.org "React homepage")<br>
+[![Made with React](https://img.shields.io/badge/React-19-blue?logo=react&logoColor=white)](https://reactjs.org "React homepage")
+[![Made with Node.js](https://img.shields.io/badge/Node.js-23-blue?logo=node.js&logoColor=white)](https://nodejs.org/en "Node.js homepage")<br>
+[![GitHub License](https://img.shields.io/github/license/domax/soht2)](https://opensource.org/licenses/MIT "MIT License page")
 [![CodeQL](https://github.com/domax/soht2/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/domax/soht2/actions/workflows/github-code-scanning/codeql)
 [![Gradle Package](https://github.com/domax/soht2/actions/workflows/gradle-publish.yml/badge.svg)](https://github.com/domax/soht2/actions/workflows/gradle-publish.yml)
 [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/domax/soht2/total)](https://github.com/domax?tab=packages&repo_name=soht2 "SOHT2 Packages page")
