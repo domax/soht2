@@ -1,6 +1,15 @@
 SOHT2 - Socket Over HTTP Tunnel 2
 =================================
 
+[![GitHub License](https://img.shields.io/github/license/domax/soht2)](https://opensource.org/licenses/MIT "MIT License page")
+[![CodeQL](https://github.com/domax/soht2/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/domax/soht2/actions/workflows/github-code-scanning/codeql)
+[![Gradle Package](https://github.com/domax/soht2/actions/workflows/gradle-publish.yml/badge.svg)](https://github.com/domax/soht2/actions/workflows/gradle-publish.yml)
+[![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/domax/soht2/total)](https://github.com/domax?tab=packages&repo_name=soht2 "SOHT2 Packages page")
+[![Made with Java](https://img.shields.io/badge/Java-21-blue?logo=openjdk&logoColor=white)](https://openjdk.org "OpenJDK homepage")
+[![Made with Spring Boot](https://img.shields.io/badge/SpringBoot-3-blue?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot "Spring Boot homepage")
+[![Made with TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript&logoColor=white)](https://typescriptlang.org "TypeScript homepage")
+[![Made with React](https://img.shields.io/badge/React-19-blue?logo=react&logoColor=white)](https://reactjs.org "React homepage")
+
 SOHT2 is a Java-based API that provides a secure and efficient way to tunnel socket connections over
 HTTP. It is designed to work seamlessly with various applications that require socket communication,
 such as web services, IoT devices, and more.
@@ -41,12 +50,12 @@ connection requests to the server, which then forwards these requests to the app
 hosts. The server acts as a bridge, allowing the client to communicate with remote hosts without
 exposing them directly to the client.
 
-![components.png](doc/components.png)
+![components.png](doc/components.png "Component Diagram for SOHT2 Client-Server Architecture")
 
 Below is a simplified sequence diagram illustrating the flow of a connection request from the client
 to the server and how the server processes this request to establish a tunnel to a remote host:
 
-![sequence.png](doc/sequence.png)
+![sequence.png](doc/sequence.png "Sequence Diagram for Client-Server SOHT2 Connection")
 
 How to Configure And Run
 ------------------------
@@ -152,6 +161,7 @@ TODO List
 - [X] Add user controller for managing users
 - [X] Add OpenAPI documentation for the server API
 - [ ] Add allowedTargets per user on the server side (`*:*`, `localhost:*`, `192.168.0.*:22`, etc.)
+- [ ] Fix NTLM proxy
 - [ ] Add connection history on the server side
 - [ ] Add more tests
 - [ ] Implement UI
