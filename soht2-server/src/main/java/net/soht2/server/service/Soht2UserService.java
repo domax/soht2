@@ -127,7 +127,7 @@ public class Soht2UserService implements UserDetailsService {
   public Soht2User createUser(
       String name, String password, @Nullable String role, Set<String> allowedTargets)
       throws HttpClientErrorException {
-    log.debug("createUser: name={}, role={}, allowedTargets={}", name, role, allowedTargets);
+    log.info("createUser: name={}, role={}, allowedTargets={}", name, role, allowedTargets);
 
     if (!hasText(name)) throw badRequest(ERR_USER_EMPTY);
     if ("self".equalsIgnoreCase(name)) throw badRequest("Cannot create user with name 'self'");
@@ -167,7 +167,7 @@ public class Soht2UserService implements UserDetailsService {
       @Nullable String role,
       @Nullable Set<String> allowedTargets)
       throws HttpClientErrorException {
-    log.debug("updateUser: name={}, role={}, allowedTargets={}", name, role, allowedTargets);
+    log.info("updateUser: name={}, role={}, allowedTargets={}", name, role, allowedTargets);
 
     if (!hasText(name)) throw badRequest(ERR_USER_EMPTY);
     if (!ofNullable(allowedTargets).stream()
@@ -211,7 +211,7 @@ public class Soht2UserService implements UserDetailsService {
    */
   @Transactional
   public void deleteUser(String name, boolean force) throws HttpClientErrorException {
-    log.debug("deleteUser: name={}", name);
+    log.info("deleteUser: name={}, force={}", name, force);
 
     if (!hasText(name)) throw badRequest(ERR_USER_EMPTY);
     val userEntity =
@@ -231,7 +231,7 @@ public class Soht2UserService implements UserDetailsService {
    */
   @Transactional(readOnly = true)
   public List<Soht2User> listUsers() {
-    log.debug("listUsers");
+    log.info("listUsers");
     return userEntityRepository.findAll().stream().map(UserEntity::toSoht2User).toList();
   }
 
@@ -241,8 +241,9 @@ public class Soht2UserService implements UserDetailsService {
    * @param names a collection of usernames to retrieve
    * @return a list of {@link Soht2User} objects representing the specified users
    */
+  @Transactional(readOnly = true)
   public List<Soht2User> listUsers(Collection<String> names) {
-    log.debug("listUsers: names={}", names);
+    log.info("listUsers: names={}", names);
     return userEntityRepository.findAllByNameIgnoreCaseIn(names).stream()
         .map(UserEntity::toSoht2User)
         .toList();
@@ -258,7 +259,7 @@ public class Soht2UserService implements UserDetailsService {
    */
   @Transactional(readOnly = true)
   public Soht2User getSelf(Authentication authentication) throws HttpClientErrorException {
-    log.debug("getSelf");
+    log.info("getSelf: authentication={}", authentication);
     return userEntityRepository
         .findByNameIgnoreCase(authentication.getName())
         .map(UserEntity::toSoht2User)
@@ -282,7 +283,7 @@ public class Soht2UserService implements UserDetailsService {
   public Soht2User changePassword(
       String oldPassword, String newPassword, Authentication authentication)
       throws HttpClientErrorException {
-    log.debug(
+    log.info(
         "changePassword: old.size={}, new.size={}", oldPassword.length(), newPassword.length());
     if (!hasText(oldPassword)) throw badRequest("Old password must be provided");
     if (!hasText(newPassword)) throw badRequest("New password must be provided");
