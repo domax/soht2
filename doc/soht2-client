@@ -10,12 +10,12 @@ function checkJava() {
   JAVA_HOME="${JAVA_HOME:-$(which java | sed -rn 's|^(.+)/bin/java$|\1|p')}"
   JAVA_CMD="${JAVA_HOME}/bin/java"
   if [[ ! -x "${JAVA_CMD}" ]]; then
-    echo "Java is not installed or not found in PATH."
+    echo >&2 "Java is not installed or not found in PATH."
     exit 7
   fi
   JAVA_VER=$("${JAVA_CMD}" -version 2>&1 | grep version | cut -d\" -f2 | cut -d. -f1)
   if [[ "${JAVA_VER}" -lt 21 ]]; then
-    echo "Java version is ${JAVA_VER}, which is less than 21."
+    echo >&2 "Java version is ${JAVA_VER}, which is less than 21."
     exit 8
   fi
   JAVA_OPTS="${JAVA_OPTS:--Xmx256m -server -Djava.awt.headless=true} -Dspring.pid.file=${PID_FILE}"
@@ -59,17 +59,17 @@ function stop() {
 }
 
 function status() {
-  if [ ! -e "${PID_FILE}" ]; then
+  if [[ ! -e "${PID_FILE}" ]]; then
     echo >&2 "${APP_NAME}'s PID file doesn't exist"
     exit 3
   fi
   APP_PID="$(cat "${PID_FILE}")"
-  if [ -z "${APP_PID}" ]; then
+  if [[ -z "${APP_PID}" ]]; then
     echo >&2 "${APP_NAME}'s PID file exists but empty"
     exit 4
   fi
   ps -p "${APP_PID}" >/dev/null
-  if [ ! $? ]; then
+  if [[ ! $? ]]; then
     echo >&2 "${APP_NAME} is not running but PID file exists"
     exit 5
   fi
