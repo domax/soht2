@@ -14,7 +14,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "users")
+@Table(name = "soht2_users")
 @Getter
 @Setter
 @ToString
@@ -43,6 +43,10 @@ public class UserEntity {
   @Column(name = "user_role", nullable = false)
   private String role = ROLE_USER;
 
+  @Builder.Default
+  @Column(name = "targets", nullable = false)
+  private Set<String> allowedTargets = Set.of("*:*");
+
   @CreatedDate
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
@@ -69,12 +73,13 @@ public class UserEntity {
     return Objects.equals(id, userEntity.id)
         && Objects.equals(name, userEntity.name)
         && Objects.equals(password, userEntity.password)
-        && Objects.equals(role, userEntity.role);
+        && Objects.equals(role, userEntity.role)
+        && Objects.equals(allowedTargets, userEntity.allowedTargets);
   }
 
   @Override
   public final int hashCode() {
-    return Objects.hash(id, name, password, role);
+    return Objects.hash(id, name, password, role, allowedTargets);
   }
 
   public Soht2User toSoht2User() {
@@ -83,6 +88,7 @@ public class UserEntity {
         .role(role)
         .createdAt(createdAt)
         .updatedAt(updatedAt)
+        .allowedTargets(allowedTargets)
         .build();
   }
 }

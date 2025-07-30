@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Collection;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.soht2.common.dto.Soht2User;
@@ -45,12 +46,13 @@ public class UserController {
    * @param username the username of the new user
    * @param password the password of the new user
    * @param role the role of the new user (optional)
+   * @param allowedTargets the set of allowed targets for the new user, defaults to "*:*"
    * @return the created {@link Soht2User} object
    */
   // <editor-fold desc="OpenAPI Annotations">
   @Tag(name = "User Requests")
   @Operation(
-      summary = "Creates a new user with the specified name, password, and role.",
+      summary = "Creates a new user with the specified name, password, role, and allowed targets.",
       description = ADMIN_ONLY)
   @SecurityRequirement(name = "Basic Authentication")
   @ApiResponse(responseCode = "200")
@@ -62,23 +64,25 @@ public class UserController {
   public Soht2User create(
       @RequestParam("username") String username,
       @RequestParam("password") String password,
-      @RequestParam(name = "role", required = false) @Nullable String role) {
-    return soht2UserService.createUser(username, password, role);
+      @RequestParam(name = "role", required = false) @Nullable String role,
+      @RequestParam(name = "target", defaultValue = "*:*") Set<String> allowedTargets) {
+    return soht2UserService.createUser(username, password, role, allowedTargets);
   }
 
   /**
-   * Updates an existing user with the specified username, password, and optional role. Only users
-   * with the admin role can update users.
+   * Updates an existing user with the specified password, role, and allowed targets. Only specified
+   * (non-null) attributes are updated. Only users with the admin role can update user records.
    *
    * @param name the username of the user to update
    * @param password the new password for the user (optional)
    * @param role the new role for the user (optional)
+   * @param allowedTargets the set of allowed targets for the user (optional)
    * @return the updated {@link Soht2User} object
    */
   // <editor-fold desc="OpenAPI Annotations">
   @Tag(name = "User Requests")
   @Operation(
-      summary = "Updates an existing user with the specified name, password, and role.",
+      summary = "Updates an existing user with the password, role, and allowed targets.",
       description = ADMIN_ONLY)
   @SecurityRequirement(name = "Basic Authentication")
   @ApiResponse(responseCode = "200")
@@ -92,15 +96,16 @@ public class UserController {
   public Soht2User update(
       @PathVariable("name") String name,
       @RequestParam(name = "password", required = false) @Nullable String password,
-      @RequestParam(name = "role", required = false) @Nullable String role) {
-    return soht2UserService.updateUser(name, password, role);
+      @RequestParam(name = "role", required = false) @Nullable String role,
+      @RequestParam(name = "target", required = false) @Nullable Set<String> allowedTargets) {
+    return soht2UserService.updateUser(name, password, role, allowedTargets);
   }
 
   /**
    * Deletes a user with the specified username. Only users with the admin role can delete users.
    *
    * @param name the username of the user to delete
-   * @param force if true, forces deletion even if the user is currently connected
+   * @param force if true, forces deletion even if the affected user is admin
    */
   // <editor-fold desc="OpenAPI Annotations">
   @Tag(name = "User Requests")

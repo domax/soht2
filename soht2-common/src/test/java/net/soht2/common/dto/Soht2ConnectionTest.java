@@ -5,6 +5,7 @@ import static net.soht2.common.UTHelper.getObjectMapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 import lombok.val;
 import org.junit.jupiter.api.Test;
 
@@ -24,6 +25,7 @@ class Soht2ConnectionTest {
                     .role("d")
                     .createdAt(timestamp)
                     .updatedAt(timestamp)
+                    .allowedTargets(Set.of("*:*"))
                     .build())
             .build();
     assertThat(object.id()).isNotNull();
@@ -34,6 +36,7 @@ class Soht2ConnectionTest {
     assertThat(object.user().role()).isEqualTo("d");
     assertThat(object.user().createdAt()).isEqualTo(timestamp);
     assertThat(object.user().updatedAt()).isEqualTo(timestamp);
+    assertThat(object.user().allowedTargets()).containsExactly("*:*");
 
     val objectMapper = getObjectMapper();
     val json = objectMapper.writeValueAsString(object);

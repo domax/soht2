@@ -161,8 +161,9 @@ TODO List
 - [X] Finalize authentication and authorization mechanisms
 - [X] Add user controller for managing users
 - [X] Add OpenAPI documentation for the server API
-- [ ] Add allowedTargets per user on the server side (`*:*`, `localhost:*`, `192.168.0.*:22`, etc.)
-- [ ] Fix NTLM proxy
+- [X] Add allowedTargets per user on the server side (`*:*`, `localhost:*`, `192.168.0.*:22`, etc.)
+- [ ] Add username and password validation
 - [ ] Add connection history on the server side
+- [ ] Fix NTLM proxy
 - [ ] Add more tests
 - [ ] Implement UI

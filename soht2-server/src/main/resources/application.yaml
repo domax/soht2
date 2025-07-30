@@ -20,7 +20,12 @@ spring:
       maximum-pool-size: 5
   jpa:
     open-in-view: true
-    hibernate.ddl-auto: update
+    hibernate.ddl-auto: none
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    table: SOHT2_SCHEMA_HISTORY
   cache:
     cache-names: userCache
     type: caffeine

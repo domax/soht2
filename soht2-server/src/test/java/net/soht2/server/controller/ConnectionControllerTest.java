@@ -67,6 +67,9 @@ class ConnectionControllerTest {
 
       val connectionInfo = mock(ServerConnection.class);
       doReturn(sohtConnection).when(connectionInfo).soht2();
+      doReturn(true)
+          .when(soht2Service)
+          .isTargetAllowed(any(Authentication.class), anyString(), anyInt());
       doReturn(connectionInfo)
           .when(soht2Service)
           .open(any(Soht2Connection.class), any(Authentication.class));
@@ -88,6 +91,7 @@ class ConnectionControllerTest {
           .andExpect(jsonPath("$.targetPort").value(sohtConnection.targetPort().toString()))
           .andExpect(jsonPath("$.openedAt").value(sohtConnection.openedAt().toString()));
 
+      verify(soht2Service).isTargetAllowed(any(Authentication.class), eq("targetHost"), eq(12345));
       verify(soht2Service).open(eq(sohtConnection), any(Authentication.class));
       verify(connectionInfo).soht2();
     }

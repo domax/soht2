@@ -207,6 +207,23 @@ public class Soht2Service {
         .isPresent();
   }
 
+  /**
+   * Checks if the target host and port are allowed for the user associated with the given
+   * authentication.
+   *
+   * @param authentication the authentication object representing the user
+   * @param targetHost the target host to check
+   * @param targetPort the target port to check
+   * @return {@code true} if the target is allowed, {@code false} otherwise
+   */
+  public boolean isTargetAllowed(Authentication authentication, String targetHost, int targetPort) {
+    return soht2UserService
+        .getCachedUserEntity(authentication.getName())
+        .map(UserEntity::toSoht2User)
+        .filter(su -> su.isAllowedTarget(targetHost, targetPort))
+        .isPresent();
+  }
+
   private ServerConnection updateConnectionWithUser(
       ServerConnection connection, Authentication authentication) {
     soht2UserService

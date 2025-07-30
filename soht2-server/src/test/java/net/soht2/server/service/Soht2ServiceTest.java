@@ -32,8 +32,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SuppressWarnings("java:S2925")
 @Slf4j
-@SpringBootTest /*(classes = Soht2Service.class)
-                @Import(Soht2ServerConfig.class)*/
+@SpringBootTest
 @ActiveProfiles("test")
 @WithMockUser(username = "system", password = "test", authorities = UserEntity.ROLE_ADMIN)
 class Soht2ServiceTest {

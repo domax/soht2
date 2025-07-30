@@ -9,6 +9,8 @@ import static org.springframework.util.StringUtils.hasText;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Pattern;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -42,6 +44,10 @@ public class Soht2UserService implements UserDetailsService {
 
   private static final String ERR_USER_NOT_FOUND = "User not found";
   private static final String ERR_USER_EMPTY = "User name must be provided";
+  private static final String ERR_TARGET =
+      "Invalid allowed target format. Must be in the format 'host:123' or '*.host:*'";
+
+  private static final Pattern RE_TARGET = Pattern.compile("^[a-z0-9.*-]+:[0-9*]+$");
 
   private final Soht2ServerConfig soht2ServerConfig;
   private final UserEntityRepository userEntityRepository;
@@ -112,20 +118,25 @@ public class Soht2UserService implements UserDetailsService {
    * @param name the name of the user to create
    * @param password the password for the new user
    * @param role the role of the new user (default is {@link UserEntity#ROLE_USER})
+   * @param allowedTargets a set of allowed targets for the user
    * @return a {@link Soht2User} object representing the created user
    * @throws HttpClientErrorException.BadRequest if the name of the user or password is not
    *     provided, or if the specified user already exists
    */
   @Transactional
-  public Soht2User createUser(String name, String password, @Nullable String role)
+  public Soht2User createUser(
+      String name, String password, @Nullable String role, Set<String> allowedTargets)
       throws HttpClientErrorException {
-    log.debug("createUser: name={}, role={}", name, role);
+    log.debug("createUser: name={}, role={}, allowedTargets={}", name, role, allowedTargets);
+
     if (!hasText(name)) throw badRequest(ERR_USER_EMPTY);
     if ("self".equalsIgnoreCase(name)) throw badRequest("Cannot create user with name 'self'");
     if (!name.matches("^\\w+$"))
       throw badRequest("User name must consist of alphanumeric characters and underscores only");
     if (!hasText(password)) throw badRequest("Password must be provided");
     if (userEntityRepository.existsByNameIgnoreCase(name)) throw badRequest("User already exists");
+    if (!allowedTargets.stream().allMatch(RE_TARGET.asMatchPredicate()))
+      throw badRequest(ERR_TARGET);
 
     return userEntityRepository
         .save(
@@ -133,6 +144,7 @@ public class Soht2UserService implements UserDetailsService {
                 .name(name.toLowerCase())
                 .password(passwordEncoder.encode(password))
                 .role(checkRole(role).orElse(UserEntity.ROLE_USER))
+                .allowedTargets(allowedTargets)
                 .build())
         .toSoht2User();
   }
@@ -143,19 +155,30 @@ public class Soht2UserService implements UserDetailsService {
    * @param name the name of the user to change
    * @param password the new password for the user (optional)
    * @param role the new role for the user (optional)
+   * @param allowedTargets a set of allowed targets for the user
    * @return a {@link Soht2User} object representing the updated user
    * @throws HttpClientErrorException.BadRequest if the name of the user is not provided or if the
    *     role is invalid
    */
   @Transactional
-  public Soht2User updateUser(String name, @Nullable String password, @Nullable String role)
+  public Soht2User updateUser(
+      String name,
+      @Nullable String password,
+      @Nullable String role,
+      @Nullable Set<String> allowedTargets)
       throws HttpClientErrorException {
-    log.debug("updateUser: name={}, role={}", name, role);
+    log.debug("updateUser: name={}, role={}, allowedTargets={}", name, role, allowedTargets);
+
     if (!hasText(name)) throw badRequest(ERR_USER_EMPTY);
+    if (!ofNullable(allowedTargets).stream()
+        .flatMap(Collection::stream)
+        .allMatch(RE_TARGET.asMatchPredicate())) throw badRequest(ERR_TARGET);
+
     var userEntity =
         userEntityRepository
             .findByNameIgnoreCase(name)
             .orElseThrow(() -> notFound(ERR_USER_NOT_FOUND));
+
     var hasChanges = false;
     if (hasText(password)) {
       userEntity.setPassword(passwordEncoder.encode(password));
@@ -163,6 +186,10 @@ public class Soht2UserService implements UserDetailsService {
     }
     if (hasText(role)) {
       checkRole(role).ifPresent(userEntity::setRole);
+      hasChanges = true;
+    }
+    if (allowedTargets != null) {
+      userEntity.setAllowedTargets(allowedTargets);
       hasChanges = true;
     }
     if (hasChanges) {
@@ -185,6 +212,7 @@ public class Soht2UserService implements UserDetailsService {
   @Transactional
   public void deleteUser(String name, boolean force) throws HttpClientErrorException {
     log.debug("deleteUser: name={}", name);
+
     if (!hasText(name)) throw badRequest(ERR_USER_EMPTY);
     val userEntity =
         userEntityRepository

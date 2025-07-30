@@ -1,0 +1,1 @@
+-- It's left empty on purpose to allow the migration tool to create the baseline

@@ -39,7 +39,8 @@ public class ConnectionController {
 
   /**
    * Opens a new SOHT2 connection to the specified target host and port, associating it with the
-   * current user and client host.
+   * current user and client host. Connection opens only if a specified target is allowed for the
+   * user on the server side.
    *
    * @param targetHost the target host to connect to
    * @param targetPort the target port to connect to
@@ -51,7 +52,7 @@ public class ConnectionController {
   @Tag(name = "Connection Requests")
   @Operation(
       summary = "Opens a new SOHT2 connection to the specified target host and port.",
-      description = AUTH_REQ)
+      description = AUTH_REQ + " Connection opens only if a target is allowed for the user.")
   @SecurityRequirement(name = "Basic Authentication")
   @ApiResponse(responseCode = "200")
   @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(hidden = true)))
@@ -59,6 +60,7 @@ public class ConnectionController {
   @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(hidden = true)))
   // </editor-fold>
   @SuppressWarnings("resource")
+  @PreAuthorize("@soht2Service.isTargetAllowed(authentication, #targetHost, #targetPort)")
   @PostMapping(produces = APPLICATION_JSON_VALUE)
   public Soht2Connection open(
       @RequestParam("host") String targetHost,
