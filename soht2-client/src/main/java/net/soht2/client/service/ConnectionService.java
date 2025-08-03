@@ -148,7 +148,7 @@ public class ConnectionService {
           .flatMapTry(
               bytes ->
                   Optional.of(bytes)
-                      .filter(v -> v.length > 0)
+                      .filter(b -> b.length > 0)
                       .map(b -> Try.run(() -> state.out.write(b)).andThenTry(state.out::flush))
                       .orElse(Try.success(null))
                       .andThenTry(v -> writeSize.set(bytes.length)))
@@ -158,7 +158,7 @@ public class ConnectionService {
               // Message "Connection reset" is expected in 2 cases:
               // 1. The OS resets the socket connection.
               // 2. This loop is interrupted by throwing a SocketException above.
-              e -> e.getMessage().equals("Connection reset") ? Try.failure(e) : Try.success(null))
+              e -> "Connection reset".equals(e.getMessage()) ? Try.failure(e) : Try.success(null))
           .onFailure(
               e -> {
                 sessions.remove(connectionId);

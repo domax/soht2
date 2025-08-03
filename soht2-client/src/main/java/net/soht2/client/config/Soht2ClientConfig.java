@@ -6,7 +6,6 @@ import static org.springframework.http.HttpHeaders.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE;
 
-import io.vavr.control.Try;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -17,21 +16,12 @@ import net.soht2.client.service.ConstantPollStrategy;
 import net.soht2.client.service.ExponentPollStrategy;
 import net.soht2.client.service.LinearPollStrategy;
 import net.soht2.client.service.PollStrategy;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
-import org.apache.hc.client5.http.io.HttpClientConnectionManager;
-import org.apache.hc.client5.http.ssl.DefaultClientTlsStrategy;
-import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
-import org.apache.hc.core5.ssl.SSLContexts;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.ClientHttpRequestFactory;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
@@ -46,23 +36,22 @@ public class Soht2ClientConfig {
       Soht2ClientProperties properties,
       RestClient.Builder restClientBuilder,
       @Autowired(required = false) ClientHttpRequestFactory clientHttpRequestFactory) {
-    log.debug("restClient: clientHttpRequestFactory={}", clientHttpRequestFactory);
-    return ofNullable(clientHttpRequestFactory)
-        .map(restClientBuilder::requestFactory)
-        .orElse(restClientBuilder)
+    log.info("restClient: clientHttpRequestFactory={}", clientHttpRequestFactory);
+
+    ofNullable(clientHttpRequestFactory).ifPresent(restClientBuilder::requestFactory);
+    restClientBuilder
         .baseUrl(properties.getUrl().toString())
-        .defaultHeader(ACCEPT, APPLICATION_JSON_VALUE, APPLICATION_OCTET_STREAM_VALUE)
-        .defaultRequest(
-            rq ->
-                Optional.of(
-                        Stream.of(properties.getUsername(), properties.getPassword())
-                            .filter(StringUtils::hasLength)
-                            .toList())
-                    .filter(l -> l.size() == 2)
-                    .map(l -> Strings.join(l, ':'))
-                    .map(v -> Base64.getEncoder().encodeToString(v.getBytes()))
-                    .ifPresent(v -> rq.header(AUTHORIZATION, "Basic " + v)))
-        .build();
+        .defaultHeader(ACCEPT, APPLICATION_JSON_VALUE, APPLICATION_OCTET_STREAM_VALUE);
+    Optional.of(
+            Stream.of(properties.getUsername(), properties.getPassword())
+                .filter(StringUtils::hasLength)
+                .toList())
+        .filter(creds -> creds.size() == 2)
+        .map(creds -> Strings.join(creds, ':'))
+        .map(creds -> Base64.getEncoder().encodeToString(creds.getBytes()))
+        .ifPresent(creds -> restClientBuilder.defaultHeader(AUTHORIZATION, "Basic " + creds));
+
+    return restClientBuilder.build();
   }
 
   @Bean
@@ -82,34 +71,5 @@ public class Soht2ClientConfig {
               .factor(poll.getFactor())
               .build();
     };
-  }
-
-  @Configuration(proxyBeanMethods = false)
-  @ConditionalOnProperty("soht2.client.disable-ssl-verification")
-  static class AcceptingSSLConfig {
-
-    @Bean
-    HttpClientConnectionManager httpClientConnectionManager() {
-      return Try.of(() -> SSLContexts.custom().loadTrustMaterial(null, (c, a) -> true).build())
-          .mapTry(ssl -> new DefaultClientTlsStrategy(ssl, NoopHostnameVerifier.INSTANCE))
-          .mapTry(
-              cts ->
-                  PoolingHttpClientConnectionManagerBuilder.create()
-                      .setTlsSocketStrategy(cts)
-                      .build())
-          .onSuccess(cm -> log.debug("httpClientConnectionManager: {}", cm))
-          .get();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    ClientHttpRequestFactory clientHttpRequestFactory(
-        HttpClientConnectionManager httpClientConnectionManager) {
-      return Try.of(
-              () -> HttpClients.custom().setConnectionManager(httpClientConnectionManager).build())
-          .mapTry(HttpComponentsClientHttpRequestFactory::new)
-          .onSuccess(factory -> log.debug("clientHttpRequestFactory: {}", factory))
-          .get();
-    }
   }
 }

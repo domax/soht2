@@ -165,5 +165,6 @@ TODO List
 - [ ] Add username and password validation
 - [ ] Add connection history on the server side
 - [ ] Fix NTLM proxy
+- [ ] Add Kerberos proxy support
 - [ ] Add more tests
 - [ ] Implement UI
