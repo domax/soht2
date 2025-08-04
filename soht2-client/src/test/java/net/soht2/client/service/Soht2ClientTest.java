@@ -18,10 +18,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.client.MockRestServiceServer;
 
 @RestClientTest(Soht2Client.class)
 @Import(Soht2ClientConfig.class)
+@ActiveProfiles("test")
 class Soht2ClientTest {
 
   @Autowired MockRestServiceServer server;

@@ -63,10 +63,10 @@ public class Soht2ServerConfig implements InitializingBean {
 
   @Override
   public void afterPropertiesSet() {
+    log.debug("afterPropertiesSet: {}", this);
     Assert.notNull(databasePath, "Database path must not be empty");
     Assert.hasText(adminUsername, "Admin username must not be empty");
     Assert.hasText(defaultAdminPassword, "Default admin password must not be empty");
-    log.debug("afterPropertiesSet: {}", this);
   }
 
   /**

@@ -6,7 +6,11 @@ import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
 import lombok.Data;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.util.Assert;
 import org.springframework.util.unit.DataSize;
 
 /**
@@ -16,9 +20,10 @@ import org.springframework.util.unit.DataSize;
  * URL, authentication credentials, socket timeout, read buffer size, polling strategy, and host
  * properties for connections.
  */
+@Slf4j
 @Data
 @ConfigurationProperties("soht2.client")
-public class Soht2ClientProperties {
+public class Soht2ClientProperties implements InitializingBean {
 
   /**
    * Properties for each host connection.
@@ -124,7 +129,7 @@ public class Soht2ClientProperties {
      * this property in your configuration file, use environment variable
      * SOHT2_CLIENT_PROXY_PASSWORD instead.
      */
-    private String password;
+    @ToString.Exclude private String password;
 
     /** The domain for NTLM authentication with the proxy server. */
     private String domain;
@@ -137,7 +142,7 @@ public class Soht2ClientProperties {
   private String username;
 
   /** The optional password for basic authentication with the SOHT2 server. */
-  private String password;
+  @ToString.Exclude private String password;
 
   /** The timeout for client socket read operations. */
   private Duration socketReadTimeout = Duration.ofMillis(100);
@@ -164,4 +169,14 @@ public class Soht2ClientProperties {
    * useful for development and testing purposes but should not be used in production environments.
    */
   private boolean disableSslVerification = false;
+
+  @Override
+  public void afterPropertiesSet() {
+    log.debug("afterPropertiesSet: {}", this);
+    Assert.notNull(url, "SOHT2 server URL must be defined in soht2.client.url");
+    Assert.hasText(username, "SOHT2 server username must be defined in soht2.client.username");
+    Assert.hasText(password, "SOHT2 server password must be defined in soht2.client.password");
+    Assert.notEmpty(
+        connections, "At least one connection must be defined in soht2.client.connections");
+  }
 }

@@ -64,7 +64,11 @@ public class ConnectionService {
             soht2ClientProperties.getConnections().stream()
                 .map(host -> CompletableFuture.runAsync(() -> connect(host, socketOpenedCallback)))
                 .toArray(CompletableFuture[]::new))
-        .thenRun(() -> log.info("startConnections: terminated"));
+        .thenRun(
+            () -> {
+              isRunning.set(false);
+              log.info("startConnections: terminated");
+            });
   }
 
   /** Gratefully stops all active connections. */
