@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Pattern;
 import java.util.Collection;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,26 @@ public class UserController {
   static final String AUTH_REQ =
       "This endpoint does not require any specific role - just regular authentication.";
 
+  @SuppressWarnings("java:S5857")
+  static final String RE_PASSWORD =
+      "^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?\\d)(?=.*?[#?!@$%^&*:;-]).{8,20}$";
+
+  static final String MSG_PASSWORD =
+      """
+      Password must have:
+      - Minimum 8 and maximum 20 characters in length
+      - At least one uppercase Latin letter
+      - At least one lowercase Latin letter
+      - At least one digit
+      - At least one special character: #?!@$%^&*:;-
+      """;
+  static final String MSG_USERNAME =
+      """
+      Username must have:
+      - Minimum 3 and maximum 30 characters in length
+      - Only alphanumeric characters and underscores
+      """;
+
   private final Soht2UserService soht2UserService;
 
   /**
@@ -62,8 +83,10 @@ public class UserController {
   @PreAuthorize("hasAuthority('" + ROLE_ADMIN + "')")
   @PostMapping(produces = APPLICATION_JSON_VALUE)
   public Soht2User create(
-      @RequestParam("username") String username,
-      @RequestParam("password") String password,
+      @Pattern(regexp = "^\\w{3,30}$", message = MSG_USERNAME) @RequestParam("username")
+          String username,
+      @Pattern(regexp = RE_PASSWORD, message = MSG_PASSWORD) @RequestParam("password")
+          String password,
       @RequestParam(name = "role", required = false) @Nullable String role,
       @RequestParam(name = "target", defaultValue = "*:*") Set<String> allowedTargets) {
     return soht2UserService.createUser(username, password, role, allowedTargets);
@@ -95,7 +118,10 @@ public class UserController {
   @PutMapping(path = "/{name}", produces = APPLICATION_JSON_VALUE)
   public Soht2User update(
       @PathVariable("name") String name,
-      @RequestParam(name = "password", required = false) @Nullable String password,
+      @Pattern(regexp = RE_PASSWORD, message = MSG_PASSWORD)
+          @RequestParam(name = "password", required = false)
+          @Nullable
+          String password,
       @RequestParam(name = "role", required = false) @Nullable String role,
       @RequestParam(name = "target", required = false) @Nullable Set<String> allowedTargets) {
     return soht2UserService.updateUser(name, password, role, allowedTargets);
@@ -181,7 +207,8 @@ public class UserController {
   @PutMapping(path = "/self", produces = APPLICATION_JSON_VALUE)
   public Soht2User password(
       @RequestParam("old") String oldPassword,
-      @RequestParam("new") String newPassword,
+      @Pattern(regexp = RE_PASSWORD, message = MSG_PASSWORD) @RequestParam("new")
+          String newPassword,
       Authentication authentication) {
     return soht2UserService.changePassword(oldPassword, newPassword, authentication);
   }

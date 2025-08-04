@@ -20,6 +20,14 @@ Authorization: Basic {{admin_username}} {{admin_password}}
 username = {{user1_username}} &
 password = {{user1_password}}
 
+### Creating wrong user
+POST {{base_url}}/api/user
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic {{admin_username}} {{admin_password}}
+
+username = a-b &
+password = 1qaz
+
 ### Get a current user
 GET {{base_url}}/api/user/self
 Authorization: Basic {{user1_username}} {{user1_password}}
