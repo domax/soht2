@@ -61,6 +61,9 @@ public class Soht2ServerConfig implements InitializingBean {
   /** A public URL of the OpenAPI server */
   private URI openApiServerUrl;
 
+  /** Whether to enable gathering the connection history. */
+  private boolean enableHistory = true;
+
   @Override
   public void afterPropertiesSet() {
     log.debug("afterPropertiesSet: {}", this);

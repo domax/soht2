@@ -79,6 +79,7 @@ Both the client and server components can be run using Java, so on both sides yo
       admin-username: "${SOHT2_USR}"               # Username for the admin user
       default-admin-password: "${SOHT2_PWD}"       # Default password for the admin user
       open-api-server-url: https://${SOHT2_SERVER} # Public URL of the OpenAPI server
+      enable-history: true                         # Enable gathering connection history
       abandoned-connections:                       # Settings for abandoned connections
         timeout: PT1M                              # Timeout for abandoned connections
         check-interval: PT5S                       # Interval for checking abandoned connections
@@ -164,7 +165,7 @@ TODO List
 - [X] Add OpenAPI documentation for the server API
 - [X] Add allowedTargets per user on the server side (`*:*`, `localhost:*`, `192.168.0.*:22`, etc.)
 - [X] Add username and password validation
-- [ ] Add connection history on the server side
+- [X] Add connection history on the server side
 - [ ] Fix NTLM proxy
 - [ ] Add Kerberos proxy support
 - [ ] Add more tests

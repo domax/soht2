@@ -17,13 +17,12 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 public class DatabaseConfig {
 
   /**
-   * Initializes the SOHT2 server by checking if the admin user exists.
+   * Initializes the database with default data or performs necessary setup actions for the
+   * application during startup.
    *
-   * <p>This method is executed at application startup to ensure that the default admin user is
-   * present in the database.
-   *
-   * @param soht2UserService the service to interact with the SOHT2 server
-   * @return a CommandLineRunner that checks for the admin user
+   * @param soht2UserService the service used to handle user-related operations, including verifying
+   *     the existence of an admin user in the system
+   * @return a {@link CommandLineRunner} that executes the required initialization logic
    */
   @Bean
   CommandLineRunner initDatabase(Soht2UserService soht2UserService) {

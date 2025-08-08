@@ -69,12 +69,12 @@ public class UserEntity {
             ? hp.getHibernateLazyInitializer().getPersistentClass()
             : this.getClass();
     if (thisEffectiveClass != oEffectiveClass) return false;
-    val userEntity = (UserEntity) o;
-    return Objects.equals(id, userEntity.id)
-        && Objects.equals(name, userEntity.name)
-        && Objects.equals(password, userEntity.password)
-        && Objects.equals(role, userEntity.role)
-        && Objects.equals(allowedTargets, userEntity.allowedTargets);
+    val that = (UserEntity) o;
+    return Objects.equals(id, that.id)
+        && Objects.equals(name, that.name)
+        && Objects.equals(password, that.password)
+        && Objects.equals(role, that.role)
+        && Objects.equals(allowedTargets, that.allowedTargets);
   }
 
   @Override

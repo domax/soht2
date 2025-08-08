@@ -7,6 +7,7 @@ Tips & Tricks for SOHT2 Server
   * [SOHT2 Server Port](#soht2-server-port)
   * [Change Context Path](#change-context-path)
   * [Fast Reset](#fast-reset)
+  * [Alternative Database](#alternative-database)
   * [Web Consoles](#web-consoles)
   * [See Also](#see-also)
 <!-- TOC -->
@@ -127,6 +128,31 @@ If you need to reset the SOHT2 server quickly, you can delete the database file 
 extension - e.g. `soht2.mv.db`) and restart service. This will remove all users and connections,
 allowing you to start fresh. However, be cautious as this action is irreversible and will delete all
 stored data.
+
+Alternative Database
+--------------------
+
+If you want to use a different database instead of the default H2DB, you can configure it like that:
+
+1. Make sure your database has a JDBC driver, and a database is available from the SOHT2 server.
+2. Download the corresponding JDBC driver and put it into the directory where SOHT2 running user can
+   reach it — e.g., to the same folder as the SOHT2 server JAR file.
+3. Update the `application-server.yaml` file with the following content:
+    ```yaml
+    spring:
+      datasource:
+        url: jdbc:${MY_DATABASE_URL} # e.g., jdbc:mysql://localhost:3306/my_db
+        username: ${MY_DATABASE_USERNAME}
+        password: ${MY_DATABASE_PASSWORD}
+    ```
+4. Create a `loader.properties` file in the same directory where SOHT2 server JAR is placed, and put
+   there the following content:
+    ```properties
+    loader.path=path/to/your/jdbc/jars/
+    ```
+   The `path/to/your/jdbc/jars/` may be a relative path in case if you're sure that you run the
+   SOHT2 server from correct working folder.
+5. Run the SOHT2 server as usual.
 
 Web Consoles
 ------------

@@ -1,3 +1,4 @@
+/* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.server.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -132,10 +133,11 @@ class UserControllerTest {
         .perform(
             delete("/api/user/" + soht2User.username())
                 .header(HttpHeaders.AUTHORIZATION, AUTH)
-                .queryParam("force", "true"))
+                .queryParam("force", "true")
+                .queryParam("history", "true"))
         .andExpect(status().isOk());
 
-    verify(soht2UserService).deleteUser(soht2User.username(), true);
+    verify(soht2UserService).deleteUser(soht2User.username(), true, true);
   }
 
   @Test

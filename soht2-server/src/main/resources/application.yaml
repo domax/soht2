@@ -78,6 +78,7 @@ soht2.server:
   database-path: ./soht2
   admin-username: admin
   open-api-server-url: http://localhost:8080
+  enable-history: true
   abandoned-connections:
     timeout: PT1M
     check-interval: PT5S

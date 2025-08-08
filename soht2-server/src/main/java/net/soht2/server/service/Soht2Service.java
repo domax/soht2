@@ -7,6 +7,7 @@ import static java.util.stream.Collectors.toSet;
 import static net.soht2.common.compress.Compressor.compressorCache;
 import static net.soht2.common.util.AuxUtil.peek;
 import static net.soht2.server.service.ExceptionHelper.gone;
+import static net.soht2.server.service.Soht2UserService.EMPTY_CU;
 import static net.soht2.server.service.Soht2UserService.getCurrentUser;
 
 import io.vavr.control.Try;
@@ -23,7 +24,6 @@ import net.soht2.common.dto.Soht2Connection;
 import net.soht2.common.dto.Soht2User;
 import net.soht2.server.config.Soht2ServerConfig;
 import net.soht2.server.entity.UserEntity;
-import net.soht2.server.service.Soht2UserService.CurrentUser;
 import org.springframework.lang.Nullable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
@@ -39,11 +39,11 @@ import org.springframework.stereotype.Service;
 public class Soht2Service {
 
   private static final byte[] EMPTY = new byte[0];
-  private static final CurrentUser EMPTY_CU = CurrentUser.builder().name("").build();
 
   private final Map<UUID, ServerConnection> connections = new ConcurrentHashMap<>();
   private final Soht2ServerConfig soht2ServerConfig;
   private final Soht2UserService soht2UserService;
+  private final Soht2HistoryService soht2HistoryService;
 
   /**
    * Opens a new SOHT2 connection and adds it to the connection pool.
@@ -59,7 +59,7 @@ public class Soht2Service {
         ServerConnection.builder()
             .soht2(soht2)
             .socketTimeout((int) soht2ServerConfig.getSocketReadTimeout().toMillis())
-            .postCloseAction(ci -> connections.remove(ci.soht2().id()))
+            .postCloseAction(this::postCloseAction)
             .build();
     connections.put(soht2.id(), connection);
     return updateConnectionWithUser(connection, authentication);
@@ -241,5 +241,11 @@ public class Soht2Service {
         .map(connection.soht2()::withUser)
         .ifPresent(connection::soht2);
     return connection;
+  }
+
+  private void postCloseAction(ServerConnection connection) {
+    val soht2 = connection.soht2().withClosedAt(LocalDateTime.now());
+    connections.remove(soht2.id());
+    if (soht2ServerConfig.isEnableHistory()) soht2HistoryService.addHistory(soht2);
   }
 }

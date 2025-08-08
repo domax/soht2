@@ -52,5 +52,12 @@ Authorization: Basic {{admin_username}} {{admin_password}}
 DELETE {{base_url}}/api/user/{{user2_username}}?force=true
 Authorization: Basic {{admin_username}} {{admin_password}}
 
+### Get history
+GET {{base_url}}/api/connection/history?ch=168.1&th=dms&tp=22,2020&oa=2025-08-07T21:03
+#GET {{base_url}}/api/connection/history?id=11844568-0e57-448f-b80f-e50e50b42572,90625f93-2d93-4617-a360-c276af6f29ca
+#GET {{base_url}}/api/connection/history?un=md03375
+Authorization: Basic {{admin_username}} {{admin_password}}
+#Authorization: Basic {{user1_username}} {{user1_password}}
+
 ###
 

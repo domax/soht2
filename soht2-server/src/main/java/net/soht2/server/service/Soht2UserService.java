@@ -49,10 +49,13 @@ public class Soht2UserService implements UserDetailsService {
 
   private static final Pattern RE_TARGET = Pattern.compile("^[a-z0-9.*-]+:[0-9*]+$");
 
+  static final CurrentUser EMPTY_CU = CurrentUser.builder().name("").build();
+
   private final Soht2ServerConfig soht2ServerConfig;
   private final UserEntityRepository userEntityRepository;
   private final PasswordEncoder passwordEncoder;
   private final Cache userCache;
+  private final Soht2HistoryService soht2HistoryService;
 
   @Setter(onMethod_ = {@Autowired, @Lazy})
   private Soht2UserService self;
@@ -205,12 +208,14 @@ public class Soht2UserService implements UserDetailsService {
    *
    * @param name the name of the user to delete
    * @param force if true, allows deletion of admin users; otherwise, throws an exception
+   * @param andHistory if true, also deletes the user's history; otherwise, leaves the history
    * @throws HttpClientErrorException.BadRequest if the name of the user is not provided
    * @throws HttpClientErrorException.Forbidden if the user to be deleted is admin and {@code force}
    *     argument is {@code false}
    */
   @Transactional
-  public void deleteUser(String name, boolean force) throws HttpClientErrorException {
+  public void deleteUser(String name, boolean force, boolean andHistory)
+      throws HttpClientErrorException {
     log.info("deleteUser: name={}, force={}", name, force);
 
     if (!hasText(name)) throw badRequest(ERR_USER_EMPTY);
@@ -220,6 +225,9 @@ public class Soht2UserService implements UserDetailsService {
             .orElseThrow(() -> notFound(ERR_USER_NOT_FOUND));
     if (userEntity.getRole().equals(UserEntity.ROLE_ADMIN) && !force)
       throw forbidden("Cannot delete admin user");
+
+    if (andHistory && soht2ServerConfig.isEnableHistory()) soht2HistoryService.deleteHistory(name);
+
     userEntityRepository.delete(userEntity);
     userCache.evict(name);
   }

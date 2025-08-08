@@ -1,7 +1,7 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.common.dto;
 
-import static java.util.UUID.randomUUID;
+import static java.util.Optional.ofNullable;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -17,9 +17,21 @@ public record Soht2Connection(
     LocalDateTime closedAt) {
 
   @Builder
-  private Soht2Connection(
-      Soht2User user, String clientHost, String targetHost, Integer targetPort) {
-    this(randomUUID(), user, clientHost, targetHost, targetPort, LocalDateTime.now(), null);
+  public Soht2Connection(
+      UUID id,
+      Soht2User user,
+      String clientHost,
+      String targetHost,
+      Integer targetPort,
+      LocalDateTime openedAt,
+      LocalDateTime closedAt) {
+    this.id = ofNullable(id).orElseGet(UUID::randomUUID);
+    this.user = user;
+    this.clientHost = clientHost;
+    this.targetHost = targetHost;
+    this.targetPort = targetPort;
+    this.openedAt = ofNullable(openedAt).orElseGet(LocalDateTime::now);
+    this.closedAt = closedAt;
   }
 
   public Soht2Connection withUser(Soht2User user) {

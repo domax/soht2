@@ -1,23 +1,29 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.server.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vavr.control.Try;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import lombok.val;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.common.dto.Soht2User;
 import net.soht2.server.config.SecurityConfig;
 import net.soht2.server.config.Soht2ServerConfig;
+import net.soht2.server.dto.*;
 import net.soht2.server.service.ServerConnection;
+import net.soht2.server.service.Soht2HistoryService;
 import net.soht2.server.service.Soht2Service;
 import net.soht2.server.test.UTHelper;
 import org.junit.jupiter.api.Test;
@@ -40,11 +46,17 @@ import org.springframework.test.web.servlet.MockMvc;
 @WithMockUser(username = "system", password = "test", authorities = "USER")
 class ConnectionControllerTest {
 
+  static final String AUTH =
+      "Basic " + Base64.getEncoder().encodeToString("system:test".getBytes());
+
   @Autowired MockMvc mockMvc;
   @Autowired Soht2ServerConfig soht2ServerConfig;
+  @Autowired ObjectMapper objectMapper;
 
   @MockitoBean("soht2Service")
   Soht2Service soht2Service;
+
+  @MockitoBean Soht2HistoryService soht2HistoryService;
 
   @SuppressWarnings("resource")
   @Test
@@ -77,9 +89,7 @@ class ConnectionControllerTest {
       mockMvc
           .perform(
               post("/api/connection")
-                  .header(
-                      HttpHeaders.AUTHORIZATION,
-                      "Basic " + Base64.getEncoder().encodeToString("system:test".getBytes()))
+                  .header(HttpHeaders.AUTHORIZATION, AUTH)
                   .queryParam("host", "targetHost")
                   .queryParam("port", "12345"))
           .andExpect(status().isOk())
@@ -120,9 +130,7 @@ class ConnectionControllerTest {
         .perform(
             post("/api/connection/" + sohtConnection.id())
                 .contentType(APPLICATION_OCTET_STREAM)
-                .header(
-                    HttpHeaders.AUTHORIZATION,
-                    "Basic " + Base64.getEncoder().encodeToString("system:test".getBytes()))
+                .header(HttpHeaders.AUTHORIZATION, AUTH)
                 .content(bytesIn))
         .andExpect(status().isOk())
         .andExpect(content().contentType(APPLICATION_OCTET_STREAM))
@@ -130,5 +138,106 @@ class ConnectionControllerTest {
 
     verify(soht2Service).isConnectionOwner(any(Authentication.class), eq(sohtConnection.id()));
     verify(soht2Service).exchange(sohtConnection.id(), bytesIn.length > 0 ? bytesIn : null, null);
+  }
+
+  @Test
+  void searchHistory_OK() throws Exception {
+    val id1 = UUID.randomUUID();
+    val id2 = UUID.randomUUID();
+    val paging =
+        HistoryPaging.builder()
+            .pageNumber(1)
+            .pageSize(2)
+            .sorting(
+                List.of(
+                    HistoryOrder.builder()
+                        .field(HistorySorting.userName)
+                        .direction(SortingDir.ASC)
+                        .build(),
+                    HistoryOrder.builder()
+                        .field(HistorySorting.openedAt)
+                        .direction(SortingDir.DESC)
+                        .build()))
+            .build();
+    val page =
+        HistoryPage.builder()
+            .paging(paging)
+            .totalItems(1000L)
+            .data(
+                List.of(
+                    Soht2Connection.builder()
+                        .id(id1)
+                        .user(Soht2User.builder().username("user1").build())
+                        .clientHost("192.168.1.100")
+                        .targetHost("example.com")
+                        .targetPort(22)
+                        .openedAt(LocalDateTime.parse("2025-08-07T21:10"))
+                        .closedAt(LocalDateTime.parse("2025-08-07T22:10"))
+                        .build(),
+                    Soht2Connection.builder()
+                        .id(id2)
+                        .user(Soht2User.builder().username("user2").build())
+                        .clientHost("192.168.1.101")
+                        .targetHost("test.com")
+                        .targetPort(443)
+                        .openedAt(LocalDateTime.parse("2025-08-07T21:20"))
+                        .closedAt(LocalDateTime.parse("2025-08-07T22:20"))
+                        .build()))
+            .build();
+
+    doReturn(page)
+        .when(soht2HistoryService)
+        .searchHistory(
+            anyCollection(),
+            anyCollection(),
+            any(),
+            any(),
+            anyCollection(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(HistoryPaging.class),
+            any(Authentication.class));
+
+    mockMvc
+        .perform(
+            get("/api/connection/history")
+                .header(HttpHeaders.AUTHORIZATION, AUTH)
+                .queryParam("un", "user1,user2")
+                .queryParam("id", id1 + "," + id2)
+                .queryParam("ch", "168.1")
+                .queryParam("th", ".com")
+                .queryParam("tp", "22,80,443")
+                .queryParam("oa", "2025-08-07T21:00")
+                .queryParam("ob", "2025-08-07T22:00")
+                .queryParam("ca", "2025-08-07T21:30")
+                .queryParam("cb", "2025-08-07T22:30")
+                .queryParam("sort", "userName:asc,openedAt:desc")
+                .queryParam("pg", "1")
+                .queryParam("sz", "2")
+                .contentType(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(content().contentType(APPLICATION_JSON))
+        .andDo(
+            rh ->
+                assertThat(
+                        objectMapper.readValue(
+                            rh.getResponse().getContentAsString(), HistoryPage.class))
+                    .isEqualTo(page));
+
+    verify(soht2HistoryService)
+        .searchHistory(
+            eq(Set.of("user1", "user2")),
+            eq(Set.of(id1, id2)),
+            eq("168.1"),
+            eq(".com"),
+            eq(Set.of(22, 80, 443)),
+            eq(LocalDateTime.parse("2025-08-07T21:00")),
+            eq(LocalDateTime.parse("2025-08-07T22:00")),
+            eq(LocalDateTime.parse("2025-08-07T21:30")),
+            eq(LocalDateTime.parse("2025-08-07T22:30")),
+            eq(paging),
+            any(Authentication.class));
   }
 }

@@ -118,10 +118,8 @@ public class UserController {
   @PutMapping(path = "/{name}", produces = APPLICATION_JSON_VALUE)
   public Soht2User update(
       @PathVariable("name") String name,
-      @Pattern(regexp = RE_PASSWORD, message = MSG_PASSWORD)
-          @RequestParam(name = "password", required = false)
-          @Nullable
-          String password,
+      @Pattern(regexp = RE_PASSWORD, message = MSG_PASSWORD) @RequestParam(name = "password", required = false)
+          @Nullable String password,
       @RequestParam(name = "role", required = false) @Nullable String role,
       @RequestParam(name = "target", required = false) @Nullable Set<String> allowedTargets) {
     return soht2UserService.updateUser(name, password, role, allowedTargets);
@@ -132,6 +130,7 @@ public class UserController {
    *
    * @param name the username of the user to delete
    * @param force if true, forces deletion even if the affected user is admin
+   * @param andHistory if true, also deletes the user's history; otherwise, leaves the history
    */
   // <editor-fold desc="OpenAPI Annotations">
   @Tag(name = "User Requests")
@@ -147,8 +146,9 @@ public class UserController {
   @DeleteMapping(path = "/{name}")
   public void delete(
       @PathVariable("name") String name,
-      @RequestParam(name = "force", defaultValue = "false") boolean force) {
-    soht2UserService.deleteUser(name, force);
+      @RequestParam(name = "force", defaultValue = "false") boolean force,
+      @RequestParam(name = "history", defaultValue = "false") boolean andHistory) {
+    soht2UserService.deleteUser(name, force, andHistory);
   }
 
   /**
