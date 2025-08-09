@@ -218,7 +218,7 @@ public class ConnectionController {
       @Parameter(description = "0-based page number")
           @RequestParam(name = "pg", required = false, defaultValue = "0")
           @Min(0) int pageNumber,
-      @Parameter(description = "Number of requests per page (up to 100)")
+      @Parameter(description = "Number of records per page (up to 1000)")
           @RequestParam(name = "sz", required = false, defaultValue = "10")
           @Max(1000) int pageSize,
       // </editor-fold>
