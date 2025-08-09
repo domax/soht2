@@ -1,6 +1,6 @@
 subprojects {
   group = 'net.soht2'
-  version = '0.0.4'
+  version = '0.0.5'
 
   tasks.register('wrapper') {}
   tasks.register('prepareKotlinBuildScriptModel') {}
