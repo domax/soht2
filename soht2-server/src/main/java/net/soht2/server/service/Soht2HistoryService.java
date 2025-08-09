@@ -63,7 +63,7 @@ public class Soht2HistoryService {
                     .closedAt(connection.closedAt())
                     .build())
         .mapTry(historyEntityRepository::save)
-        .onSuccess(v -> log.debug("addHistory: {}", v))
+        .onSuccess(v -> log.info("addHistory: {}", v))
         .onFailure(e -> log.error("addHistory: {}", e.toString()));
   }
 
@@ -117,7 +117,7 @@ public class Soht2HistoryService {
       HistoryPaging paging,
       Authentication authentication) {
     if (!soht2ServerConfig.isEnableHistory()) throw serviceUnavailable(ERR_HISTORY_DISABLED);
-    log.debug(
+    log.info(
         "searchHistory"
             + ": userNames={}"
             + ", connectionIds={}"
