@@ -166,7 +166,7 @@ TODO List
 - [X] Add allowedTargets per user on the server side (`*:*`, `localhost:*`, `192.168.0.*:22`, etc.)
 - [X] Add username and password validation
 - [X] Add connection history on the server side
+- [ ] Implement UI
+- [ ] Add more tests
 - [ ] Fix NTLM proxy
 - [ ] Add Kerberos proxy support
-- [ ] Add more tests
-- [ ] Implement UI
