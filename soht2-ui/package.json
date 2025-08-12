@@ -14,11 +14,11 @@
     "deploy": "npm run clean4deploy && npx copyfiles -u 1 dist/* dist/**/* ../soht2-server/src/main/resources/public/"
   },
   "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "@mui/material": "^6.1.2",
     "@emotion/react": "^11.13.5",
     "@emotion/styled": "^11.13.5",
+    "@mui/material": "^6.1.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {

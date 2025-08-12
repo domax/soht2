@@ -4,7 +4,7 @@
 // - Uses fetch with JSON handling and optional Basic Auth header
 // - Provides typed functions for each controller endpoint
 
-export type UUID = string;
+export type UUID = string; // NOSONAR typescript:S6564
 
 // ===== Common DTOs =====
 export interface Soht2User {
@@ -58,6 +58,23 @@ export type HistoryOrder = SortingOrder<HistorySorting>;
 export type HistoryPaging = Paging<HistorySorting> & { sorting?: HistoryOrder[] | null };
 export type HistoryPage = Page<Soht2Connection, HistorySorting> & { paging?: HistoryPaging | null };
 
+export class ApiError extends Error {
+  timestamp: string; // ISO date-time
+  status: number;
+  message: string;
+  error?: string | null;
+  path?: string | null;
+
+  constructor(timestamp: string, status: number, message: string, error?: string, path?: string) {
+    super();
+    this.timestamp = timestamp;
+    this.status = status;
+    this.error = error;
+    this.message = message;
+    this.path = path;
+  }
+}
+
 // ===== HTTP helper =====
 export interface ApiClientOptions {
   baseUrl?: string; // default: '' (same origin)
@@ -74,7 +91,7 @@ type QueryValue =
 type Query = Record<string, QueryValue>;
 
 class HttpClient {
-  private baseUrl: string;
+  private readonly baseUrl: string;
   private authHeader: string | null = null;
 
   constructor(opts?: ApiClientOptions) {
@@ -99,7 +116,7 @@ class HttpClient {
     return { ...headers, ...(extra ?? {}) };
   }
 
-  private makeUrl(path: string, query?: Query): string {
+  private makeUrl(path: string, query?: Query): string /* NOSONAR (typescript:S3776) */ {
     const url = new URL((this.baseUrl || '') + path, window.location.origin);
     if (query) {
       for (const [k, v] of Object.entries(query)) {
@@ -157,28 +174,26 @@ class HttpClient {
     const res = await fetch(this.makeUrl(path), {
       method: 'POST',
       headers: this.headers({ ...(extraHeaders || {}) }, 'application/octet-stream'),
-      body: data ? (data instanceof Uint8Array ? data : new Uint8Array(data)) : null,
+      body: data ? (data instanceof Uint8Array ? data : new Uint8Array(data)) : null, // NOSONAR typescript:S3358
     });
     if (!res.ok) throw await this.toError(res);
     const arrayBuf = await res.arrayBuffer();
     return new Uint8Array(arrayBuf);
   }
 
-  private async toError(res: Response): Promise<Error> {
-    let message = `${res.status} ${res.statusText}`;
-    try {
-      const text = await res.text();
-      if (text) message += `: ${text}`;
-    } catch {
-      // ignore
-    }
-    return new Error(message);
+  private async toError(res: Response): Promise<ApiError> {
+    return res
+      .text()
+      .then(err => {
+        const apiError: ApiError = JSON.parse(err);
+        return apiError;
+      })
+      .catch(() => new ApiError(new Date().toISOString(), res.status, res.statusText));
   }
 }
 
 // Export a singleton client with defaults; consumers may create their own.
-export const httpClient = new HttpClient();
-export const createHttpClient = (opts?: ApiClientOptions) => new HttpClient(opts);
+export const httpClient = new HttpClient({ baseUrl: `${import.meta.env.VITE_APP_API_ORIGIN}` });
 
 // ===== UserController API =====
 export const UserApi = {
