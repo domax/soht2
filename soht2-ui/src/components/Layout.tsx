@@ -3,9 +3,47 @@ import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Divider from '@mui/material/Divider';
+import Tooltip from '@mui/material/Tooltip';
+import MenuIcon from '@mui/icons-material/Menu';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useThemeMode } from '../theme';
+import { httpClient } from '../api/soht2Api';
 import soht2Logo from '/soht2_logo.png'; // NOSONAR typescript:S6859
 
 export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const { mode, toggle } = useThemeMode();
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isLogin = location.pathname === '/login';
+
+  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => setAnchorEl(null);
+
+  const handleToggleTheme = () => {
+    toggle();
+    handleClose();
+  };
+
+  const handleLogout = () => {
+    httpClient.clearAuth();
+    handleClose();
+    navigate('/login', { replace: true });
+  };
+
+  const ThemeIcon = mode === 'dark' ? LightModeIcon : DarkModeIcon;
+  const themeText = mode === 'dark' ? 'Light theme' : 'Dark theme';
+
   return (
     <>
       <AppBar position="fixed">
@@ -14,6 +52,30 @@ export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             SOHT2 Server
           </Typography>
+          <Tooltip title="Menu">
+            <IconButton color="inherit" onClick={handleMenu} size="large" aria-label="menu">
+              <MenuIcon />
+            </IconButton>
+          </Tooltip>
+          <Menu
+            anchorEl={anchorEl}
+            open={open}
+            onClose={handleClose}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            keepMounted>
+            <MenuItem onClick={handleToggleTheme}>
+              <ThemeIcon fontSize="small" style={{ marginRight: 12 }} />
+              {themeText}
+            </MenuItem>
+            {!isLogin && <Divider />}
+            {!isLogin && (
+              <MenuItem onClick={handleLogout}>
+                <LogoutIcon fontSize="small" style={{ marginRight: 12 }} />
+                Log out
+              </MenuItem>
+            )}
+          </Menu>
         </Toolbar>
       </AppBar>
       {/* Spacer to offset fixed AppBar height */}
