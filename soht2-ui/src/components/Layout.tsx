@@ -12,18 +12,23 @@ import MenuIcon from '@mui/icons-material/Menu';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import LogoutIcon from '@mui/icons-material/Logout';
+import LockResetIcon from '@mui/icons-material/LockReset';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useThemeMode } from '../theme';
 import { httpClient } from '../api/soht2Api';
 import soht2Logo from '/soht2_logo.png'; // NOSONAR typescript:S6859
+import ChangePasswordDialog from './ChangePasswordDialog';
 
 export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
   const { mode, toggle } = useThemeMode();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
+  const menuOpen = Boolean(anchorEl);
   const navigate = useNavigate();
   const location = useLocation();
   const isLogin = location.pathname === '/login';
+
+  // Change password dialog state (moved to component)
+  const [pwDialogOpen, setPwDialogOpen] = React.useState(false);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -39,6 +44,15 @@ export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
     httpClient.clearAuth();
     handleClose();
     navigate('/login', { replace: true });
+  };
+
+  const openChangePassword = () => {
+    setPwDialogOpen(true);
+    handleClose();
+  };
+
+  const closeChangePassword = () => {
+    setPwDialogOpen(false);
   };
 
   const ThemeIcon = mode === 'dark' ? LightModeIcon : DarkModeIcon;
@@ -59,7 +73,7 @@ export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
           </Tooltip>
           <Menu
             anchorEl={anchorEl}
-            open={open}
+            open={menuOpen}
             onClose={handleClose}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
@@ -68,6 +82,12 @@ export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
               <ThemeIcon fontSize="small" style={{ marginRight: 12 }} />
               {themeText}
             </MenuItem>
+            {!isLogin && (
+              <MenuItem onClick={openChangePassword}>
+                <LockResetIcon fontSize="small" style={{ marginRight: 12 }} />
+                Change Password
+              </MenuItem>
+            )}
             {!isLogin && <Divider />}
             {!isLogin && (
               <MenuItem onClick={handleLogout}>
@@ -83,6 +103,8 @@ export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
       <Container maxWidth={false} disableGutters sx={{ p: 2 }}>
         {children}
       </Container>
+
+      <ChangePasswordDialog open={pwDialogOpen} onClose={closeChangePassword} />
     </>
   );
 }

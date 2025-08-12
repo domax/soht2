@@ -26,8 +26,8 @@ function App() {
             }
           />
           <Route path="/login" element={<LoginPage onLogin={u => setUser(u)} />} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/user" element={<UserPage />} />
+          <Route path="/admin" element={<AdminPage user={user} />} />
+          <Route path="/user" element={<UserPage user={user} />} />
         </Routes>
       </BrowserRouter>
     </ThemeModeProvider>

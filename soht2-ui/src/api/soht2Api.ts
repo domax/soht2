@@ -58,18 +58,28 @@ export type HistoryOrder = SortingOrder<HistorySorting>;
 export type HistoryPaging = Paging<HistorySorting> & { sorting?: HistoryOrder[] | null };
 export type HistoryPage = Page<Soht2Connection, HistorySorting> & { paging?: HistoryPaging | null };
 
+export type ValidationError = { defaultMessage: string; arguments: unknown[] };
 export class ApiError extends Error {
   timestamp: string; // ISO date-time
   status: number;
   message: string;
   error?: string | null;
+  errors?: ValidationError[] | null;
   path?: string | null;
 
-  constructor(timestamp: string, status: number, message: string, error?: string, path?: string) {
+  constructor(
+    timestamp: string,
+    status: number,
+    message: string,
+    error?: string,
+    errors?: ValidationError[],
+    path?: string
+  ) {
     super();
     this.timestamp = timestamp;
     this.status = status;
     this.error = error;
+    this.errors = errors;
     this.message = message;
     this.path = path;
   }
