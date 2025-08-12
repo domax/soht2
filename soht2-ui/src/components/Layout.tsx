@@ -100,7 +100,7 @@ export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
       </AppBar>
       {/* Spacer to offset fixed AppBar height */}
       <Toolbar />
-      <Container maxWidth={false} disableGutters sx={{ p: 2 }}>
+      <Container maxWidth={false} disableGutters sx={{ p: 2, position: 'fixed', top: 64, left: 0 }}>
         {children}
       </Container>
 

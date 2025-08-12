@@ -36,7 +36,7 @@ export function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2User) => 
 
   return (
     <Layout>
-      <Stack spacing={2} sx={{ maxWidth: 600 }}>
+      <Stack spacing={2} sx={{ maxWidth: 420, margin: 'auto', marginTop: 6 }}>
         <TextField
           label="Username"
           variant="outlined"
