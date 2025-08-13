@@ -36,6 +36,15 @@ export default function UsersTable() {
     void load();
   }, [load]);
 
+  // Listen for external notifications about users' changes (e.g., from NewUserDialog)
+  React.useEffect(() => {
+    const handler = () => {
+      void load();
+    };
+    window.addEventListener('users:changed', handler as EventListener);
+    return () => window.removeEventListener('users:changed', handler as EventListener);
+  }, [load]);
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
