@@ -7,8 +7,7 @@ import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
+import ErrorAlert from './ErrorAlert';
 import { type ApiError, type Soht2User, UserApi } from '../api/soht2Api';
 
 export type DeleteUserDialogProps = Readonly<{
@@ -91,19 +90,7 @@ export default function DeleteUserDialog({ open, user, onClose }: DeleteUserDial
         </DialogActions>
       </Dialog>
 
-      <Snackbar
-        open={!!error}
-        autoHideDuration={6000}
-        onClose={() => setError(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert
-          onClose={() => setError(null)}
-          severity="error"
-          variant="filled"
-          sx={{ width: '100%' }}>
-          <div style={{ whiteSpace: 'pre-wrap' }}>{error}</div>
-        </Alert>
-      </Snackbar>
+      <ErrorAlert message={error} onClose={() => setError(null)} />
     </>
   );
 }

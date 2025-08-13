@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
+import ErrorAlert from '../components/ErrorAlert';
 import CircularProgress from '@mui/material/CircularProgress';
 import { UserApi, httpClient, type Soht2User, ApiError } from '../api/soht2Api';
 import { Layout } from '../components/Layout';
@@ -81,19 +80,8 @@ export function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2User) => 
           )}
         </Button>
       </Stack>
-      <Snackbar
-        open={!!error}
-        autoHideDuration={6000}
-        onClose={() => setError(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert
-          onClose={() => setError(null)}
-          severity="error"
-          variant="filled"
-          sx={{ width: '100%' }}>
-          <div style={{ whiteSpace: 'pre-wrap' }}>{error}</div>
-        </Alert>
-      </Snackbar>
+
+      <ErrorAlert message={error} onClose={() => setError(null)} />
     </Layout>
   );
 }

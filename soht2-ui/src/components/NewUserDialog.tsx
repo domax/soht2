@@ -5,8 +5,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
+import ErrorAlert from './ErrorAlert';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
@@ -199,19 +198,7 @@ export default function NewUserDialog({
         </DialogActions>
       </Dialog>
 
-      <Snackbar
-        open={!!error}
-        autoHideDuration={6000}
-        onClose={() => setError(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert
-          onClose={() => setError(null)}
-          severity="error"
-          variant="filled"
-          sx={{ width: '100%' }}>
-          <div style={{ whiteSpace: 'pre-wrap' }}>{error}</div>
-        </Alert>
-      </Snackbar>
+      <ErrorAlert message={error} onClose={() => setError(null)} />
     </>
   );
 }

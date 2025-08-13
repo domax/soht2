@@ -5,8 +5,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
+import ErrorAlert from './ErrorAlert';
 import CircularProgress from '@mui/material/CircularProgress';
 import { UserApi, type ApiError } from '../api/soht2Api';
 
@@ -116,19 +115,7 @@ export default function ChangePasswordDialog({
         </DialogActions>
       </Dialog>
 
-      <Snackbar
-        open={!!error}
-        autoHideDuration={6000}
-        onClose={() => setError(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert
-          onClose={() => setError(null)}
-          severity="error"
-          variant="filled"
-          sx={{ width: '100%' }}>
-          <div style={{ whiteSpace: 'pre-wrap' }}>{error}</div>
-        </Alert>
-      </Snackbar>
+      <ErrorAlert message={error} onClose={() => setError(null)} />
     </>
   );
 }
