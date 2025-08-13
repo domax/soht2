@@ -178,21 +178,6 @@ class HttpClient {
     if (!res.ok) throw await this.toError(res);
   }
 
-  async postOctet(
-    path: string,
-    data?: Uint8Array | ArrayBuffer | null,
-    extraHeaders?: HeadersInit
-  ): Promise<Uint8Array> {
-    const res = await fetch(this.makeUrl(path), {
-      method: 'POST',
-      headers: this.headers({ ...(extraHeaders || {}) }, 'application/octet-stream'),
-      body: data ? (data instanceof Uint8Array ? data : new Uint8Array(data)) : null, // NOSONAR typescript:S3358
-    });
-    if (!res.ok) throw await this.toError(res);
-    const arrayBuf = await res.arrayBuffer();
-    return new Uint8Array(arrayBuf);
-  }
-
   private async toError(res: Response): Promise<ApiError> {
     return res
       .text()
@@ -272,17 +257,6 @@ export const UserApi = {
 
 // ===== ConnectionController API =====
 export const ConnectionApi = {
-  // POST /api/connection?host=&port=
-  open: async (
-    params: { host: string; port: number },
-    client: HttpClient = httpClient
-  ): Promise<Soht2Connection> => {
-    return client.postJson<Soht2Connection>('/api/connection', undefined, {
-      host: params.host,
-      port: params.port,
-    });
-  },
-
   // GET /api/connection
   list: async (client: HttpClient = httpClient): Promise<Soht2Connection[]> => {
     return client.getJson<Soht2Connection[]>('/api/connection');
@@ -307,18 +281,6 @@ export const ConnectionApi = {
     client: HttpClient = httpClient
   ): Promise<HistoryPage> => {
     return client.getJson<HistoryPage>('/api/connection/history', filters as Query);
-  },
-
-  // POST /api/connection/{id} octet-stream, optional Content-Encoding header
-  exchange: async (
-    id: UUID,
-    data?: Uint8Array | ArrayBuffer | null,
-    options?: { contentEncoding?: string },
-    client: HttpClient = httpClient
-  ): Promise<Uint8Array> => {
-    const headers: HeadersInit = {};
-    if (options?.contentEncoding) headers['Content-Encoding'] = options.contentEncoding;
-    return client.postOctet(`/api/connection/${encodeURIComponent(id)}`, data ?? null, headers);
   },
 
   // DELETE /api/connection/{id}
