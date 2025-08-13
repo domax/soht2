@@ -21,11 +21,7 @@ export default function ErrorAlert({
       autoHideDuration={autoHideDuration}
       onClose={onClose}
       anchorOrigin={anchorOrigin}>
-      <Alert
-        onClose={onClose}
-        severity="error"
-        variant="filled"
-        sx={{ width: '100%', zIndex: 10000 }}>
+      <Alert onClose={onClose} severity="error" variant="filled" sx={{ width: '100%' }}>
         <div style={{ whiteSpace: 'pre-wrap' }}>{message}</div>
       </Alert>
     </Snackbar>

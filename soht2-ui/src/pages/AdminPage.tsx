@@ -23,7 +23,7 @@ function TabPanel(props: Readonly<{ children?: React.ReactNode; index: number; v
   );
 }
 
-export function AdminPage({ user }: Readonly<{ user?: Soht2User | null }>) {
+export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }>) {
   const [tab, setTab] = React.useState(0);
 
   if ((user?.role || '').toUpperCase() !== 'ADMIN') {

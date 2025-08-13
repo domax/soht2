@@ -8,7 +8,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { UserApi, httpClient, type Soht2User, ApiError } from '../api/soht2Api';
 import { Layout } from '../components/Layout';
 
-export function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2User) => void }>) {
+export default function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2User) => void }>) {
   const navigate = useNavigate();
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');

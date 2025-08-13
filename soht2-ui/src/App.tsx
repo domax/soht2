@@ -1,13 +1,13 @@
 import './App.css';
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import type { Soht2User } from './api/soht2Api';
-import { LoginPage } from './pages/LoginPage';
-import { AdminPage } from './pages/AdminPage';
-import { UserPage } from './pages/UserPage';
 import { ThemeModeProvider } from './theme';
+import type { Soht2User } from './api/soht2Api';
+import LoginPage from './pages/LoginPage';
+import AdminPage from './pages/AdminPage';
+import UserPage from './pages/UserPage';
 
-function App() {
+export default function App() {
   const [user, setUser] = React.useState<Soht2User | null>(null);
   const isAdmin = React.useMemo(() => (user?.role || '').toUpperCase() === 'ADMIN', [user]);
 
@@ -33,5 +33,3 @@ function App() {
     </ThemeModeProvider>
   );
 }
-
-export default App;
