@@ -1,3 +1,4 @@
+/* SOHT2 © Licensed under MIT 2025. */
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import TextField from '@mui/material/TextField';

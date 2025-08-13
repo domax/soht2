@@ -1,3 +1,4 @@
+/* SOHT2 © Licensed under MIT 2025. */
 import './App.css';
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';

@@ -5,13 +5,15 @@
 // - Provides typed functions for each controller endpoint
 
 export type UUID = string; // NOSONAR typescript:S6564
+export type ISODateTime = string; // NOSONAR typescript:S6564
+export type UserRole = 'USER' | 'ADMIN';
 
 // ===== Common DTOs =====
 export interface Soht2User {
   username: string;
-  role?: string | null;
-  createdAt?: string | null; // ISO date-time
-  updatedAt?: string | null; // ISO date-time
+  role?: UserRole | null;
+  createdAt?: ISODateTime | null;
+  updatedAt?: ISODateTime | null;
   allowedTargets?: string[] | null;
 }
 
@@ -21,8 +23,8 @@ export interface Soht2Connection {
   clientHost?: string | null;
   targetHost?: string | null;
   targetPort?: number | null;
-  openedAt?: string | null; // ISO date-time
-  closedAt?: string | null; // ISO date-time
+  openedAt?: ISODateTime | null;
+  closedAt?: ISODateTime | null;
 }
 
 // Paging related
@@ -60,7 +62,7 @@ export type HistoryPage = Page<Soht2Connection, HistorySorting> & { paging?: His
 
 export type ValidationError = { defaultMessage: string; arguments: unknown[] };
 export class ApiError extends Error {
-  timestamp: string; // ISO date-time
+  timestamp: ISODateTime;
   status: number;
   message: string;
   error?: string | null;
@@ -68,9 +70,9 @@ export class ApiError extends Error {
   path?: string | null;
 
   constructor(
-    timestamp: string,
-    status: number,
     message: string,
+    status: number = 400,
+    timestamp: ISODateTime = new Date().toISOString(),
     error?: string,
     errors?: ValidationError[],
     path?: string
@@ -198,7 +200,7 @@ class HttpClient {
         const apiError: ApiError = JSON.parse(err);
         return apiError;
       })
-      .catch(() => new ApiError(new Date().toISOString(), res.status, res.statusText));
+      .catch(() => new ApiError(res.statusText, res.status));
   }
 }
 
@@ -294,10 +296,10 @@ export const ConnectionApi = {
       ch?: string;
       th?: string;
       tp?: number[];
-      oa?: string; // ISO local datetime
-      ob?: string;
-      ca?: string;
-      cb?: string;
+      oa?: ISODateTime;
+      ob?: ISODateTime;
+      ca?: ISODateTime;
+      cb?: ISODateTime;
       sort?: string[]; // e.g., ["openedAt:desc"]
       pg?: number; // default 0
       sz?: number; // default 10
@@ -324,5 +326,3 @@ export const ConnectionApi = {
     return client.delete(`/api/connection/${encodeURIComponent(id)}`);
   },
 };
-
-export type { HttpClient };

@@ -1,3 +1,4 @@
+/* SOHT2 © Licensed under MIT 2025. */
 import React from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -11,31 +12,22 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import Chip from '@mui/material/Chip';
-import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import InputAdornment from '@mui/material/InputAdornment';
 import IconButton from '@mui/material/IconButton';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import { type ApiError, type Soht2User, UserApi } from '../api/soht2Api';
+import { type ApiError, type Soht2User, UserApi, type UserRole } from '../api/soht2Api';
+import AllowedTargets from './AllowedTargets.tsx';
 
-const TARGET_REGEX = /^[a-z0-9.*-]+:[0-9*]+$/;
+type EditUserDialogProps = Readonly<{ open: boolean; user: Soht2User | null; onClose: () => void }>;
 
-export type EditUserDialogProps = { open: boolean; user: Soht2User | null; onClose: () => void };
-
-type UserRole = 'USER' | 'ADMIN';
-
-export default function EditUserDialog({ open, user, onClose }: Readonly<EditUserDialogProps>) {
+export default function EditUserDialog({ open, user, onClose }: EditUserDialogProps) {
   const [password, setPassword] = React.useState('');
-  const [role, setRole] = React.useState<UserRole>((user?.role || 'USER') as UserRole);
+  const [role, setRole] = React.useState<UserRole>(user?.role || 'USER');
   const [allowedTargets, setAllowedTargets] = React.useState<string[]>(user?.allowedTargets ?? []);
-
-  const [initialRole] = React.useState<UserRole>((user?.role || 'USER') as UserRole);
+  const [initialRole] = React.useState<UserRole>(user?.role || 'USER');
   const [initialTargets] = React.useState<string[]>(user?.allowedTargets ?? []);
-
-  const [targetInput, setTargetInput] = React.useState('');
-  const [targetError, setTargetError] = React.useState<string | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -44,33 +36,11 @@ export default function EditUserDialog({ open, user, onClose }: Readonly<EditUse
     if (open) {
       setPassword('');
       setShowPassword(false);
-      setTargetInput('');
-      setTargetError(null);
-      setRole((user?.role || 'USER') as UserRole);
+      setRole(user?.role || 'USER');
       setAllowedTargets(user?.allowedTargets ?? []);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user?.username]);
-
-  const addTarget = () => {
-    const value = targetInput.trim();
-    if (!value) return;
-    if (!TARGET_REGEX.test(value)) {
-      setTargetError("Invalid format. Expected something like 'host:123' or '*.host:*");
-      return;
-    }
-    if (allowedTargets.includes(value)) {
-      setTargetError('Target already added');
-      return;
-    }
-    setAllowedTargets(prev => [...prev, value]);
-    setTargetInput('');
-    setTargetError(null);
-  };
-
-  const removeTarget = (t: string) => {
-    setAllowedTargets(prev => prev.filter(x => x !== t));
-  };
 
   const handleSubmit = async () => {
     if (!user) return;
@@ -150,33 +120,7 @@ export default function EditUserDialog({ open, user, onClose }: Readonly<EditUse
             </Select>
           </FormControl>
 
-          <Box>
-            <TextField
-              label="Allowed Target"
-              placeholder="e.g. host:123 or *.host:*"
-              value={targetInput}
-              onChange={e => {
-                setTargetInput(e.target.value);
-                if (targetError) setTargetError(null);
-              }}
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addTarget();
-                }
-              }}
-              error={!!targetError}
-              helperText={targetError || 'Press Enter to add target'}
-              fullWidth
-            />
-            {allowedTargets.length > 0 && (
-              <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {allowedTargets.map(t => (
-                  <Chip key={t} label={t} onDelete={() => removeTarget(t)} />
-                ))}
-              </Box>
-            )}
-          </Box>
+          <AllowedTargets targets={allowedTargets} setTargets={setAllowedTargets} />
         </Stack>
       </DialogContent>
       <DialogActions>

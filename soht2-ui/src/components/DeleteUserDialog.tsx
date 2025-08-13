@@ -1,3 +1,4 @@
+/* SOHT2 © Licensed under MIT 2025. */
 import React from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -10,7 +11,7 @@ import Box from '@mui/material/Box';
 import { APP_ERROR_EVENT } from './ErrorAlert';
 import { type ApiError, type Soht2User, UserApi } from '../api/soht2Api';
 
-export type DeleteUserDialogProps = Readonly<{
+type DeleteUserDialogProps = Readonly<{
   open: boolean;
   user: Soht2User | null;
   onClose: () => void;

@@ -1,3 +1,4 @@
+/* SOHT2 © Licensed under MIT 2025. */
 import React from 'react';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';

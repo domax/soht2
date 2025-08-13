@@ -1,3 +1,4 @@
+/* SOHT2 © Licensed under MIT 2025. */
 import React from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -24,7 +25,7 @@ export default function ChangePasswordDialog({
     if (newPassword !== confirmPassword) {
       window.dispatchEvent(
         new CustomEvent<ApiError>(APP_ERROR_EVENT, {
-          detail: new ApiError(new Date().toISOString(), 400, 'New passwords do not match'),
+          detail: new ApiError('New passwords do not match'),
         })
       );
       return;
@@ -32,7 +33,7 @@ export default function ChangePasswordDialog({
     if (oldPassword === newPassword) {
       window.dispatchEvent(
         new CustomEvent<ApiError>(APP_ERROR_EVENT, {
-          detail: new ApiError(new Date().toISOString(), 400, 'New password must be different'),
+          detail: new ApiError('New password must be different'),
         })
       );
       return;

@@ -1,3 +1,4 @@
+/* SOHT2 © Licensed under MIT 2025. */
 import React from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -11,36 +12,24 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import Chip from '@mui/material/Chip';
-import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import InputAdornment from '@mui/material/InputAdornment';
 import IconButton from '@mui/material/IconButton';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import { type ApiError, UserApi } from '../api/soht2Api';
+import { type ApiError, UserApi, type UserRole } from '../api/soht2Api';
+import AllowedTargets from './AllowedTargets.tsx';
 
-const TARGET_REGEX = /^[a-z0-9.*-]+:[0-9*]+$/;
+type NewUserDialogProps = Readonly<{ open: boolean; onClose: () => void }>;
+type NewUserForm = { username: string; password: string; role: UserRole; allowedTargets: string[] };
 
-export type NewUserForm = {
-  username: string;
-  password: string;
-  role: 'USER' | 'ADMIN';
-  allowedTargets: string[];
-};
-
-export default function NewUserDialog({
-  open,
-  onClose,
-}: Readonly<{ open: boolean; onClose: () => void }>) {
+export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
   const [form, setForm] = React.useState<NewUserForm>({
     username: '',
     password: '',
     role: 'USER',
-    allowedTargets: [],
+    allowedTargets: ['*:*'],
   });
-  const [targetInput, setTargetInput] = React.useState('');
-  const [targetError, setTargetError] = React.useState<string | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -49,30 +38,8 @@ export default function NewUserDialog({
   const resetAndClose = () => {
     if (submitting) return;
     setForm({ username: '', password: '', role: 'USER', allowedTargets: [] });
-    setTargetInput('');
-    setTargetError(null);
     setShowPassword(false);
     onClose();
-  };
-
-  const addTarget = () => {
-    const value = targetInput.trim();
-    if (!value) return;
-    if (!TARGET_REGEX.test(value)) {
-      setTargetError("Invalid format. Expected something like 'host:123' or '*.host:*'");
-      return;
-    }
-    if (form.allowedTargets.includes(value)) {
-      setTargetError('Target already added');
-      return;
-    }
-    setForm(prev => ({ ...prev, allowedTargets: [...prev.allowedTargets, value] }));
-    setTargetInput('');
-    setTargetError(null);
-  };
-
-  const removeTarget = (t: string) => {
-    setForm(prev => ({ ...prev, allowedTargets: prev.allowedTargets.filter(x => x !== t) }));
   };
 
   const handleSubmit = async () => {
@@ -149,33 +116,10 @@ export default function NewUserDialog({
             </Select>
           </FormControl>
 
-          <Box>
-            <TextField
-              label="Allowed Target"
-              placeholder="e.g. host:123 or *.host:*"
-              value={targetInput}
-              onChange={e => {
-                setTargetInput(e.target.value);
-                if (targetError) setTargetError(null);
-              }}
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addTarget();
-                }
-              }}
-              error={!!targetError}
-              helperText={targetError || 'Press Enter to add target'}
-              fullWidth
-            />
-            {form.allowedTargets.length > 0 && (
-              <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {form.allowedTargets.map(t => (
-                  <Chip key={t} label={t} onDelete={() => removeTarget(t)} />
-                ))}
-              </Box>
-            )}
-          </Box>
+          <AllowedTargets
+            targets={form.allowedTargets}
+            setTargets={targets => setForm(prev => ({ ...prev, allowedTargets: targets }))}
+          />
         </Stack>
       </DialogContent>
       <DialogActions>
