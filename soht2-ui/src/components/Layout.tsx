@@ -20,6 +20,7 @@ import { httpClient } from '../api/soht2Api';
 import soht2Logo from '/soht2_logo.png'; // NOSONAR typescript:S6859
 import ChangePasswordDialog from './ChangePasswordDialog';
 import NewUserDialog from './NewUserDialog';
+import ErrorAlert from './ErrorAlert';
 
 export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
   const { mode, toggle } = useThemeMode();
@@ -123,6 +124,7 @@ export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
 
       <ChangePasswordDialog open={pwDialogOpen} onClose={closeChangePassword} />
       <NewUserDialog open={newUserOpen} onClose={closeNewUser} />
+      <ErrorAlert />
     </>
   );
 }

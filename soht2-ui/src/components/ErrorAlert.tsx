@@ -1,20 +1,35 @@
+import React from 'react';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import type { SnackbarOrigin } from '@mui/material/Snackbar';
+import type { ApiError } from '../api/soht2Api';
+
+export const APP_ERROR_EVENT = 'app:error';
 
 export type ErrorAlertProps = Readonly<{
-  message: string | null;
-  onClose: () => void;
   autoHideDuration?: number;
   anchorOrigin?: SnackbarOrigin;
 }>;
 
 export default function ErrorAlert({
-  message,
-  onClose,
   autoHideDuration = 10000,
   anchorOrigin = { vertical: 'bottom', horizontal: 'center' },
 }: ErrorAlertProps) {
+  const [message, setMessage] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const handler = (evt: Event) => {
+      const ce = evt as CustomEvent<ApiError>;
+      const msg =
+        ce.detail?.errors?.[0]?.defaultMessage || ce.detail?.message || 'Unexpected error';
+      setMessage(msg);
+    };
+    window.addEventListener(APP_ERROR_EVENT, handler as EventListener);
+    return () => window.removeEventListener(APP_ERROR_EVENT, handler as EventListener);
+  }, []);
+
+  const onClose = () => setMessage(null);
+
   return (
     <Snackbar
       open={!!message}

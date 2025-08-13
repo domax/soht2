@@ -5,7 +5,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
-import ErrorAlert from './ErrorAlert';
+import { APP_ERROR_EVENT } from './ErrorAlert';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
@@ -43,7 +43,6 @@ export default function NewUserDialog({
   const [targetError, setTargetError] = React.useState<string | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
 
   const emptyRequired = !form.username || !form.password;
 
@@ -79,7 +78,6 @@ export default function NewUserDialog({
   const handleSubmit = async () => {
     if (emptyRequired) return;
     setSubmitting(true);
-    setError(null);
     try {
       await UserApi.createUser({
         username: form.username,
@@ -92,113 +90,108 @@ export default function NewUserDialog({
         new CustomEvent('users:changed', { detail: { action: 'create', username: form.username } })
       );
       resetAndClose();
-    } catch (e: unknown) {
-      const apiError = e as ApiError;
-      setError(apiError.errors?.[0] ? apiError.errors[0].defaultMessage : apiError.message);
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent<ApiError>(APP_ERROR_EVENT, { detail: e as ApiError }));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <>
-      <Dialog open={open} onClose={resetAndClose} fullWidth maxWidth="sm">
-        <DialogTitle>New User</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="Username"
-              value={form.username}
-              required
-              onChange={e => setForm(prev => ({ ...prev, username: e.target.value }))}
-              autoFocus
-              autoComplete="username"
-            />
+    <Dialog open={open} onClose={resetAndClose} fullWidth maxWidth="sm">
+      <DialogTitle>New User</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <TextField
+            label="Username"
+            value={form.username}
+            required
+            onChange={e => setForm(prev => ({ ...prev, username: e.target.value }))}
+            autoFocus
+            autoComplete="username"
+          />
 
+          <TextField
+            label="Password"
+            value={form.password}
+            required
+            type={showPassword ? 'text' : 'password'}
+            onChange={e => setForm(prev => ({ ...prev, password: e.target.value }))}
+            autoComplete="new-password"
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      onClick={() => setShowPassword(p => !p)}
+                      edge="end"
+                      size="small">
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+
+          <FormControl fullWidth>
+            <InputLabel id="role-label">Role</InputLabel>
+            <Select
+              labelId="role-label"
+              label="Role"
+              value={form.role}
+              onChange={e =>
+                setForm(prev => ({ ...prev, role: e.target.value as 'USER' | 'ADMIN' }))
+              }>
+              <MenuItem value="USER">USER</MenuItem>
+              <MenuItem value="ADMIN">ADMIN</MenuItem>
+            </Select>
+          </FormControl>
+
+          <Box>
             <TextField
-              label="Password"
-              value={form.password}
-              required
-              type={showPassword ? 'text' : 'password'}
-              onChange={e => setForm(prev => ({ ...prev, password: e.target.value }))}
-              autoComplete="new-password"
-              slotProps={{
-                input: {
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
-                        onClick={() => setShowPassword(p => !p)}
-                        edge="end"
-                        size="small">
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                },
+              label="Allowed Target"
+              placeholder="e.g. host:123 or *.host:*"
+              value={targetInput}
+              onChange={e => {
+                setTargetInput(e.target.value);
+                if (targetError) setTargetError(null);
               }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addTarget();
+                }
+              }}
+              error={!!targetError}
+              helperText={targetError || 'Press Enter to add target'}
+              fullWidth
             />
-
-            <FormControl fullWidth>
-              <InputLabel id="role-label">Role</InputLabel>
-              <Select
-                labelId="role-label"
-                label="Role"
-                value={form.role}
-                onChange={e =>
-                  setForm(prev => ({ ...prev, role: e.target.value as 'USER' | 'ADMIN' }))
-                }>
-                <MenuItem value="USER">USER</MenuItem>
-                <MenuItem value="ADMIN">ADMIN</MenuItem>
-              </Select>
-            </FormControl>
-
-            <Box>
-              <TextField
-                label="Allowed Target"
-                placeholder="e.g. host:123 or *.host:*"
-                value={targetInput}
-                onChange={e => {
-                  setTargetInput(e.target.value);
-                  if (targetError) setTargetError(null);
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addTarget();
-                  }
-                }}
-                error={!!targetError}
-                helperText={targetError || 'Press Enter to add target'}
-                fullWidth
-              />
-              {form.allowedTargets.length > 0 && (
-                <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {form.allowedTargets.map(t => (
-                    <Chip key={t} label={t} onDelete={() => removeTarget(t)} />
-                  ))}
-                </Box>
-              )}
-            </Box>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={resetAndClose} disabled={submitting} color="inherit">
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={emptyRequired || submitting} variant="contained">
-            {submitting ? (
-              <>
-                <CircularProgress size={20} sx={{ mr: 1 }} /> Creating...
-              </>
-            ) : (
-              'Create User'
+            {form.allowedTargets.length > 0 && (
+              <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {form.allowedTargets.map(t => (
+                  <Chip key={t} label={t} onDelete={() => removeTarget(t)} />
+                ))}
+              </Box>
             )}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <ErrorAlert message={error} onClose={() => setError(null)} />
-    </>
+          </Box>
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={resetAndClose} disabled={submitting} color="inherit">
+          Cancel
+        </Button>
+        <Button onClick={handleSubmit} disabled={emptyRequired || submitting} variant="contained">
+          {submitting ? (
+            <>
+              <CircularProgress size={20} sx={{ mr: 1 }} /> Creating...
+            </>
+          ) : (
+            'Create User'
+          )}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

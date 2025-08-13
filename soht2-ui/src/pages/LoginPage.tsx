@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
-import ErrorAlert from '../components/ErrorAlert';
+import { APP_ERROR_EVENT } from '../components/ErrorAlert';
 import CircularProgress from '@mui/material/CircularProgress';
-import { UserApi, httpClient, type Soht2User, ApiError } from '../api/soht2Api';
+import { UserApi, httpClient, type Soht2User, type ApiError } from '../api/soht2Api';
 import { Layout } from '../components/Layout';
 
 export default function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2User) => void }>) {
@@ -14,20 +14,17 @@ export default function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2U
   const [password, setPassword] = React.useState('');
   const [empty, setEmpty] = React.useState(true);
   const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
 
   const handleSubmit = async () => {
     setLoading(true);
-    setError(null);
     try {
       httpClient.setBasicAuth(username, password);
       const self = await UserApi.getSelf();
       onLogin(self);
       navigate((self.role || '').toUpperCase() === 'ADMIN' ? '/admin' : '/user', { replace: true });
-    } catch (e: unknown) {
+    } catch (e) {
       httpClient.clearAuth();
-      const apiError: ApiError = e as ApiError;
-      setError(apiError.message);
+      window.dispatchEvent(new CustomEvent<ApiError>(APP_ERROR_EVENT, { detail: e as ApiError }));
     } finally {
       setLoading(false);
     }
@@ -80,8 +77,6 @@ export default function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2U
           )}
         </Button>
       </Stack>
-
-      <ErrorAlert message={error} onClose={() => setError(null)} />
     </Layout>
   );
 }
