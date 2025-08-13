@@ -11,6 +11,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
+import Chip from '@mui/material/Chip';
 import { type ApiError, type Soht2User, UserApi } from '../api/soht2Api';
 
 export default function UsersTable() {
@@ -84,13 +85,21 @@ export default function UsersTable() {
         <TableBody>
           {(users ?? []).map(u => {
             const created = u.createdAt ? new Date(u.createdAt).toLocaleString() : '';
-            const targets = (u.allowedTargets ?? []).join(', ');
+            const targets = u.allowedTargets ?? [];
             return (
               <TableRow key={u.username} hover>
                 <TableCell>{u.username}</TableCell>
                 <TableCell>{(u.role || '').toString()}</TableCell>
                 <TableCell>{created}</TableCell>
-                <TableCell>{targets}</TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {targets.length > 0 ? (
+                      targets.map(t => <Chip key={t} label={t} size="small" variant="outlined" />)
+                    ) : (
+                      <span>—</span>
+                    )}
+                  </Box>
+                </TableCell>
                 <TableCell align="right">
                   <IconButton size="small" aria-label={`actions-${u.username}`}>
                     <MoreVertIcon />
