@@ -19,80 +19,83 @@ import InputAdornment from '@mui/material/InputAdornment';
 import IconButton from '@mui/material/IconButton';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import { type ApiError, UserApi } from '../api/soht2Api';
+import { type ApiError, type Soht2User, UserApi } from '../api/soht2Api';
 
 const TARGET_REGEX = /^[a-z0-9.*-]+:[0-9*]+$/;
 
-export type NewUserForm = {
-  username: string;
-  password: string;
-  role: 'USER' | 'ADMIN';
-  allowedTargets: string[];
-};
+export type EditUserDialogProps = { open: boolean; user: Soht2User | null; onClose: () => void };
 
-export default function NewUserDialog({
-  open,
-  onClose,
-}: Readonly<{ open: boolean; onClose: () => void }>) {
-  const [form, setForm] = React.useState<NewUserForm>({
-    username: '',
-    password: '',
-    role: 'USER',
-    allowedTargets: [],
-  });
+type UserRole = 'USER' | 'ADMIN';
+
+export default function EditUserDialog({ open, user, onClose }: Readonly<EditUserDialogProps>) {
+  const [password, setPassword] = React.useState('');
+  const [role, setRole] = React.useState<UserRole>((user?.role || 'USER') as UserRole);
+  const [allowedTargets, setAllowedTargets] = React.useState<string[]>(user?.allowedTargets ?? []);
+
+  const [initialRole] = React.useState<UserRole>((user?.role || 'USER') as UserRole);
+  const [initialTargets] = React.useState<string[]>(user?.allowedTargets ?? []);
+
   const [targetInput, setTargetInput] = React.useState('');
   const [targetError, setTargetError] = React.useState<string | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const emptyRequired = !form.username || !form.password;
-
-  const resetAndClose = () => {
-    if (submitting) return;
-    setForm({ username: '', password: '', role: 'USER', allowedTargets: [] });
-    setTargetInput('');
-    setTargetError(null);
-    setShowPassword(false);
-    onClose();
-  };
+  React.useEffect(() => {
+    // Reset when user changes/open toggles
+    if (open) {
+      setPassword('');
+      setShowPassword(false);
+      setTargetInput('');
+      setTargetError(null);
+      setError(null);
+      setRole((user?.role || 'USER') as UserRole);
+      setAllowedTargets(user?.allowedTargets ?? []);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, user?.username]);
 
   const addTarget = () => {
     const value = targetInput.trim();
     if (!value) return;
     if (!TARGET_REGEX.test(value)) {
-      setTargetError("Invalid format. Expected something like 'host:123' or '*.host:*'");
+      setTargetError("Invalid format. Expected something like 'host:123' or '*.host:*");
       return;
     }
-    if (form.allowedTargets.includes(value)) {
+    if (allowedTargets.includes(value)) {
       setTargetError('Target already added');
       return;
     }
-    setForm(prev => ({ ...prev, allowedTargets: [...prev.allowedTargets, value] }));
+    setAllowedTargets(prev => [...prev, value]);
     setTargetInput('');
     setTargetError(null);
   };
 
   const removeTarget = (t: string) => {
-    setForm(prev => ({ ...prev, allowedTargets: prev.allowedTargets.filter(x => x !== t) }));
+    setAllowedTargets(prev => prev.filter(x => x !== t));
   };
 
   const handleSubmit = async () => {
-    if (emptyRequired) return;
+    if (!user) return;
     setSubmitting(true);
     setError(null);
     try {
-      await UserApi.createUser({
-        username: form.username,
-        password: form.password,
-        role: form.role,
-        allowedTargets: form.allowedTargets,
-      });
-      // Notify listeners (e.g., UsersTable) that users' list has changed
+      const params: {
+        password?: string | null;
+        role?: string | null;
+        allowedTargets?: string[] | null;
+      } = {};
+      if (password) params.password = password; // optional; only send if non-empty
+      if (role && role !== initialRole) params.role = role;
+      // Only send allowedTargets if changed. Note: empty array would be ignored by API implementation
+      const changedTargets = JSON.stringify(allowedTargets) !== JSON.stringify(initialTargets);
+      if (changedTargets) params.allowedTargets = allowedTargets;
+
+      await UserApi.updateUser(user.username, params);
       window.dispatchEvent(
-        new CustomEvent('users:changed', { detail: { action: 'create', username: form.username } })
+        new CustomEvent('users:changed', { detail: { action: 'update', username: user.username } })
       );
-      resetAndClose();
+      onClose();
     } catch (e: unknown) {
       const apiError = e as ApiError;
       setError(apiError.errors?.[0] ? apiError.errors[0].defaultMessage : apiError.message);
@@ -103,26 +106,27 @@ export default function NewUserDialog({
 
   return (
     <>
-      <Dialog open={open} onClose={resetAndClose} fullWidth maxWidth="sm">
-        <DialogTitle>New User</DialogTitle>
+      <Dialog
+        open={open}
+        onClose={() => (!submitting ? onClose() : undefined)}
+        fullWidth
+        maxWidth="sm">
+        <DialogTitle>Edit User</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
               label="Username"
-              value={form.username}
-              required
-              onChange={e => setForm(prev => ({ ...prev, username: e.target.value }))}
-              autoFocus
-              autoComplete="username"
+              value={user?.username}
+              slotProps={{ input: { readOnly: true } }}
             />
 
             <TextField
               label="Password"
-              value={form.password}
-              required
+              value={password}
               type={showPassword ? 'text' : 'password'}
-              onChange={e => setForm(prev => ({ ...prev, password: e.target.value }))}
+              onChange={e => setPassword(e.target.value)}
               autoComplete="new-password"
+              helperText="Leave empty to keep unchanged"
               slotProps={{
                 input: {
                   endAdornment: (
@@ -141,14 +145,12 @@ export default function NewUserDialog({
             />
 
             <FormControl fullWidth>
-              <InputLabel id="role-label">Role</InputLabel>
+              <InputLabel id="role-label-edit">Role</InputLabel>
               <Select
-                labelId="role-label"
+                labelId="role-label-edit"
                 label="Role"
-                value={form.role}
-                onChange={e =>
-                  setForm(prev => ({ ...prev, role: e.target.value as 'USER' | 'ADMIN' }))
-                }>
+                value={role || 'USER'}
+                onChange={e => setRole(e.target.value as UserRole)}>
                 <MenuItem value="USER">USER</MenuItem>
                 <MenuItem value="ADMIN">ADMIN</MenuItem>
               </Select>
@@ -173,9 +175,9 @@ export default function NewUserDialog({
                 helperText={targetError || 'Press Enter to add target'}
                 fullWidth
               />
-              {form.allowedTargets.length > 0 && (
+              {allowedTargets.length > 0 && (
                 <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {form.allowedTargets.map(t => (
+                  {allowedTargets.map(t => (
                     <Chip key={t} label={t} onDelete={() => removeTarget(t)} />
                   ))}
                 </Box>
@@ -184,16 +186,16 @@ export default function NewUserDialog({
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={resetAndClose} disabled={submitting} color="inherit">
+          <Button onClick={onClose} disabled={submitting} color="inherit">
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={emptyRequired || submitting} variant="contained">
+          <Button onClick={handleSubmit} disabled={submitting} variant="contained">
             {submitting ? (
               <>
-                <CircularProgress size={20} sx={{ mr: 1 }} /> Creating...
+                <CircularProgress size={20} sx={{ mr: 1 }} /> Saving...
               </>
             ) : (
-              'Create User'
+              'Save Changes'
             )}
           </Button>
         </DialogActions>

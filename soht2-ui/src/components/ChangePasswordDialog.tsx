@@ -10,7 +10,7 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import { UserApi, type ApiError } from '../api/soht2Api';
 
-export function ChangePasswordDialog({
+export default function ChangePasswordDialog({
   open,
   onClose,
 }: Readonly<{ open: boolean; onClose: () => void }>) {
@@ -132,5 +132,3 @@ export function ChangePasswordDialog({
     </>
   );
 }
-
-export default ChangePasswordDialog;

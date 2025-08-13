@@ -91,7 +91,7 @@ export function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2User) => 
           severity="error"
           variant="filled"
           sx={{ width: '100%' }}>
-          {error}
+          <div style={{ whiteSpace: 'pre-wrap' }}>{error}</div>
         </Alert>
       </Snackbar>
     </Layout>
