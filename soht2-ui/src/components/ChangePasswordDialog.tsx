@@ -8,7 +8,7 @@ import Button from '@mui/material/Button';
 import { APP_ERROR_EVENT } from './ErrorAlert';
 import CircularProgress from '@mui/material/CircularProgress';
 import { UserApi, ApiError } from '../api/soht2Api';
-import PasswordEye from './PasswordEye.tsx';
+import PasswordEye from '../controls/PasswordEye';
 
 export default function ChangePasswordDialog({
   open,

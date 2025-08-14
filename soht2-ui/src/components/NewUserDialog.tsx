@@ -14,8 +14,8 @@ import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import { type ApiError, UserApi, type UserRole } from '../api/soht2Api';
-import AllowedTargets from './AllowedTargets.tsx';
-import PasswordEye from './PasswordEye.tsx';
+import AllowedTargets from '../controls/AllowedTargets';
+import PasswordEye from '../controls/PasswordEye';
 
 type NewUserDialogProps = Readonly<{ open: boolean; onClose: () => void }>;
 type NewUserForm = { username: string; password: string; role: UserRole; allowedTargets: string[] };

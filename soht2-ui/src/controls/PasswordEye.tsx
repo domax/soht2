@@ -9,13 +9,13 @@ import Visibility from '@mui/icons-material/Visibility';
 
 type PasswordEyeProps = Readonly<{
   password?: string | null;
-  label?: string | undefined;
-  helperText?: string | undefined;
-  variant?: TextFieldVariants | undefined;
-  fullWidth?: boolean | undefined;
-  margin?: 'dense' | 'normal' | 'none' | undefined;
-  required?: boolean | undefined;
-  autoComplete?: string | undefined;
+  label: string | undefined;
+  helperText: string | undefined;
+  variant: TextFieldVariants | undefined;
+  fullWidth: boolean | undefined;
+  margin: 'dense' | 'normal' | 'none' | undefined;
+  required: boolean | undefined;
+  autoComplete: string | undefined;
   onChange: (password: string) => void;
   onEnter?: () => void | null;
 }>;

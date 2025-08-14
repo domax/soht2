@@ -7,24 +7,12 @@ import Box from '@mui/material/Box';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Typography from '@mui/material/Typography';
+import TabPanel from '../components/TabPanel';
 import UsersTable from '../components/UsersTable';
 
-function TabPanel(props: Readonly<{ children?: React.ReactNode; index: number; value: number }>) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`admin-tabpanel-${index}`}
-      aria-labelledby={`admin-tab-${index}`}
-      {...other}
-      style={{ height: '100%' }}>
-      {value === index && <Box sx={{ p: 0, height: '100%' }}>{children}</Box>}
-    </div>
-  );
-}
-
 export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }>) {
+  const prefix = 'admin-';
+
   const [tab, setTab] = React.useState(0);
 
   if ((user?.role || '').toUpperCase() !== 'ADMIN') {
@@ -40,26 +28,24 @@ export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }
         sx={{
           display: 'flex',
           flexDirection: 'column',
-          height: 'calc(100vh - 64px - 16px)',
+          height: 'calc(100vh - 80px)',
           width: '100%',
         }}>
         <Tabs value={tab} onChange={handleChange} aria-label="admin tabs">
-          <Tab label="Users" id="admin-tab-0" aria-controls="admin-tabpanel-0" />
-          <Tab label="Connections" id="admin-tab-1" aria-controls="admin-tabpanel-1" />
-          <Tab label="History" id="admin-tab-2" aria-controls="admin-tabpanel-2" />
+          <Tab label="Users" id={`${prefix}tab-0`} aria-controls={`${prefix}tabpanel-0`} />
+          <Tab label="Connections" id={`${prefix}tab-1`} aria-controls={`${prefix}tabpanel-1`} />
+          <Tab label="History" id={`${prefix}tab-2`} aria-controls={`${prefix}tabpanel-2`} />
         </Tabs>
         <Box sx={{ flex: 1, minHeight: 0 }}>
-          <TabPanel value={tab} index={0}>
-            <Box sx={{ height: '100%' }}>
-              <UsersTable />
-            </Box>
+          <TabPanel prefix={prefix} value={tab} index={0}>
+            <UsersTable />
           </TabPanel>
-          <TabPanel value={tab} index={1}>
+          <TabPanel prefix={prefix} value={tab} index={1}>
             <Box sx={{ p: 2 }}>
               <Typography>Under construction</Typography>
             </Box>
           </TabPanel>
-          <TabPanel value={tab} index={2}>
+          <TabPanel prefix={prefix} value={tab} index={2}>
             <Box sx={{ p: 2 }}>
               <Typography>Under construction</Typography>
             </Box>
