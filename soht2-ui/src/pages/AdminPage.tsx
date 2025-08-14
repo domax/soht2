@@ -1,12 +1,12 @@
 /* SOHT2 © Licensed under MIT 2025. */
 import React from 'react';
-import { Layout } from '../components/Layout';
 import { Navigate } from 'react-router-dom';
-import { httpClient, type Soht2User } from '../api/soht2Api.ts';
 import Box from '@mui/material/Box';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Typography from '@mui/material/Typography';
+import { httpClient, type Soht2User } from '../api/soht2Api.ts';
+import Layout from '../components/Layout';
 import TabPanel from '../components/TabPanel';
 import UsersTable from '../components/UsersTable';
 

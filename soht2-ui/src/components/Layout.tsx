@@ -15,13 +15,13 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import LogoutIcon from '@mui/icons-material/Logout';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import { useNavigate, useLocation } from 'react-router-dom';
+import soht2Logo from '/soht2_logo.png'; // NOSONAR typescript:S6859
 import { useThemeMode } from '../theme';
 import { httpClient } from '../api/soht2Api';
-import soht2Logo from '/soht2_logo.png'; // NOSONAR typescript:S6859
 import ChangePasswordDialog from './ChangePasswordDialog';
 import ErrorAlert from './ErrorAlert';
 
-export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
   const { mode, toggle } = useThemeMode();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);

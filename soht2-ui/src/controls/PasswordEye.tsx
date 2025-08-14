@@ -8,16 +8,16 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import Visibility from '@mui/icons-material/Visibility';
 
 type PasswordEyeProps = Readonly<{
-  password?: string | null;
-  label: string | undefined;
-  helperText: string | undefined;
-  variant: TextFieldVariants | undefined;
-  fullWidth: boolean | undefined;
-  margin: 'dense' | 'normal' | 'none' | undefined;
-  required: boolean | undefined;
-  autoComplete: string | undefined;
+  password?: string;
+  label?: string;
+  helperText?: string;
+  variant?: TextFieldVariants;
+  fullWidth?: boolean;
+  margin?: 'dense' | 'normal' | 'none';
+  required?: boolean;
+  autoComplete?: string;
   onChange: (password: string) => void;
-  onEnter?: () => void | null;
+  onEnter?: () => void;
 }>;
 
 export default function PasswordEye({

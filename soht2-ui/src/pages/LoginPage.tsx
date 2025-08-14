@@ -4,10 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
-import { APP_ERROR_EVENT } from '../components/ErrorAlert';
 import CircularProgress from '@mui/material/CircularProgress';
+import { APP_ERROR_EVENT } from '../components/ErrorAlert';
 import { UserApi, httpClient, type Soht2User, type ApiError } from '../api/soht2Api';
-import { Layout } from '../components/Layout';
+import Layout from '../components/Layout';
+import PasswordEye from '../controls/PasswordEye';
 
 export default function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2User) => void }>) {
   const navigate = useNavigate();
@@ -20,9 +21,9 @@ export default function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2U
     setLoading(true);
     try {
       httpClient.setBasicAuth(username, password);
-      const self = await UserApi.getSelf();
-      onLogin(self);
-      navigate((self.role || '').toUpperCase() === 'ADMIN' ? '/admin' : '/user', { replace: true });
+      const user = await UserApi.getSelf();
+      onLogin(user);
+      navigate((user.role || '').toUpperCase() === 'ADMIN' ? '/admin' : '/user', { replace: true });
     } catch (e) {
       httpClient.clearAuth();
       window.dispatchEvent(new CustomEvent<ApiError>(APP_ERROR_EVENT, { detail: e as ApiError }));
@@ -36,32 +37,30 @@ export default function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2U
       <Stack spacing={2} sx={{ maxWidth: 420, margin: 'auto', marginTop: 6 }}>
         <TextField
           label="Username"
-          variant="outlined"
-          fullWidth
-          margin="normal"
           value={username}
-          required={true}
-          onChange={e => {
-            setUsername(e.target.value);
-            setEmpty(!e.target.value || !password);
-          }}
-          autoComplete="username"
-        />
-        <TextField
-          label="Password"
-          type="password"
           variant="outlined"
-          fullWidth
           margin="normal"
-          value={password}
-          required={true}
+          autoComplete="username"
+          fullWidth
+          required
           onChange={e => {
-            setPassword(e.target.value);
-            setEmpty(!username || !e.target.value);
+            const u = e.target.value;
+            setUsername(u);
+            setEmpty(!u || !password);
           }}
+        />
+        <PasswordEye
+          password={password}
+          fullWidth
+          variant="outlined"
+          margin="normal"
           autoComplete="current-password"
-          onKeyDown={e => {
-            if (e.key === 'Enter' && !empty && !loading) handleSubmit();
+          onChange={p => {
+            setPassword(p);
+            setEmpty(!username || !p);
+          }}
+          onEnter={() => {
+            if (!empty && !loading) handleSubmit();
           }}
         />
         <Button
