@@ -16,14 +16,14 @@ import Chip from '@mui/material/Chip';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
+import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
+import PersonRemoveAlt1Icon from '@mui/icons-material/PersonRemoveAlt1';
 import { useTheme } from '@mui/material/styles';
+import NewUserDialog from './NewUserDialog';
 import EditUserDialog from './EditUserDialog';
 import DeleteUserDialog from './DeleteUserDialog';
 import { type ApiError, type Soht2User, UserApi } from '../api/soht2Api';
-import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
-import NewUserDialog from './NewUserDialog.tsx';
 
 export default function UsersTable() {
   const theme = useTheme();
@@ -201,13 +201,13 @@ export default function UsersTable() {
         keepMounted>
         <MenuItem onClick={onEdit} disabled={!selectedUser}>
           <ListItemIcon>
-            <EditOutlinedIcon fontSize="small" />
+            <ManageAccountsIcon fontSize="small" />
           </ListItemIcon>
           Edit User
         </MenuItem>
         <MenuItem onClick={onDelete} disabled={!selectedUser}>
           <ListItemIcon>
-            <DeleteOutlineIcon fontSize="small" />
+            <PersonRemoveAlt1Icon fontSize="small" />
           </ListItemIcon>
           Delete User
         </MenuItem>
@@ -215,7 +215,6 @@ export default function UsersTable() {
 
       <NewUserDialog open={newUserOpen} onClose={() => setNewUserOpen(false)} />
       <EditUserDialog open={editOpen} user={selectedUser} onClose={() => setEditOpen(false)} />
-
       <DeleteUserDialog
         open={deleteOpen}
         user={selectedUser}

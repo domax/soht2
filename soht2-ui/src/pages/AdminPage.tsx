@@ -48,7 +48,7 @@ export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }
           <Tab label="Connections" id="admin-tab-1" aria-controls="admin-tabpanel-1" />
           <Tab label="History" id="admin-tab-2" aria-controls="admin-tabpanel-2" />
         </Tabs>
-        <Box sx={{ flex: 1, minHeight: 0 /* allow children to use 100% height with overflow */ }}>
+        <Box sx={{ flex: 1, minHeight: 0 }}>
           <TabPanel value={tab} index={0}>
             <Box sx={{ height: '100%' }}>
               <UsersTable />

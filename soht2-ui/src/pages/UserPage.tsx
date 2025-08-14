@@ -46,7 +46,7 @@ export default function UserPage({ user }: Readonly<{ user?: Soht2User | null }>
           <Tab label="Connections" id="user-tab-0" aria-controls="user-tabpanel-0" />
           <Tab label="History" id="user-tab-1" aria-controls="user-tabpanel-1" />
         </Tabs>
-        <Box sx={{ flex: 1, minHeight: 0 /* allow children to use 100% height with overflow */ }}>
+        <Box sx={{ flex: 1, minHeight: 0 }}>
           <TabPanel value={tab} index={0}>
             <Box sx={{ p: 2 }}>
               <Typography>Under construction</Typography>
