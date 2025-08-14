@@ -13,12 +13,9 @@ import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
-import InputAdornment from '@mui/material/InputAdornment';
-import IconButton from '@mui/material/IconButton';
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { type ApiError, type Soht2User, UserApi, type UserRole } from '../api/soht2Api';
 import AllowedTargets from './AllowedTargets.tsx';
+import PasswordEye from './PasswordEye.tsx';
 
 type EditUserDialogProps = Readonly<{ open: boolean; user: Soht2User | null; onClose: () => void }>;
 
@@ -28,14 +25,12 @@ export default function EditUserDialog({ open, user, onClose }: EditUserDialogPr
   const [allowedTargets, setAllowedTargets] = React.useState<string[]>(user?.allowedTargets ?? []);
   const [initialRole] = React.useState<UserRole>(user?.role || 'USER');
   const [initialTargets] = React.useState<string[]>(user?.allowedTargets ?? []);
-  const [showPassword, setShowPassword] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
 
   React.useEffect(() => {
     // Reset when user changes/open toggles
     if (open) {
       setPassword('');
-      setShowPassword(false);
       setRole(user?.role || 'USER');
       setAllowedTargets(user?.allowedTargets ?? []);
     }
@@ -51,9 +46,9 @@ export default function EditUserDialog({ open, user, onClose }: EditUserDialogPr
         role?: string | null;
         allowedTargets?: string[] | null;
       } = {};
-      if (password) params.password = password; // optional; only send if non-empty
+      if (password) params.password = password; // optional; only send it if non-empty
       if (role && role !== initialRole) params.role = role;
-      // Only send allowedTargets if changed. Note: empty array would be ignored by API implementation
+      // Only send allowedTargets if changed.
       const changedTargets = JSON.stringify(allowedTargets) !== JSON.stringify(initialTargets);
       if (changedTargets) params.allowedTargets = allowedTargets;
 
@@ -84,28 +79,10 @@ export default function EditUserDialog({ open, user, onClose }: EditUserDialogPr
             slotProps={{ input: { readOnly: true } }}
           />
 
-          <TextField
-            label="Password"
-            value={password}
-            type={showPassword ? 'text' : 'password'}
-            onChange={e => setPassword(e.target.value)}
-            autoComplete="new-password"
+          <PasswordEye
+            password={password}
             helperText="Leave empty to keep unchanged"
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      onClick={() => setShowPassword(p => !p)}
-                      edge="end"
-                      size="small">
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              },
-            }}
+            onChange={setPassword}
           />
 
           <FormControl fullWidth>
@@ -120,7 +97,7 @@ export default function EditUserDialog({ open, user, onClose }: EditUserDialogPr
             </Select>
           </FormControl>
 
-          <AllowedTargets targets={allowedTargets} setTargets={setAllowedTargets} />
+          <AllowedTargets targets={allowedTargets} onChange={setAllowedTargets} />
         </Stack>
       </DialogContent>
       <DialogActions>

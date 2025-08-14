@@ -13,12 +13,9 @@ import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
-import InputAdornment from '@mui/material/InputAdornment';
-import IconButton from '@mui/material/IconButton';
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { type ApiError, UserApi, type UserRole } from '../api/soht2Api';
 import AllowedTargets from './AllowedTargets.tsx';
+import PasswordEye from './PasswordEye.tsx';
 
 type NewUserDialogProps = Readonly<{ open: boolean; onClose: () => void }>;
 type NewUserForm = { username: string; password: string; role: UserRole; allowedTargets: string[] };
@@ -30,7 +27,6 @@ export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
     role: 'USER',
     allowedTargets: ['*:*'],
   });
-  const [showPassword, setShowPassword] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
 
   const emptyRequired = !form.username || !form.password;
@@ -38,7 +34,6 @@ export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
   const resetAndClose = () => {
     if (submitting) return;
     setForm({ username: '', password: '', role: 'USER', allowedTargets: [] });
-    setShowPassword(false);
     onClose();
   };
 
@@ -78,28 +73,9 @@ export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
             autoComplete="username"
           />
 
-          <TextField
-            label="Password"
-            value={form.password}
-            required
-            type={showPassword ? 'text' : 'password'}
-            onChange={e => setForm(prev => ({ ...prev, password: e.target.value }))}
-            autoComplete="new-password"
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      onClick={() => setShowPassword(p => !p)}
-                      edge="end"
-                      size="small">
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              },
-            }}
+          <PasswordEye
+            password={form.password}
+            onChange={p => setForm(prev => ({ ...prev, password: p }))}
           />
 
           <FormControl fullWidth>
@@ -118,7 +94,7 @@ export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
 
           <AllowedTargets
             targets={form.allowedTargets}
-            setTargets={targets => setForm(prev => ({ ...prev, allowedTargets: targets }))}
+            onChange={targets => setForm(prev => ({ ...prev, allowedTargets: targets }))}
           />
         </Stack>
       </DialogContent>

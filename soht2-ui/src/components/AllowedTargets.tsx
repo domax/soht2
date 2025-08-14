@@ -7,15 +7,15 @@ import Chip from '@mui/material/Chip';
 export const TARGET_REGEX = /^[a-z0-9.*-]+:[0-9*]+$/;
 
 type AllowedTargetProps = Readonly<{
-  targets: string[];
-  setTargets: (targets: string[]) => void;
   label?: string;
+  targets: string[];
+  onChange: (targets: string[]) => void;
 }>;
 
 export default function AllowedTargets({
+  label = 'Allowed Target',
   targets,
-  setTargets,
-  label = 'Allowed Targets',
+  onChange,
 }: AllowedTargetProps) {
   const [targetInput, setTargetInput] = React.useState('');
   const [targetError, setTargetError] = React.useState<string | null>(null);
@@ -31,13 +31,13 @@ export default function AllowedTargets({
       setTargetError('Target already added');
       return;
     }
-    setTargets([...targets, value]);
+    onChange([...targets, value]);
     setTargetInput('');
     setTargetError(null);
   };
 
   const removeTarget = (t: string) => {
-    setTargets(targets.filter(x => x !== t));
+    onChange(targets.filter(x => x !== t));
   };
 
   return (

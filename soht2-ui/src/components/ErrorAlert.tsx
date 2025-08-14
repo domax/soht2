@@ -19,12 +19,10 @@ export default function ErrorAlert({
   const [message, setMessage] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    const handler = (evt: Event) => {
-      const ce = evt as CustomEvent<ApiError>;
-      const msg =
-        ce.detail?.errors?.[0]?.defaultMessage || ce.detail?.message || 'Unexpected error';
-      setMessage(msg);
-    };
+    const handler = (evt: CustomEvent<ApiError>) =>
+      setMessage(
+        evt.detail?.errors?.[0]?.defaultMessage || evt.detail?.message || 'Unexpected error'
+      );
     window.addEventListener(APP_ERROR_EVENT, handler as EventListener);
     return () => window.removeEventListener(APP_ERROR_EVENT, handler as EventListener);
   }, []);

@@ -4,11 +4,11 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
-import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import { APP_ERROR_EVENT } from './ErrorAlert';
 import CircularProgress from '@mui/material/CircularProgress';
 import { UserApi, ApiError } from '../api/soht2Api';
+import PasswordEye from './PasswordEye.tsx';
 
 export default function ChangePasswordDialog({
   open,
@@ -16,20 +16,19 @@ export default function ChangePasswordDialog({
 }: Readonly<{ open: boolean; onClose: () => void }>) {
   const [oldPassword, setOldPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
-  const [confirmPassword, setConfirmPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
-  const empty = !oldPassword || !newPassword || !confirmPassword;
+  const empty = !oldPassword || !newPassword;
+
+  React.useEffect(() => {
+    // Reset when user changes/open toggles
+    if (open) {
+      setOldPassword('');
+      setNewPassword('');
+    }
+  }, [open]);
 
   const handleSubmit = async () => {
-    if (newPassword !== confirmPassword) {
-      window.dispatchEvent(
-        new CustomEvent<ApiError>(APP_ERROR_EVENT, {
-          detail: new ApiError('New passwords do not match'),
-        })
-      );
-      return;
-    }
     if (oldPassword === newPassword) {
       window.dispatchEvent(
         new CustomEvent<ApiError>(APP_ERROR_EVENT, {
@@ -44,7 +43,6 @@ export default function ChangePasswordDialog({
       // on success close and reset
       setOldPassword('');
       setNewPassword('');
-      setConfirmPassword('');
       onClose();
     } catch (e) {
       window.dispatchEvent(new CustomEvent<ApiError>(APP_ERROR_EVENT, { detail: e as ApiError }));
@@ -61,46 +59,22 @@ export default function ChangePasswordDialog({
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
       <DialogTitle>Change Password</DialogTitle>
       <DialogContent>
-        <TextField
+        <PasswordEye
           label="Old Password"
-          type="password"
-          variant="outlined"
+          password={oldPassword}
           fullWidth
           margin="normal"
-          value={oldPassword}
-          required
-          onChange={e => {
-            setOldPassword(e.target.value);
-          }}
           autoComplete="current-password"
+          onChange={setOldPassword}
         />
-        <TextField
+        <PasswordEye
           label="New Password"
-          type="password"
-          variant="outlined"
+          password={newPassword}
           fullWidth
           margin="normal"
-          value={newPassword}
-          required
-          onChange={e => {
-            setNewPassword(e.target.value);
-          }}
-          autoComplete="new-password"
-        />
-        <TextField
-          label="Confirm New Password"
-          type="password"
-          variant="outlined"
-          fullWidth
-          margin="normal"
-          value={confirmPassword}
-          required
-          onChange={e => {
-            setConfirmPassword(e.target.value);
-          }}
-          autoComplete="new-password"
-          onKeyDown={e => {
-            if (e.key === 'Enter' && !empty && !loading) handleSubmit();
+          onChange={setNewPassword}
+          onEnter={() => {
+            if (!empty && !loading) handleSubmit();
           }}
         />
       </DialogContent>
