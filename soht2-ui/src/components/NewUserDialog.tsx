@@ -31,11 +31,13 @@ export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
 
   const emptyRequired = !form.username || !form.password;
 
-  const resetAndClose = () => {
-    if (submitting) return;
-    setForm({ username: '', password: '', role: 'USER', allowedTargets: [] });
-    onClose();
+  const handleClose = () => {
+    if (!submitting) onClose();
   };
+
+  React.useEffect(() => {
+    if (open) setForm({ username: '', password: '', role: 'USER', allowedTargets: ['*:*'] });
+  }, [open]);
 
   const handleSubmit = async () => {
     if (emptyRequired) return;
@@ -51,7 +53,7 @@ export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
       window.dispatchEvent(
         new CustomEvent('users:changed', { detail: { action: 'create', username: form.username } })
       );
-      resetAndClose();
+      onClose();
     } catch (e) {
       window.dispatchEvent(new CustomEvent<ApiError>(APP_ERROR_EVENT, { detail: e as ApiError }));
     } finally {
@@ -60,7 +62,7 @@ export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
   };
 
   return (
-    <Dialog open={open} onClose={resetAndClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
       <DialogTitle>New User</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
@@ -99,7 +101,7 @@ export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={resetAndClose} disabled={submitting} color="inherit">
+        <Button onClick={handleClose} disabled={submitting} color="inherit">
           Cancel
         </Button>
         <Button onClick={handleSubmit} disabled={emptyRequired || submitting} variant="contained">

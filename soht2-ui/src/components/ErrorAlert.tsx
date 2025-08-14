@@ -2,20 +2,11 @@
 import React from 'react';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
-import type { SnackbarOrigin } from '@mui/material/Snackbar';
 import type { ApiError } from '../api/soht2Api';
 
 export const APP_ERROR_EVENT = 'app:error';
 
-export type ErrorAlertProps = Readonly<{
-  autoHideDuration?: number;
-  anchorOrigin?: SnackbarOrigin;
-}>;
-
-export default function ErrorAlert({
-  autoHideDuration = 10000,
-  anchorOrigin = { vertical: 'bottom', horizontal: 'center' },
-}: ErrorAlertProps) {
+export default function ErrorAlert() {
   const [message, setMessage] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -32,9 +23,9 @@ export default function ErrorAlert({
   return (
     <Snackbar
       open={!!message}
-      autoHideDuration={autoHideDuration}
+      autoHideDuration={10000}
       onClose={onClose}
-      anchorOrigin={anchorOrigin}>
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
       <Alert onClose={onClose} severity="error" variant="filled" sx={{ width: '100%' }}>
         <div style={{ whiteSpace: 'pre-wrap' }}>{message}</div>
       </Alert>

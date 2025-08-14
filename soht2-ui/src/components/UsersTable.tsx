@@ -18,24 +18,26 @@ import MenuItem from '@mui/material/MenuItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { useTheme } from '@mui/material/styles';
 import EditUserDialog from './EditUserDialog';
 import DeleteUserDialog from './DeleteUserDialog';
 import { type ApiError, type Soht2User, UserApi } from '../api/soht2Api';
+import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
+import NewUserDialog from './NewUserDialog.tsx';
 
 export default function UsersTable() {
+  const theme = useTheme();
+
   const [users, setUsers] = React.useState<Soht2User[] | null>(null);
   const [loading, setLoading] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Row menu state
-  const [menuAnchor, setMenuAnchor] = React.useState<null | HTMLElement>(null);
+  const [menuHeaderAnchor, setMenuHeaderAnchor] = React.useState<null | HTMLElement>(null);
+  const [menuRowAnchor, setMenuRowAnchor] = React.useState<null | HTMLElement>(null);
   const [selectedUser, setSelectedUser] = React.useState<Soht2User | null>(null);
-
-  // Edit dialog state
   const [editOpen, setEditOpen] = React.useState(false);
-
-  // Delete dialog state
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [newUserOpen, setNewUserOpen] = React.useState(false);
 
   const load = React.useCallback(async () => {
     try {
@@ -51,18 +53,28 @@ export default function UsersTable() {
     }
   }, []);
 
-  const openMenu = (event: React.MouseEvent<HTMLElement>, user: Soht2User) => {
-    setSelectedUser(user);
-    setMenuAnchor(event.currentTarget);
+  const openMenuHeader = (event: React.MouseEvent<HTMLElement>) => {
+    setMenuHeaderAnchor(event.currentTarget);
   };
-  const closeMenu = () => setMenuAnchor(null);
+  const closeMenuHeader = () => setMenuHeaderAnchor(null);
+
+  const openNewUser = () => {
+    setNewUserOpen(true);
+    closeMenuHeader();
+  };
+
+  const openMenuRow = (event: React.MouseEvent<HTMLElement>, user: Soht2User) => {
+    setSelectedUser(user);
+    setMenuRowAnchor(event.currentTarget);
+  };
+  const closeMenuRow = () => setMenuRowAnchor(null);
 
   const onEdit = () => {
-    closeMenu();
+    closeMenuRow();
     setEditOpen(true);
   };
   const onDelete = () => {
-    closeMenu();
+    closeMenuRow();
     setDeleteOpen(true);
   };
 
@@ -113,7 +125,21 @@ export default function UsersTable() {
               <TableCell>
                 <b>Allowed Targets</b>
               </TableCell>
-              <TableCell align="right" />
+              <TableCell align="right">
+                <IconButton
+                  size="small"
+                  aria-label="actions-users"
+                  aria-controls={menuHeaderAnchor ? 'user-header-menu' : undefined}
+                  aria-haspopup="true"
+                  onClick={openMenuHeader}
+                  sx={{
+                    backgroundColor: theme.palette.primary.main,
+                    color: theme.palette.primary.contrastText,
+                    '&:hover': { backgroundColor: theme.palette.primary.light },
+                  }}>
+                  <MoreVertIcon />
+                </IconButton>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -138,9 +164,9 @@ export default function UsersTable() {
                     <IconButton
                       size="small"
                       aria-label={`actions-${u.username}`}
-                      aria-controls={menuAnchor ? 'user-row-menu' : undefined}
+                      aria-controls={menuRowAnchor ? 'user-row-menu' : undefined}
                       aria-haspopup="true"
-                      onClick={e => openMenu(e, u)}>
+                      onClick={e => openMenuRow(e, u)}>
                       <MoreVertIcon />
                     </IconButton>
                   </TableCell>
@@ -152,10 +178,24 @@ export default function UsersTable() {
       </TableContainer>
 
       <Menu
+        id="user-header-menu"
+        anchorEl={menuHeaderAnchor}
+        open={!!menuHeaderAnchor}
+        onClose={closeMenuHeader}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        keepMounted>
+        <MenuItem onClick={openNewUser}>
+          <PersonAddAlt1Icon fontSize="small" style={{ marginRight: 12 }} />
+          New User
+        </MenuItem>
+      </Menu>
+
+      <Menu
         id="user-row-menu"
-        anchorEl={menuAnchor}
-        open={!!menuAnchor}
-        onClose={closeMenu}
+        anchorEl={menuRowAnchor}
+        open={!!menuRowAnchor}
+        onClose={closeMenuRow}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         keepMounted>
@@ -173,6 +213,7 @@ export default function UsersTable() {
         </MenuItem>
       </Menu>
 
+      <NewUserDialog open={newUserOpen} onClose={() => setNewUserOpen(false)} />
       <EditUserDialog open={editOpen} user={selectedUser} onClose={() => setEditOpen(false)} />
 
       <DeleteUserDialog

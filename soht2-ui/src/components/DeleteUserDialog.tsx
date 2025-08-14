@@ -10,6 +10,7 @@ import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import { APP_ERROR_EVENT } from './ErrorAlert';
 import { type ApiError, type Soht2User, UserApi } from '../api/soht2Api';
+import CircularProgress from '@mui/material/CircularProgress';
 
 type DeleteUserDialogProps = Readonly<{
   open: boolean;
@@ -46,8 +47,12 @@ export default function DeleteUserDialog({ open, user, onClose }: DeleteUserDial
     }
   };
 
+  const handleClose = () => {
+    if (!deleting) onClose();
+  };
+
   return (
-    <Dialog open={open} onClose={() => (!deleting ? onClose() : undefined)}>
+    <Dialog open={open} onClose={handleClose}>
       <DialogTitle>Delete User</DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 1 }}>Are you sure you want to delete user "{user?.username}"?</Box>
@@ -74,11 +79,17 @@ export default function DeleteUserDialog({ open, user, onClose }: DeleteUserDial
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={deleting} color="inherit">
+        <Button onClick={handleClose} disabled={deleting} color="inherit">
           Cancel
         </Button>
         <Button onClick={handleConfirm} disabled={deleting} color="error" variant="contained">
-          {deleting ? 'Deleting...' : 'Delete'}
+          {deleting ? (
+            <>
+              <CircularProgress size={20} sx={{ mr: 1 }} /> Deleting...
+            </>
+          ) : (
+            'Delete'
+          )}
         </Button>
       </DialogActions>
     </Dialog>

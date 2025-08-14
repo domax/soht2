@@ -14,13 +14,11 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import LogoutIcon from '@mui/icons-material/Logout';
 import LockResetIcon from '@mui/icons-material/LockReset';
-import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useThemeMode } from '../theme';
 import { httpClient } from '../api/soht2Api';
 import soht2Logo from '/soht2_logo.png'; // NOSONAR typescript:S6859
 import ChangePasswordDialog from './ChangePasswordDialog';
-import NewUserDialog from './NewUserDialog';
 import ErrorAlert from './ErrorAlert';
 
 export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -30,13 +28,8 @@ export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
   const navigate = useNavigate();
   const location = useLocation();
   const isLogin = location.pathname === '/login';
-  const isAdmin = location.pathname.startsWith('/admin');
 
-  // Change password dialog state (moved to component)
   const [pwDialogOpen, setPwDialogOpen] = React.useState(false);
-
-  // New user dialog state
-  const [newUserOpen, setNewUserOpen] = React.useState(false);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -63,15 +56,8 @@ export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
     setPwDialogOpen(false);
   };
 
-  const openNewUser = () => {
-    setNewUserOpen(true);
-    handleClose();
-  };
-
-  const closeNewUser = () => setNewUserOpen(false);
-
   const ThemeIcon = mode === 'dark' ? LightModeIcon : DarkModeIcon;
-  const themeText = mode === 'dark' ? 'Light theme' : 'Dark theme';
+  const themeText = mode === 'dark' ? 'Light Theme' : 'Dark Theme';
 
   return (
     <>
@@ -103,17 +89,11 @@ export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
                 Change Password
               </MenuItem>
             )}
-            {isAdmin && (
-              <MenuItem onClick={openNewUser}>
-                <PersonAddAlt1Icon fontSize="small" style={{ marginRight: 12 }} />
-                New User
-              </MenuItem>
-            )}
             {!isLogin && <Divider />}
             {!isLogin && (
               <MenuItem onClick={handleLogout}>
                 <LogoutIcon fontSize="small" style={{ marginRight: 12 }} />
-                Log out
+                Log Out
               </MenuItem>
             )}
           </Menu>
@@ -124,7 +104,6 @@ export function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
       </Container>
 
       <ChangePasswordDialog open={pwDialogOpen} onClose={closeChangePassword} />
-      <NewUserDialog open={newUserOpen} onClose={closeNewUser} />
       <ErrorAlert />
     </>
   );
