@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import React from 'react';
+import { useState } from 'react';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import Chip from '@mui/material/Chip';
@@ -17,8 +17,8 @@ export default function AllowedTargets({
   targets,
   onChange,
 }: AllowedTargetProps) {
-  const [targetInput, setTargetInput] = React.useState('');
-  const [targetError, setTargetError] = React.useState<string | null>(null);
+  const [targetInput, setTargetInput] = useState('');
+  const [targetError, setTargetError] = useState<string | null>(null);
 
   const addTarget = () => {
     const value = targetInput.trim();

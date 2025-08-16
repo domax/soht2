@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import React from 'react';
+import { useState, useEffect } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -20,14 +20,14 @@ import PasswordEye from '../controls/PasswordEye';
 type EditUserDialogProps = Readonly<{ open: boolean; user: Soht2User | null; onClose: () => void }>;
 
 export default function EditUserDialog({ open, user, onClose }: EditUserDialogProps) {
-  const [password, setPassword] = React.useState('');
-  const [role, setRole] = React.useState<UserRole>(user?.role || 'USER');
-  const [allowedTargets, setAllowedTargets] = React.useState<string[]>(user?.allowedTargets ?? []);
-  const [initialRole] = React.useState<UserRole>(user?.role || 'USER');
-  const [initialTargets] = React.useState<string[]>(user?.allowedTargets ?? []);
-  const [submitting, setSubmitting] = React.useState(false);
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState<UserRole>(user?.role || 'USER');
+  const [allowedTargets, setAllowedTargets] = useState<string[]>(user?.allowedTargets ?? []);
+  const [initialRole] = useState<UserRole>(user?.role || 'USER');
+  const [initialTargets] = useState<string[]>(user?.allowedTargets ?? []);
+  const [submitting, setSubmitting] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Reset when user changes/open toggles
     if (open) {
       setPassword('');

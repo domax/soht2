@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import React from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
@@ -12,10 +12,10 @@ import PasswordEye from '../controls/PasswordEye';
 
 export default function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2User) => void }>) {
   const navigate = useNavigate();
-  const [username, setUsername] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [empty, setEmpty] = React.useState(true);
-  const [loading, setLoading] = React.useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [empty, setEmpty] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
     setLoading(true);

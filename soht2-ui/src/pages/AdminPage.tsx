@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import React from 'react';
+import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Tabs from '@mui/material/Tabs';
@@ -13,7 +13,7 @@ import UsersTable from '../components/UsersTable';
 export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }>) {
   const prefix = 'admin-';
 
-  const [tab, setTab] = React.useState(0);
+  const [tab, setTab] = useState(0);
 
   if ((user?.role || '').toUpperCase() !== 'ADMIN') {
     httpClient.clearAuth();

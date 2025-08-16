@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import React from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -28,18 +28,18 @@ import { type ApiError, type Soht2User, UserApi } from '../api/soht2Api';
 export default function UsersTable() {
   const theme = useTheme();
 
-  const [users, setUsers] = React.useState<Soht2User[] | null>(null);
-  const [loading, setLoading] = React.useState<boolean>(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [users, setUsers] = useState<Soht2User[] | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [menuHeaderAnchor, setMenuHeaderAnchor] = React.useState<null | HTMLElement>(null);
-  const [menuRowAnchor, setMenuRowAnchor] = React.useState<null | HTMLElement>(null);
-  const [selectedUser, setSelectedUser] = React.useState<Soht2User | null>(null);
-  const [editOpen, setEditOpen] = React.useState(false);
-  const [deleteOpen, setDeleteOpen] = React.useState(false);
-  const [newUserOpen, setNewUserOpen] = React.useState(false);
+  const [menuHeaderAnchor, setMenuHeaderAnchor] = useState<null | HTMLElement>(null);
+  const [menuRowAnchor, setMenuRowAnchor] = useState<null | HTMLElement>(null);
+  const [selectedUser, setSelectedUser] = useState<Soht2User | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [newUserOpen, setNewUserOpen] = useState(false);
 
-  const load = React.useCallback(async () => {
+  const load = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -78,12 +78,12 @@ export default function UsersTable() {
     setDeleteOpen(true);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     void load();
   }, [load]);
 
   // Listen for external notifications about users' changes (e.g., from NewUserDialog)
-  React.useEffect(() => {
+  useEffect(() => {
     const handler = () => {
       void load();
     };

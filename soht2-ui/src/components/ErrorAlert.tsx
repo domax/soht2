@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import React from 'react';
+import { useState, useEffect } from 'react';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import type { ApiError } from '../api/soht2Api';
@@ -7,9 +7,9 @@ import type { ApiError } from '../api/soht2Api';
 export const APP_ERROR_EVENT = 'app:error';
 
 export default function ErrorAlert() {
-  const [message, setMessage] = React.useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handler = (evt: CustomEvent<ApiError>) =>
       setMessage(
         evt.detail?.errors?.[0]?.defaultMessage || evt.detail?.message || 'Unexpected error'

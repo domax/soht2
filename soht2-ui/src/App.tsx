@@ -1,6 +1,6 @@
 /* SOHT2 © Licensed under MIT 2025. */
 import './App.css';
-import React, { Suspense, lazy } from 'react';
+import { useState, useMemo, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeModeProvider } from './theme';
 import type { Soht2User } from './api/soht2Api';
@@ -12,8 +12,8 @@ const LazyUserPage = lazy(() => import('./pages/UserPage'));
 export type WindowProps = typeof window & { __CONTEXT_PATH__: string };
 
 export default function App() {
-  const [user, setUser] = React.useState<Soht2User | null>(null);
-  const isAdmin = React.useMemo(() => (user?.role || '').toUpperCase() === 'ADMIN', [user]);
+  const [user, setUser] = useState<Soht2User | null>(null);
+  const isAdmin = useMemo(() => (user?.role || '').toUpperCase() === 'ADMIN', [user]);
 
   return (
     <ThemeModeProvider>

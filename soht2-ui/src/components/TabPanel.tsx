@@ -1,9 +1,9 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import React from 'react';
+import { type ReactNode } from 'react';
 import Box from '@mui/material/Box';
 
 type TabPanelProps = Readonly<{
-  children?: React.ReactNode;
+  children?: ReactNode;
   prefix?: string;
   index: number;
   value: number;

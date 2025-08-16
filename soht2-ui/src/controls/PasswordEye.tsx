@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import React from 'react';
+import { useState } from 'react';
 import type { TextFieldVariants } from '@mui/material/TextField/TextField';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -32,7 +32,7 @@ export default function PasswordEye({
   onChange,
   onEnter,
 }: PasswordEyeProps) {
-  const [showPassword, setShowPassword] = React.useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <TextField

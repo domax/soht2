@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import React from 'react';
+import { type ReactNode, createContext, useContext, useState, useMemo, useCallback } from 'react';
 import { createTheme, CssBaseline, ThemeProvider } from '@mui/material';
 
 export type ThemeMode = 'light' | 'dark';
@@ -14,15 +14,15 @@ function getInitialMode(): ThemeMode {
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const ThemeModeContext = React.createContext<{ mode: ThemeMode; toggle: () => void }>({
+export const ThemeModeContext = createContext<{ mode: ThemeMode; toggle: () => void }>({
   mode: 'light',
   toggle: () => {},
 });
 
-export function ThemeModeProvider({ children }: Readonly<{ children: React.ReactNode }>) {
-  const [mode, setMode] = React.useState<ThemeMode>(getInitialMode);
+export function ThemeModeProvider({ children }: Readonly<{ children: ReactNode }>) {
+  const [mode, setMode] = useState<ThemeMode>(getInitialMode);
 
-  const toggle = React.useCallback(() => {
+  const toggle = useCallback(() => {
     setMode(prev => {
       const next: ThemeMode = prev === 'light' ? 'dark' : 'light';
       localStorage.setItem(STORAGE_KEY, next);
@@ -30,9 +30,9 @@ export function ThemeModeProvider({ children }: Readonly<{ children: React.React
     });
   }, []);
 
-  const theme = React.useMemo(() => createTheme({ palette: { mode } }), [mode]);
+  const theme = useMemo(() => createTheme({ palette: { mode } }), [mode]);
 
-  const ctx = React.useMemo(() => ({ mode, toggle }), [mode, toggle]);
+  const ctx = useMemo(() => ({ mode, toggle }), [mode, toggle]);
 
   return (
     <ThemeModeContext.Provider value={ctx}>
@@ -46,5 +46,5 @@ export function ThemeModeProvider({ children }: Readonly<{ children: React.React
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useThemeMode() {
-  return React.useContext(ThemeModeContext);
+  return useContext(ThemeModeContext);
 }

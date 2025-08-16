@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import React from 'react';
+import { useState, useEffect } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -19,11 +19,11 @@ type DeleteUserDialogProps = Readonly<{
 }>;
 
 export default function DeleteUserDialog({ open, user, onClose }: DeleteUserDialogProps) {
-  const [deleteHistory, setDeleteHistory] = React.useState(true);
-  const [deleteForce, setDeleteForce] = React.useState(false);
-  const [deleting, setDeleting] = React.useState(false);
+  const [deleteHistory, setDeleteHistory] = useState(true);
+  const [deleteForce, setDeleteForce] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       setDeleteHistory(true);
       setDeleteForce(false);

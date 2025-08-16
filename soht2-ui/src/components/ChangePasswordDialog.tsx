@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import React from 'react';
+import { useState, useEffect } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -14,13 +14,13 @@ export default function ChangePasswordDialog({
   open,
   onClose,
 }: Readonly<{ open: boolean; onClose: () => void }>) {
-  const [oldPassword, setOldPassword] = React.useState('');
-  const [newPassword, setNewPassword] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const empty = !oldPassword || !newPassword;
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Reset when user changes/open toggles
     if (open) {
       setOldPassword('');

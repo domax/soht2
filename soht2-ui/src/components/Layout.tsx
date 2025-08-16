@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import React from 'react';
+import { type ReactNode, type MouseEvent, useState } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
@@ -21,17 +21,16 @@ import { httpClient } from '../api/soht2Api';
 import ChangePasswordDialog from './ChangePasswordDialog';
 import ErrorAlert from './ErrorAlert';
 
-export default function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function Layout({ children }: Readonly<{ children: ReactNode }>) {
   const { mode, toggle } = useThemeMode();
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const menuOpen = Boolean(anchorEl);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const isLogin = location.pathname === '/login';
 
-  const [pwDialogOpen, setPwDialogOpen] = React.useState(false);
+  const [pwDialogOpen, setPwDialogOpen] = useState(false);
 
-  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
+  const handleMenu = (event: MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
   const handleClose = () => setAnchorEl(null);
@@ -74,7 +73,7 @@ export default function Layout({ children }: Readonly<{ children: React.ReactNod
           </Tooltip>
           <Menu
             anchorEl={anchorEl}
-            open={menuOpen}
+            open={!!anchorEl}
             onClose={handleClose}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}

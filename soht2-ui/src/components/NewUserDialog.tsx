@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import React from 'react';
+import { useState, useEffect } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -21,13 +21,13 @@ type NewUserDialogProps = Readonly<{ open: boolean; onClose: () => void }>;
 type NewUserForm = { username: string; password: string; role: UserRole; allowedTargets: string[] };
 
 export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
-  const [form, setForm] = React.useState<NewUserForm>({
+  const [form, setForm] = useState<NewUserForm>({
     username: '',
     password: '',
     role: 'USER',
     allowedTargets: ['*:*'],
   });
-  const [submitting, setSubmitting] = React.useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const emptyRequired = !form.username || !form.password;
 
@@ -35,7 +35,7 @@ export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
     if (!submitting) onClose();
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) setForm({ username: '', password: '', role: 'USER', allowedTargets: ['*:*'] });
   }, [open]);
 

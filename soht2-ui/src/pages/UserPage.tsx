@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import React from 'react';
+import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Tabs from '@mui/material/Tabs';
@@ -12,7 +12,7 @@ import TabPanel from '../components/TabPanel';
 export default function UserPage({ user }: Readonly<{ user?: Soht2User | null }>) {
   const prefix = 'user-';
 
-  const [tab, setTab] = React.useState(0);
+  const [tab, setTab] = useState(0);
 
   if ((user?.role || '') === '') {
     httpClient.clearAuth();
