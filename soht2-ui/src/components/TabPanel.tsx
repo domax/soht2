@@ -1,3 +1,4 @@
+/* SOHT2 © Licensed under MIT 2025. */
 import React from 'react';
 import Box from '@mui/material/Box';
 

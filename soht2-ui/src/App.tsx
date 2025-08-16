@@ -9,13 +9,15 @@ const LazyLoginPage = lazy(() => import('./pages/LoginPage'));
 const LazyAdminPage = lazy(() => import('./pages/AdminPage'));
 const LazyUserPage = lazy(() => import('./pages/UserPage'));
 
+export type WindowProps = typeof window & { __CONTEXT_PATH__: string };
+
 export default function App() {
   const [user, setUser] = React.useState<Soht2User | null>(null);
   const isAdmin = React.useMemo(() => (user?.role || '').toUpperCase() === 'ADMIN', [user]);
 
   return (
     <ThemeModeProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={(window as WindowProps).__CONTEXT_PATH__ || '/'}>
         <Routes>
           <Route
             path="/"

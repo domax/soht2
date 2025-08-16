@@ -10,14 +10,14 @@
     "preview": "vite preview",
     "format": "prettier --write \"**/*.+(js|jsx|ts|tsx|json|css|vue)\"",
     "clean": "npx del -f dist/ && npm run clean4deploy",
-    "clean4deploy": "npx del -f ../soht2-server/src/main/resources/public/* '!../**/version'",
-    "deploy": "npm run clean4deploy && npx copyfiles -u 1 dist/* dist/**/* ../soht2-server/src/main/resources/public/"
+    "clean4deploy": "npx del -f ../soht2-server/src/main/resources/public/* ../soht2-server/src/main/resources/templates/index.html",
+    "deploy": "npm run clean4deploy && npx copyfiles -u 1 dist/* dist/**/* ../soht2-server/src/main/resources/public/ && npx move-file ../soht2-server/src/main/resources/public/index.html ../soht2-server/src/main/resources/templates/index.html"
   },
   "dependencies": {
     "@emotion/react": "^11.13.5",
     "@emotion/styled": "^11.13.5",
-    "@mui/material": "^6.1.2",
     "@mui/icons-material": "^6.1.2",
+    "@mui/material": "^6.1.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^6.28.0"
@@ -36,6 +36,7 @@
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
     "husky": "^9.1.7",
+    "move-file-cli": "^3.0.0",
     "prettier": "^3.5.3",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.30.1",

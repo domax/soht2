@@ -15,7 +15,7 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import LogoutIcon from '@mui/icons-material/Logout';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import { useNavigate, useLocation } from 'react-router-dom';
-import soht2Logo from '/soht2_logo.png'; // NOSONAR typescript:S6859
+import soht2Logo from '../assets/soht2_logo.png';
 import { useThemeMode } from '../theme';
 import { httpClient } from '../api/soht2Api';
 import ChangePasswordDialog from './ChangePasswordDialog';

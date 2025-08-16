@@ -46,8 +46,8 @@ bin/
 *.bak
 HELP.md
 /soht2-server/src/main/resources/public/*
-!/soht2-server/src/main/resources/public/version
 /soht2-server/src/main/resources/public/assets/
+/soht2-server/src/main/resources/templates/index.html
 application-local.yaml
 /soht2-server/**/application-server.yaml
 /soht2-client/**/application-client.yaml
