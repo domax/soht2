@@ -1,11 +1,12 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import { type MouseEvent, useCallback, useEffect, useState } from 'react';
+import { type MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
+import TableSortLabel from '@mui/material/TableSortLabel';
 import TableRow from '@mui/material/TableRow';
 import IconButton from '@mui/material/IconButton';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -20,12 +21,18 @@ import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import PersonRemoveAlt1Icon from '@mui/icons-material/PersonRemoveAlt1';
 import { useTheme } from '@mui/material/styles';
+import { type ApiError, type ISODateTime, type Soht2User, UserApi } from '../api/soht2Api';
 import NewUserDialog from './NewUserDialog';
 import EditUserDialog from './EditUserDialog';
 import DeleteUserDialog from './DeleteUserDialog';
-import { type ApiError, type Soht2User, UserApi } from '../api/soht2Api';
 
-export default function UsersTable() {
+type SortColumn = 'username' | 'role' | 'createdAt' | null;
+export type UsersSorting = { column: SortColumn; direction: 'asc' | 'desc' | null };
+
+export default function UsersTable({
+  initSorting,
+  onSortingChange,
+}: Readonly<{ initSorting?: UsersSorting; onSortingChange?: (s: UsersSorting) => void }>) {
   const theme = useTheme();
 
   const [users, setUsers] = useState<Soht2User[] | null>(null);
@@ -35,9 +42,9 @@ export default function UsersTable() {
   const [menuHeaderAnchor, setMenuHeaderAnchor] = useState<HTMLElement | null>(null);
   const [menuRowAnchor, setMenuRowAnchor] = useState<HTMLElement | null>(null);
   const [selectedUser, setSelectedUser] = useState<Soht2User | null>(null);
+  const [newUserOpen, setNewUserOpen] = useState(false);
   const [editUserOpen, setEditUserOpen] = useState(false);
   const [deleteUserOpen, setDeleteUserOpen] = useState(false);
-  const [newUserOpen, setNewUserOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -56,26 +63,21 @@ export default function UsersTable() {
   const handleMenuHeaderOpen = useCallback((e: MouseEvent<HTMLElement>) => {
     setMenuHeaderAnchor(e.currentTarget);
   }, []);
-
   const handleMenuHeaderClose = useCallback(() => setMenuHeaderAnchor(null), []);
-
-  const handleNewUserOpen = () => {
-    setNewUserOpen(true);
+  const handleNewUserOpen = useCallback(() => {
     handleMenuHeaderClose();
-  };
+    setNewUserOpen(true);
+  }, [handleMenuHeaderClose]);
 
   const handleMenuRowOpen = useCallback((e: MouseEvent<HTMLElement>, user: Soht2User) => {
     setSelectedUser(user);
     setMenuRowAnchor(e.currentTarget);
   }, []);
-
   const handleMenuRowClose = useCallback(() => setMenuRowAnchor(null), []);
-
   const handleEditUserOpen = useCallback(() => {
     handleMenuRowClose();
     setEditUserOpen(true);
   }, [handleMenuRowClose]);
-
   const handleDeleteUserOpen = useCallback(() => {
     handleMenuRowClose();
     setDeleteUserOpen(true);
@@ -98,6 +100,42 @@ export default function UsersTable() {
     return () => window.removeEventListener('users:changed', handler as EventListener);
   }, [load]);
 
+  const [sorting, setSorting] = useState(initSorting ?? { column: null, direction: null });
+
+  const toggleSort = useCallback(
+    (column: Exclude<SortColumn, null>) => {
+      const nextSorting: UsersSorting = { column, direction: 'asc' };
+      if (sorting.column !== column) {
+        nextSorting.column = column;
+      } else if (sorting.direction === 'asc') {
+        nextSorting.direction = 'desc';
+      } else if (sorting.direction === 'desc') {
+        nextSorting.column = null;
+        nextSorting.direction = null;
+      }
+      setSorting(nextSorting);
+      if (onSortingChange) onSortingChange(nextSorting);
+    },
+    [onSortingChange, sorting.column, sorting.direction]
+  );
+
+  const sortedUsers = useMemo(() => {
+    const list = users ?? [];
+    if (!sorting.column || !sorting.direction) return list;
+    const arr = [...list];
+    const cmp = (a: Soht2User, b: Soht2User): number => {
+      type Col = Exclude<SortColumn, null>;
+      const asTime = (u: Soht2User) =>
+        u[sorting.column as Col] ? new Date(u[sorting.column as Col] as ISODateTime).getTime() : 0;
+      const asString = (u: Soht2User) => (u[sorting.column as Col] || '').toString().toLowerCase();
+      return sorting.column === 'createdAt'
+        ? asTime(a) - asTime(b)
+        : asString(a).localeCompare(asString(b));
+    };
+    arr.sort((a, b) => (sorting.direction === 'asc' ? cmp(a, b) : -cmp(a, b)));
+    return arr;
+  }, [users, sorting.column, sorting.direction]);
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -114,20 +152,37 @@ export default function UsersTable() {
     );
   }
 
+  const sortDir = sorting.direction ?? false;
+  const dir = sorting.direction ?? 'asc';
   return (
     <>
       <TableContainer component={Paper} sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
         <Table stickyHeader size="small" aria-label="users table">
           <TableHead>
             <TableRow>
-              <TableCell>
-                <b>Name</b>
+              <TableCell sortDirection={sorting.column === 'username' ? sortDir : false}>
+                <TableSortLabel
+                  active={sorting.column === 'username'}
+                  direction={dir}
+                  onClick={() => toggleSort('username')}>
+                  <b>Name</b>
+                </TableSortLabel>
               </TableCell>
-              <TableCell>
-                <b>Role</b>
+              <TableCell sortDirection={sorting.column === 'role' ? sortDir : false}>
+                <TableSortLabel
+                  active={sorting.column === 'role'}
+                  direction={dir}
+                  onClick={() => toggleSort('role')}>
+                  <b>Role</b>
+                </TableSortLabel>
               </TableCell>
-              <TableCell>
-                <b>Created</b>
+              <TableCell sortDirection={sorting.column === 'createdAt' ? sortDir : false}>
+                <TableSortLabel
+                  active={sorting.column === 'createdAt'}
+                  direction={dir}
+                  onClick={() => toggleSort('createdAt')}>
+                  <b>Created</b>
+                </TableSortLabel>
               </TableCell>
               <TableCell>
                 <b>Allowed Targets</b>
@@ -150,7 +205,7 @@ export default function UsersTable() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {(users ?? []).map(u => {
+            {sortedUsers.map(u => {
               const created = u.createdAt ? new Date(u.createdAt).toLocaleString() : '';
               const targets = u.allowedTargets ?? [];
               return (
