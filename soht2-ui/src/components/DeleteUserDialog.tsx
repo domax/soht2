@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import { useState, useEffect } from 'react';
+import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -8,9 +8,9 @@ import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
 import { APP_ERROR_EVENT } from './ErrorAlert';
 import { type ApiError, type Soht2User, UserApi } from '../api/soht2Api';
-import CircularProgress from '@mui/material/CircularProgress';
 
 type DeleteUserDialogProps = Readonly<{
   open: boolean;
@@ -31,7 +31,7 @@ export default function DeleteUserDialog({ open, user, onClose }: DeleteUserDial
     }
   }, [open, user?.username]);
 
-  const handleConfirm = async () => {
+  const handleConfirm = useCallback(async () => {
     if (!user) return;
     setDeleting(true);
     try {
@@ -45,11 +45,21 @@ export default function DeleteUserDialog({ open, user, onClose }: DeleteUserDial
     } finally {
       setDeleting(false);
     }
-  };
+  }, [user, deleteHistory, deleteForce, onClose]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (!deleting) onClose();
-  };
+  }, [deleting, onClose]);
+
+  const handleChangeHistory = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => setDeleteHistory(e.target.checked),
+    []
+  );
+
+  const handleChangeForce = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => setDeleteForce(e.target.checked),
+    []
+  );
 
   return (
     <Dialog open={open} onClose={handleClose}>
@@ -58,21 +68,14 @@ export default function DeleteUserDialog({ open, user, onClose }: DeleteUserDial
         <Box sx={{ mt: 1 }}>Are you sure you want to delete user "{user?.username}"?</Box>
         <Box sx={{ mt: 1 }}>
           <FormControlLabel
-            control={
-              <Checkbox
-                checked={deleteHistory}
-                onChange={e => setDeleteHistory(e.target.checked)}
-              />
-            }
+            control={<Checkbox checked={deleteHistory} onChange={handleChangeHistory} />}
             label="Remove history"
           />
         </Box>
         {(user?.role || '').toUpperCase() === 'ADMIN' && (
           <Box>
             <FormControlLabel
-              control={
-                <Checkbox checked={deleteForce} onChange={e => setDeleteForce(e.target.checked)} />
-              }
+              control={<Checkbox checked={deleteForce} onChange={handleChangeForce} />}
               label="Force deletion"
             />
           </Box>

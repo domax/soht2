@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import { useState, useEffect } from 'react';
+import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -10,12 +10,12 @@ import { APP_ERROR_EVENT } from './ErrorAlert';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
-import Select from '@mui/material/Select';
+import Select, { type SelectChangeEvent } from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import { type ApiError, UserApi, type UserRole } from '../api/soht2Api';
 import AllowedTargets from '../controls/AllowedTargets';
-import PasswordEye from '../controls/PasswordEye';
+import PasswordField from '../controls/PasswordField';
 
 type NewUserDialogProps = Readonly<{ open: boolean; onClose: () => void }>;
 type NewUserForm = { username: string; password: string; role: UserRole; allowedTargets: string[] };
@@ -29,18 +29,16 @@ export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const emptyRequired = !form.username || !form.password;
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (!submitting) onClose();
-  };
+  }, [submitting, onClose]);
 
   useEffect(() => {
     if (open) setForm({ username: '', password: '', role: 'USER', allowedTargets: ['*:*'] });
   }, [open]);
 
-  const handleSubmit = async () => {
-    if (emptyRequired) return;
+  const handleSubmit = useCallback(async () => {
+    if (!form.username || !form.password) return;
     setSubmitting(true);
     try {
       await UserApi.createUser({
@@ -59,7 +57,28 @@ export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [form.username, form.password, form.role, form.allowedTargets, onClose]);
+
+  const handleChangeUsername = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => setForm(prev => ({ ...prev, username: e.target.value })),
+    []
+  );
+
+  const handleChangePassword = useCallback(
+    (p: string) => setForm(prev => ({ ...prev, password: p })),
+    []
+  );
+
+  const handleChangeRole = useCallback(
+    (e: SelectChangeEvent<UserRole>) =>
+      setForm(prev => ({ ...prev, role: e.target.value as UserRole })),
+    []
+  );
+
+  const handleChangeTargets = useCallback(
+    (targets: string[]) => setForm(prev => ({ ...prev, allowedTargets: targets })),
+    []
+  );
 
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
@@ -70,41 +89,32 @@ export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
             label="Username"
             value={form.username}
             required
-            onChange={e => setForm(prev => ({ ...prev, username: e.target.value }))}
+            onChange={handleChangeUsername}
             autoFocus
             autoComplete="username"
           />
 
-          <PasswordEye
-            password={form.password}
-            onChange={p => setForm(prev => ({ ...prev, password: p }))}
-          />
+          <PasswordField password={form.password} onChange={handleChangePassword} />
 
           <FormControl fullWidth>
             <InputLabel id="role-label">Role</InputLabel>
-            <Select
-              labelId="role-label"
-              label="Role"
-              value={form.role}
-              onChange={e =>
-                setForm(prev => ({ ...prev, role: e.target.value as 'USER' | 'ADMIN' }))
-              }>
+            <Select labelId="role-label" label="Role" value={form.role} onChange={handleChangeRole}>
               <MenuItem value="USER">USER</MenuItem>
               <MenuItem value="ADMIN">ADMIN</MenuItem>
             </Select>
           </FormControl>
 
-          <AllowedTargets
-            targets={form.allowedTargets}
-            onChange={targets => setForm(prev => ({ ...prev, allowedTargets: targets }))}
-          />
+          <AllowedTargets targets={form.allowedTargets} onChange={handleChangeTargets} />
         </Stack>
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose} disabled={submitting} color="inherit">
           Cancel
         </Button>
-        <Button onClick={handleSubmit} disabled={emptyRequired || submitting} variant="contained">
+        <Button
+          onClick={handleSubmit}
+          disabled={!form.username || !form.password || submitting}
+          variant="contained">
           {submitting ? (
             <>
               <CircularProgress size={20} sx={{ mr: 1 }} /> Creating...

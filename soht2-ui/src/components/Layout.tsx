@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import { type ReactNode, type MouseEvent, useState } from 'react';
+import { type MouseEvent, type ReactNode, useCallback, useState } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
@@ -14,7 +14,7 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import LogoutIcon from '@mui/icons-material/Logout';
 import LockResetIcon from '@mui/icons-material/LockReset';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import soht2Logo from '../assets/soht2_logo.png';
 import { useThemeMode } from '../theme';
 import { httpClient } from '../api/soht2Api';
@@ -30,30 +30,30 @@ export default function Layout({ children }: Readonly<{ children: ReactNode }>) 
 
   const [pwDialogOpen, setPwDialogOpen] = useState(false);
 
-  const handleMenu = (event: MouseEvent<HTMLElement>) => {
+  const handleMenu = useCallback((event: MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => setAnchorEl(null);
+  }, []);
+  const handleClose = useCallback(() => setAnchorEl(null), []);
 
-  const handleToggleTheme = () => {
+  const handleToggleTheme = useCallback(() => {
     toggle();
     handleClose();
-  };
+  }, [toggle, handleClose]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     httpClient.clearAuth();
     handleClose();
     navigate('/login', { replace: true });
-  };
+  }, [handleClose, navigate]);
 
-  const openChangePassword = () => {
+  const openChangePassword = useCallback(() => {
     setPwDialogOpen(true);
     handleClose();
-  };
+  }, [handleClose]);
 
-  const closeChangePassword = () => {
+  const closeChangePassword = useCallback(() => {
     setPwDialogOpen(false);
-  };
+  }, []);
 
   const ThemeIcon = mode === 'dark' ? LightModeIcon : DarkModeIcon;
   const themeText = mode === 'dark' ? 'Light Theme' : 'Dark Theme';

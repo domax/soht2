@@ -1,10 +1,11 @@
 /* SOHT2 © Licensed under MIT 2025. */
 import './App.css';
-import { useState, useMemo, Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ThemeModeProvider } from './theme';
 import type { Soht2User } from './api/soht2Api';
 import CircularProgress from '@mui/material/CircularProgress';
+
 const LazyLoginPage = lazy(() => import('./pages/LoginPage'));
 const LazyAdminPage = lazy(() => import('./pages/AdminPage'));
 const LazyUserPage = lazy(() => import('./pages/UserPage'));
@@ -14,6 +15,8 @@ export type WindowProps = typeof window & { __CONTEXT_PATH__: string };
 export default function App() {
   const [user, setUser] = useState<Soht2User | null>(null);
   const isAdmin = useMemo(() => (user?.role || '').toUpperCase() === 'ADMIN', [user]);
+
+  const handleLogin = useCallback((u: Soht2User) => setUser(u), []);
 
   return (
     <ThemeModeProvider>
@@ -33,7 +36,7 @@ export default function App() {
             path="/login"
             element={
               <Suspense fallback={<CircularProgress />}>
-                <LazyLoginPage onLogin={u => setUser(u)} />
+                <LazyLoginPage onLogin={handleLogin} />
               </Suspense>
             }
           />

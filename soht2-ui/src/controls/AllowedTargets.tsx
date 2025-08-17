@@ -1,10 +1,10 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import { useState } from 'react';
+import { type KeyboardEvent, useCallback, useState } from 'react';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import Chip from '@mui/material/Chip';
 
-export const TARGET_REGEX = /^[a-z0-9.*-]+:[0-9*]+$/;
+const TARGET_REGEX = /^[a-z0-9.*-]+:[0-9*]+$/;
 
 type AllowedTargetProps = Readonly<{
   label?: string;
@@ -20,7 +20,7 @@ export default function AllowedTargets({
   const [targetInput, setTargetInput] = useState('');
   const [targetError, setTargetError] = useState<string | null>(null);
 
-  const addTarget = () => {
+  const handleAddTarget = useCallback(() => {
     const value = targetInput.trim();
     if (!value) return;
     if (!TARGET_REGEX.test(value)) {
@@ -34,11 +34,24 @@ export default function AllowedTargets({
     onChange([...targets, value]);
     setTargetInput('');
     setTargetError(null);
-  };
+  }, [targets, targetInput, onChange]);
 
-  const removeTarget = (t: string) => {
-    onChange(targets.filter(x => x !== t));
-  };
+  const handleRemoveTarget = useCallback(
+    (t: string) => {
+      onChange(targets.filter(x => x !== t));
+    },
+    [targets, onChange]
+  );
+
+  const handleEnterTarget = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleAddTarget();
+      }
+    },
+    [handleAddTarget]
+  );
 
   return (
     <Box>
@@ -50,12 +63,7 @@ export default function AllowedTargets({
           setTargetInput(e.target.value);
           if (targetError) setTargetError(null);
         }}
-        onKeyDown={e => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            addTarget();
-          }
-        }}
+        onKeyDown={handleEnterTarget}
         error={!!targetError}
         helperText={targetError || 'Press Enter to add target'}
         fullWidth
@@ -63,7 +71,7 @@ export default function AllowedTargets({
       {targets.length > 0 && (
         <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
           {targets.map(t => (
-            <Chip key={t} label={t} onDelete={() => removeTarget(t)} />
+            <Chip key={t} label={t} onDelete={() => handleRemoveTarget(t)} />
           ))}
         </Box>
       )}

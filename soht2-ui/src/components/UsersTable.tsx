@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import { useState, useEffect, useCallback } from 'react';
+import { type MouseEvent, useCallback, useEffect, useState } from 'react';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -32,11 +32,11 @@ export default function UsersTable() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [menuHeaderAnchor, setMenuHeaderAnchor] = useState<null | HTMLElement>(null);
-  const [menuRowAnchor, setMenuRowAnchor] = useState<null | HTMLElement>(null);
+  const [menuHeaderAnchor, setMenuHeaderAnchor] = useState<HTMLElement | null>(null);
+  const [menuRowAnchor, setMenuRowAnchor] = useState<HTMLElement | null>(null);
   const [selectedUser, setSelectedUser] = useState<Soht2User | null>(null);
-  const [editOpen, setEditOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editUserOpen, setEditUserOpen] = useState(false);
+  const [deleteUserOpen, setDeleteUserOpen] = useState(false);
   const [newUserOpen, setNewUserOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -53,30 +53,37 @@ export default function UsersTable() {
     }
   }, []);
 
-  const openMenuHeader = (event: React.MouseEvent<HTMLElement>) => {
-    setMenuHeaderAnchor(event.currentTarget);
-  };
-  const closeMenuHeader = () => setMenuHeaderAnchor(null);
+  const handleMenuHeaderOpen = useCallback((e: MouseEvent<HTMLElement>) => {
+    setMenuHeaderAnchor(e.currentTarget);
+  }, []);
 
-  const openNewUser = () => {
+  const handleMenuHeaderClose = useCallback(() => setMenuHeaderAnchor(null), []);
+
+  const handleNewUserOpen = () => {
     setNewUserOpen(true);
-    closeMenuHeader();
+    handleMenuHeaderClose();
   };
 
-  const openMenuRow = (event: React.MouseEvent<HTMLElement>, user: Soht2User) => {
+  const handleMenuRowOpen = useCallback((e: MouseEvent<HTMLElement>, user: Soht2User) => {
     setSelectedUser(user);
-    setMenuRowAnchor(event.currentTarget);
-  };
-  const closeMenuRow = () => setMenuRowAnchor(null);
+    setMenuRowAnchor(e.currentTarget);
+  }, []);
 
-  const onEdit = () => {
-    closeMenuRow();
-    setEditOpen(true);
-  };
-  const onDelete = () => {
-    closeMenuRow();
-    setDeleteOpen(true);
-  };
+  const handleMenuRowClose = useCallback(() => setMenuRowAnchor(null), []);
+
+  const handleEditUserOpen = useCallback(() => {
+    handleMenuRowClose();
+    setEditUserOpen(true);
+  }, [handleMenuRowClose]);
+
+  const handleDeleteUserOpen = useCallback(() => {
+    handleMenuRowClose();
+    setDeleteUserOpen(true);
+  }, [handleMenuRowClose]);
+
+  const handleNewUserClose = useCallback(() => setNewUserOpen(false), []);
+  const handleEditUserClose = useCallback(() => setEditUserOpen(false), []);
+  const handleDeleteUserClose = useCallback(() => setDeleteUserOpen(false), []);
 
   useEffect(() => {
     void load();
@@ -131,7 +138,7 @@ export default function UsersTable() {
                   aria-label="actions-users"
                   aria-controls={menuHeaderAnchor ? 'user-header-menu' : undefined}
                   aria-haspopup="true"
-                  onClick={openMenuHeader}
+                  onClick={handleMenuHeaderOpen}
                   sx={{
                     backgroundColor: theme.palette.primary.main,
                     color: theme.palette.primary.contrastText,
@@ -166,7 +173,7 @@ export default function UsersTable() {
                       aria-label={`actions-${u.username}`}
                       aria-controls={menuRowAnchor ? 'user-row-menu' : undefined}
                       aria-haspopup="true"
-                      onClick={e => openMenuRow(e, u)}>
+                      onClick={e => handleMenuRowOpen(e, u)}>
                       <MoreVertIcon />
                     </IconButton>
                   </TableCell>
@@ -181,11 +188,11 @@ export default function UsersTable() {
         id="user-header-menu"
         anchorEl={menuHeaderAnchor}
         open={!!menuHeaderAnchor}
-        onClose={closeMenuHeader}
+        onClose={handleMenuHeaderClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         keepMounted>
-        <MenuItem onClick={openNewUser}>
+        <MenuItem onClick={handleNewUserOpen}>
           <PersonAddAlt1Icon fontSize="small" style={{ marginRight: 12 }} />
           New User
         </MenuItem>
@@ -195,17 +202,17 @@ export default function UsersTable() {
         id="user-row-menu"
         anchorEl={menuRowAnchor}
         open={!!menuRowAnchor}
-        onClose={closeMenuRow}
+        onClose={handleMenuRowClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         keepMounted>
-        <MenuItem onClick={onEdit} disabled={!selectedUser}>
+        <MenuItem onClick={handleEditUserOpen} disabled={!selectedUser}>
           <ListItemIcon>
             <ManageAccountsIcon fontSize="small" />
           </ListItemIcon>
           Edit User
         </MenuItem>
-        <MenuItem onClick={onDelete} disabled={!selectedUser}>
+        <MenuItem onClick={handleDeleteUserOpen} disabled={!selectedUser}>
           <ListItemIcon>
             <PersonRemoveAlt1Icon fontSize="small" />
           </ListItemIcon>
@@ -213,13 +220,9 @@ export default function UsersTable() {
         </MenuItem>
       </Menu>
 
-      <NewUserDialog open={newUserOpen} onClose={() => setNewUserOpen(false)} />
-      <EditUserDialog open={editOpen} user={selectedUser} onClose={() => setEditOpen(false)} />
-      <DeleteUserDialog
-        open={deleteOpen}
-        user={selectedUser}
-        onClose={() => setDeleteOpen(false)}
-      />
+      <NewUserDialog open={newUserOpen} onClose={handleNewUserClose} />
+      <EditUserDialog open={editUserOpen} user={selectedUser} onClose={handleEditUserClose} />
+      <DeleteUserDialog open={deleteUserOpen} user={selectedUser} onClose={handleDeleteUserClose} />
     </>
   );
 }

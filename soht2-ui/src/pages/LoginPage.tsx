@@ -1,14 +1,14 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
 import { APP_ERROR_EVENT } from '../components/ErrorAlert';
-import { UserApi, httpClient, type Soht2User, type ApiError } from '../api/soht2Api';
+import { type ApiError, httpClient, type Soht2User, UserApi } from '../api/soht2Api';
 import Layout from '../components/Layout';
-import PasswordEye from '../controls/PasswordEye';
+import PasswordField from '../controls/PasswordField';
 
 export default function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2User) => void }>) {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ export default function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2U
   const [empty, setEmpty] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     setLoading(true);
     try {
       httpClient.setBasicAuth(username, password);
@@ -30,7 +30,7 @@ export default function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2U
     } finally {
       setLoading(false);
     }
-  };
+  }, [onLogin, username, password, navigate]);
 
   return (
     <Layout>
@@ -49,7 +49,7 @@ export default function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2U
             setEmpty(!u || !password);
           }}
         />
-        <PasswordEye
+        <PasswordField
           password={password}
           fullWidth
           variant="outlined"
@@ -60,7 +60,7 @@ export default function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2U
             setEmpty(!username || !p);
           }}
           onEnter={() => {
-            if (!empty && !loading) handleSubmit();
+            if (!empty && !loading) void handleSubmit();
           }}
         />
         <Button

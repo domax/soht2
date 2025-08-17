@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -10,12 +10,12 @@ import { APP_ERROR_EVENT } from './ErrorAlert';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
-import Select from '@mui/material/Select';
+import Select, { type SelectChangeEvent } from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import { type ApiError, type Soht2User, UserApi, type UserRole } from '../api/soht2Api';
 import AllowedTargets from '../controls/AllowedTargets';
-import PasswordEye from '../controls/PasswordEye';
+import PasswordField from '../controls/PasswordField';
 
 type EditUserDialogProps = Readonly<{ open: boolean; user: Soht2User | null; onClose: () => void }>;
 
@@ -23,8 +23,6 @@ export default function EditUserDialog({ open, user, onClose }: EditUserDialogPr
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>(user?.role || 'USER');
   const [allowedTargets, setAllowedTargets] = useState<string[]>(user?.allowedTargets ?? []);
-  const [initialRole] = useState<UserRole>(user?.role || 'USER');
-  const [initialTargets] = useState<string[]>(user?.allowedTargets ?? []);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -34,10 +32,9 @@ export default function EditUserDialog({ open, user, onClose }: EditUserDialogPr
       setRole(user?.role || 'USER');
       setAllowedTargets(user?.allowedTargets ?? []);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, user?.username]);
+  }, [open, user?.allowedTargets, user?.role]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!user) return;
     setSubmitting(true);
     try {
@@ -47,10 +44,8 @@ export default function EditUserDialog({ open, user, onClose }: EditUserDialogPr
         allowedTargets?: string[] | null;
       } = {};
       if (password) params.password = password; // optional; only send it if non-empty
-      if (role && role !== initialRole) params.role = role;
-      // Only send allowedTargets if changed.
-      const changedTargets = JSON.stringify(allowedTargets) !== JSON.stringify(initialTargets);
-      if (changedTargets) params.allowedTargets = allowedTargets;
+      params.role = role;
+      params.allowedTargets = allowedTargets;
 
       await UserApi.updateUser(user.username, params);
       window.dispatchEvent(
@@ -62,14 +57,20 @@ export default function EditUserDialog({ open, user, onClose }: EditUserDialogPr
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [user, password, role, allowedTargets, onClose]);
+
+  const handleClose = useCallback(
+    () => (!submitting ? onClose() : undefined),
+    [onClose, submitting]
+  );
+
+  const handleChangeRole = useCallback(
+    (e: SelectChangeEvent<UserRole>) => setRole(e.target.value as UserRole),
+    []
+  );
 
   return (
-    <Dialog
-      open={open}
-      onClose={() => (!submitting ? onClose() : undefined)}
-      fullWidth
-      maxWidth="sm">
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
       <DialogTitle>Edit User</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
@@ -79,7 +80,7 @@ export default function EditUserDialog({ open, user, onClose }: EditUserDialogPr
             slotProps={{ input: { readOnly: true } }}
           />
 
-          <PasswordEye
+          <PasswordField
             password={password}
             helperText="Leave empty to keep unchanged"
             onChange={setPassword}
@@ -91,7 +92,7 @@ export default function EditUserDialog({ open, user, onClose }: EditUserDialogPr
               labelId="role-label-edit"
               label="Role"
               value={role || 'USER'}
-              onChange={e => setRole(e.target.value as UserRole)}>
+              onChange={handleChangeRole}>
               <MenuItem value="USER">USER</MenuItem>
               <MenuItem value="ADMIN">ADMIN</MenuItem>
             </Select>
@@ -101,7 +102,7 @@ export default function EditUserDialog({ open, user, onClose }: EditUserDialogPr
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={submitting} color="inherit">
+        <Button onClick={handleClose} disabled={submitting} color="inherit">
           Cancel
         </Button>
         <Button onClick={handleSubmit} disabled={submitting} variant="contained">

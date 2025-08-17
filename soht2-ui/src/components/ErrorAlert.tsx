@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import type { ApiError } from '../api/soht2Api';
@@ -18,7 +18,7 @@ export default function ErrorAlert() {
     return () => window.removeEventListener(APP_ERROR_EVENT, handler as EventListener);
   }, []);
 
-  const onClose = () => setMessage(null);
+  const onClose = useCallback(() => setMessage(null), []);
 
   return (
     <Snackbar

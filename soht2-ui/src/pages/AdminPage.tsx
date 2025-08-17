@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import React, { useState } from 'react';
+import { type SyntheticEvent, useCallback, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Tabs from '@mui/material/Tabs';
@@ -15,12 +15,12 @@ export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }
 
   const [tab, setTab] = useState(0);
 
+  const handleChange = useCallback((_: SyntheticEvent, newTab: number) => setTab(newTab), []);
+
   if ((user?.role || '').toUpperCase() !== 'ADMIN') {
     httpClient.clearAuth();
     return <Navigate to="/login" replace />;
   }
-
-  const handleChange = (_: React.SyntheticEvent, newValue: number) => setTab(newValue);
 
   return (
     <Layout>
