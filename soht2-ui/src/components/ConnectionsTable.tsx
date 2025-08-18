@@ -28,6 +28,7 @@ import {
   type Soht2Connection,
 } from '../api/soht2Api';
 import HeaderMenuButton from '../controls/HeaderMenuButton';
+import ConnectionCloseDialog from './ConnectionCloseDialog';
 
 type SortColumn =
   | 'id'
@@ -161,19 +162,19 @@ export default function ConnectionsTable({
   }, []);
   const handleMenuRowClose = useCallback(() => setMenuRowAnchor(null), []);
 
-  const handleCloseConnection = useCallback(async () => {
+  const [closeConnectionOpen, setCloseConnectionOpen] = useState(false);
+  const handleCloseConnectionOpen = useCallback(() => {
     handleMenuRowClose();
-    const id = selectedConnection?.id;
-    if (!id) return;
-    if (!window.confirm('Are you sure you want to close this connection?')) return;
-    try {
-      await ConnectionApi.close(id);
-      await load();
-    } catch (e) {
-      const apiError = e as ApiError;
-      setError(apiError.message);
-    }
-  }, [handleMenuRowClose, load, selectedConnection?.id]);
+    setCloseConnectionOpen(true);
+  }, [handleMenuRowClose]);
+  const handleCloseConnectionClose = useCallback(() => setCloseConnectionOpen(false), []);
+  useEffect(() => {
+    const handler = () => {
+      void load();
+    };
+    window.addEventListener('connections:changed', handler as EventListener);
+    return () => window.removeEventListener('connections:changed', handler as EventListener);
+  }, [load]);
 
   const toggleSort = useCallback(
     (column: Exclude<SortColumn, null>) => {
@@ -362,13 +363,19 @@ export default function ConnectionsTable({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         keepMounted>
-        <MenuItem onClick={handleCloseConnection} disabled={!selectedConnection}>
+        <MenuItem onClick={handleCloseConnectionOpen} disabled={!selectedConnection}>
           <ListItemIcon>
             <LinkOffIcon fontSize="small" />
           </ListItemIcon>
           Close Connection
         </MenuItem>
       </Menu>
+
+      <ConnectionCloseDialog
+        open={closeConnectionOpen}
+        connectionId={selectedConnection?.id}
+        onClose={handleCloseConnectionClose}
+      />
     </>
   );
 }
