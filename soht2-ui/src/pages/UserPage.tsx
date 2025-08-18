@@ -8,13 +8,26 @@ import Typography from '@mui/material/Typography';
 import { httpClient, type Soht2User } from '../api/soht2Api';
 import Layout from '../components/Layout';
 import TabPanel from '../components/TabPanel';
+import ConnectionsTable, { type ConnectionsSorting } from '../components/ConnectionsTable';
+
+type ConnectionSettings = { sorting: ConnectionsSorting; autoRefresh: boolean };
 
 export default function UserPage({ user }: Readonly<{ user?: Soht2User | null }>) {
   const prefix = 'user-';
 
   const [tab, setTab] = useState(0);
-
   const handleChange = useCallback((_: SyntheticEvent, newTab: number) => setTab(newTab), []);
+
+  const [connectionsSettings, setConnectionsSettings] = useState<ConnectionSettings>({
+    sorting: { column: 'openedAt', direction: 'desc' },
+    autoRefresh: false,
+  });
+  const handleConnectionsSortingChange = useCallback((sorting: ConnectionsSorting) => {
+    setConnectionsSettings(settings => ({ ...settings, sorting }));
+  }, []);
+  const handleConnectionsAutoRefreshChange = useCallback((autoRefresh: boolean) => {
+    setConnectionsSettings(settings => ({ ...settings, autoRefresh }));
+  }, []);
 
   if ((user?.role || '') === '') {
     httpClient.clearAuth();
@@ -36,9 +49,12 @@ export default function UserPage({ user }: Readonly<{ user?: Soht2User | null }>
         </Tabs>
         <Box sx={{ flex: 1, minHeight: 0 }}>
           <TabPanel prefix={prefix} value={tab} index={0}>
-            <Box sx={{ p: 2 }}>
-              <Typography>Under construction</Typography>
-            </Box>
+            <ConnectionsTable
+              initSorting={connectionsSettings.sorting}
+              initAutoRefresh={connectionsSettings.autoRefresh}
+              onSortingChange={handleConnectionsSortingChange}
+              onAutoRefreshChange={handleConnectionsAutoRefreshChange}
+            />
           </TabPanel>
           <TabPanel prefix={prefix} value={tab} index={1}>
             <Box sx={{ p: 2 }}>

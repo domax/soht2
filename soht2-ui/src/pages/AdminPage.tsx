@@ -9,6 +9,9 @@ import { httpClient, type Soht2User } from '../api/soht2Api';
 import Layout from '../components/Layout';
 import TabPanel from '../components/TabPanel';
 import UsersTable, { type UsersSorting } from '../components/UsersTable';
+import ConnectionsTable, { type ConnectionsSorting } from '../components/ConnectionsTable';
+
+type ConnectionSettings = { sorting: ConnectionsSorting; autoRefresh: boolean };
 
 export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }>) {
   const prefix = 'admin-';
@@ -16,9 +19,23 @@ export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }
   const [tab, setTab] = useState(0);
   const handleTabChange = useCallback((_: SyntheticEvent, newTab: number) => setTab(newTab), []);
 
-  const [usersSorting, setUsersSorting] = useState<UsersSorting>({ column: null, direction: null });
-  const handleSortingChange = useCallback((sorting: UsersSorting) => {
+  const [usersSorting, setUsersSorting] = useState<UsersSorting>({
+    column: 'username',
+    direction: 'asc',
+  });
+  const handleUsersSortingChange = useCallback((sorting: UsersSorting) => {
     setUsersSorting(sorting);
+  }, []);
+
+  const [connectionsSettings, setConnectionsSettings] = useState<ConnectionSettings>({
+    sorting: { column: 'openedAt', direction: 'desc' },
+    autoRefresh: false,
+  });
+  const handleConnectionsSortingChange = useCallback((sorting: ConnectionsSorting) => {
+    setConnectionsSettings(settings => ({ ...settings, sorting }));
+  }, []);
+  const handleConnectionsAutoRefreshChange = useCallback((autoRefresh: boolean) => {
+    setConnectionsSettings(settings => ({ ...settings, autoRefresh }));
   }, []);
 
   if ((user?.role || '').toUpperCase() !== 'ADMIN') {
@@ -42,12 +59,15 @@ export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }
         </Tabs>
         <Box sx={{ flex: 1, minHeight: 0 }}>
           <TabPanel prefix={prefix} value={tab} index={0}>
-            <UsersTable initSorting={usersSorting} onSortingChange={handleSortingChange} />
+            <UsersTable initSorting={usersSorting} onSortingChange={handleUsersSortingChange} />
           </TabPanel>
           <TabPanel prefix={prefix} value={tab} index={1}>
-            <Box sx={{ p: 2 }}>
-              <Typography>Under construction</Typography>
-            </Box>
+            <ConnectionsTable
+              initSorting={connectionsSettings.sorting}
+              initAutoRefresh={connectionsSettings.autoRefresh}
+              onSortingChange={handleConnectionsSortingChange}
+              onAutoRefreshChange={handleConnectionsAutoRefreshChange}
+            />
           </TabPanel>
           <TabPanel prefix={prefix} value={tab} index={2}>
             <Box sx={{ p: 2 }}>

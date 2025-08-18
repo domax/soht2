@@ -20,8 +20,8 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import PersonRemoveAlt1Icon from '@mui/icons-material/PersonRemoveAlt1';
-import { useTheme } from '@mui/material/styles';
 import { type ApiError, type ISODateTime, type Soht2User, UserApi } from '../api/soht2Api';
+import HeaderMenuButton from '../controls/HeaderMenuButton';
 import NewUserDialog from './NewUserDialog';
 import EditUserDialog from './EditUserDialog';
 import DeleteUserDialog from './DeleteUserDialog';
@@ -33,8 +33,6 @@ export default function UsersTable({
   initSorting,
   onSortingChange,
 }: Readonly<{ initSorting?: UsersSorting; onSortingChange?: (s: UsersSorting) => void }>) {
-  const theme = useTheme();
-
   const [users, setUsers] = useState<Soht2User[] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,14 +121,12 @@ export default function UsersTable({
     const list = users ?? [];
     if (!sorting.column || !sorting.direction) return list;
     const arr = [...list];
+    type Col = Exclude<SortColumn, null>;
     const cmp = (a: Soht2User, b: Soht2User): number => {
-      type Col = Exclude<SortColumn, null>;
-      const asTime = (u: Soht2User) =>
-        u[sorting.column as Col] ? new Date(u[sorting.column as Col] as ISODateTime).getTime() : 0;
+      const asTime = (t?: ISODateTime | null) => (t ? new Date(t).getTime() : 0);
       const asString = (u: Soht2User) => (u[sorting.column as Col] || '').toString().toLowerCase();
-      return sorting.column === 'createdAt'
-        ? asTime(a) - asTime(b)
-        : asString(a).localeCompare(asString(b));
+      if (sorting.column === 'createdAt') return asTime(a.createdAt) - asTime(b.createdAt);
+      return asString(a).localeCompare(asString(b));
     };
     arr.sort((a, b) => (sorting.direction === 'asc' ? cmp(a, b) : -cmp(a, b)));
     return arr;
@@ -188,19 +184,10 @@ export default function UsersTable({
                 <b>Allowed Targets</b>
               </TableCell>
               <TableCell align="right">
-                <IconButton
-                  size="small"
-                  aria-label="actions-users"
-                  aria-controls={menuHeaderAnchor ? 'user-header-menu' : undefined}
-                  aria-haspopup="true"
-                  onClick={handleMenuHeaderOpen}
-                  sx={{
-                    backgroundColor: theme.palette.primary.main,
-                    color: theme.palette.primary.contrastText,
-                    '&:hover': { backgroundColor: theme.palette.primary.light },
-                  }}>
-                  <MoreVertIcon />
-                </IconButton>
+                <HeaderMenuButton
+                  menuHeaderAnchor={menuHeaderAnchor}
+                  handleMenuHeaderOpen={handleMenuHeaderOpen}
+                />
               </TableCell>
             </TableRow>
           </TableHead>
