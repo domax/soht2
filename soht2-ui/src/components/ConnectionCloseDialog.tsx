@@ -13,7 +13,7 @@ export default function ConnectionCloseDialog({
   open,
   connectionId,
   onClose,
-}: Readonly<{ open: boolean; connectionId: UUID | null; onClose: () => void }>) {
+}: Readonly<{ open: boolean; connectionId?: UUID | null; onClose: () => void }>) {
   const [closing, setClosing] = useState(false);
 
   useEffect(() => {
