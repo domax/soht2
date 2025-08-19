@@ -193,13 +193,12 @@ export default function UsersTable({
           </TableHead>
           <TableBody>
             {sortedUsers.map(u => {
-              const created = u.createdAt ? new Date(u.createdAt).toLocaleString() : '';
               const targets = u.allowedTargets ?? [];
               return (
                 <TableRow key={u.username} hover>
                   <TableCell>{u.username}</TableCell>
                   <TableCell>{(u.role || '').toString()}</TableCell>
-                  <TableCell>{created}</TableCell>
+                  <TableCell>{u.createdAt ? new Date(u.createdAt).toLocaleString() : ''}</TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {targets.length > 0 ? (

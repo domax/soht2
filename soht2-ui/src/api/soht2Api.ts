@@ -265,18 +265,18 @@ export const ConnectionApi = {
   // GET /api/connection/history with many filters
   history: async (
     filters: {
-      un?: string[];
-      id?: UUID[];
-      ch?: string;
-      th?: string;
-      tp?: number[];
-      oa?: ISODateTime;
-      ob?: ISODateTime;
-      ca?: ISODateTime;
-      cb?: ISODateTime;
-      sort?: string[]; // e.g., ["openedAt:desc"]
-      pg?: number; // default 0
-      sz?: number; // default 10
+      un?: string[]; // usernames e.g. ["user1", "user2"]
+      id?: UUID[]; // connection IDs e.g. ["53eded2b-..-2b12a57a592a", "87a06042-..-42457d6efc3c"]
+      ch?: string; // client host
+      th?: string; // target host
+      tp?: number[]; // target ports e.g. [80, 443]
+      oa?: ISODateTime; // opened after
+      ob?: ISODateTime; // opened before
+      ca?: ISODateTime; // closed after
+      cb?: ISODateTime; // closed before
+      sort?: string[]; // sorting criteria e.g. ["targetHost:asc", "openedAt:desc"]
+      pg?: number; // page number - default is 0
+      sz?: number; // page size - default is 10
     } = {},
     client: HttpClient = httpClient
   ): Promise<HistoryPage> => {

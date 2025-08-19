@@ -321,7 +321,6 @@ export default function ConnectionsTable({
           </TableHead>
           <TableBody>
             {sortedConnections.map(c => {
-              const opened = c.openedAt ? new Date(c.openedAt).toLocaleString() : '';
               return (
                 <TableRow key={c.id} hover>
                   <TableCell>{c.id}</TableCell>
@@ -329,7 +328,7 @@ export default function ConnectionsTable({
                   <TableCell>{c.clientHost || ''}</TableCell>
                   <TableCell>{c.targetHost || ''}</TableCell>
                   <TableCell>{c.targetPort ?? ''}</TableCell>
-                  <TableCell>{opened}</TableCell>
+                  <TableCell>{c.openedAt ? new Date(c.openedAt).toLocaleString() : ''}</TableCell>
                   <TableCell align="right">
                     <IconButton
                       size="small"
