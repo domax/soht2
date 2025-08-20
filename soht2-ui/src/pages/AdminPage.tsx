@@ -4,12 +4,12 @@ import { Navigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
-import Typography from '@mui/material/Typography';
 import { httpClient, type Soht2User } from '../api/soht2Api';
 import Layout from '../components/Layout';
 import TabPanel from '../components/TabPanel';
 import UsersTable, { type UsersSorting } from '../components/UsersTable';
 import ConnectionsTable, { type ConnectionsSorting } from '../components/ConnectionsTable';
+import HistoryTable from '../components/HistoryTable';
 
 type ConnectionSettings = { sorting: ConnectionsSorting; autoRefresh: boolean };
 
@@ -70,9 +70,7 @@ export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }
             />
           </TabPanel>
           <TabPanel prefix={prefix} value={tab} index={2}>
-            <Box sx={{ p: 2 }}>
-              <Typography>Under construction</Typography>
-            </Box>
+            <HistoryTable />
           </TabPanel>
         </Box>
       </Box>

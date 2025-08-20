@@ -323,7 +323,9 @@ export default function ConnectionsTable({
             {sortedConnections.map(c => {
               return (
                 <TableRow key={c.id} hover>
-                  <TableCell>{c.id}</TableCell>
+                  <TableCell sx={{ paddingY: '13px', fontSizeAdjust: '0.5' }}>
+                    <pre style={{ margin: 0 }}>{c.id}</pre>
+                  </TableCell>
                   <TableCell>{c.user?.username || ''}</TableCell>
                   <TableCell>{c.clientHost || ''}</TableCell>
                   <TableCell>{c.targetHost || ''}</TableCell>
