@@ -39,8 +39,17 @@ export type HistorySortColumn =
   | 'openedAt'
   | 'closedAt';
 export type HistorySorting = { column: HistorySortColumn | null; direction: 'asc' | 'desc' | null };
+export type HistoryNavigation = HistoryFilters & { sort?: string[]; pg?: number; sz?: number };
 
-export default function HistoryTable() {
+export default function HistoryTable({
+  regularUser,
+  navigation,
+  onNavigationChange,
+}: Readonly<{
+  regularUser?: string;
+  navigation?: HistoryNavigation;
+  onNavigationChange?: (n: HistoryNavigation) => void;
+}>) {
   const [menuHeaderAnchor, setMenuHeaderAnchor] = useState<HTMLElement | null>(null);
   const handleMenuHeaderOpen = useCallback((e: MouseEvent<HTMLElement>) => {
     setMenuHeaderAnchor(e.currentTarget);
@@ -48,13 +57,17 @@ export default function HistoryTable() {
   const handleMenuHeaderClose = useCallback(() => setMenuHeaderAnchor(null), []);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filters, setFilters] = useState<HistoryFilters>({});
+  const [filters, setFilters] = useState<HistoryFilters>(navigation ?? {});
 
-  const [page, setPage] = useState<number>(0); // 0-based for API
-  const [pageSize, setPageSize] = useState<number>(50);
-  const [pageSizeInput, setPageSizeInput] = useState<string>('50');
+  const [page, setPage] = useState<number>(navigation?.pg ?? 0); // 0-based for API
+  const navPageSize = navigation?.sz ?? 50;
+  const [pageSize, setPageSize] = useState<number>(navPageSize);
+  const [pageSizeInput, setPageSizeInput] = useState<string>(String(navPageSize));
   const pageSizeDebounceRef = useRef<number | null>(null);
-  const [sorting, setSorting] = useState<HistorySorting>({ column: 'openedAt', direction: 'desc' });
+
+  const [navSorting] = navigation?.sort ?? ['openedAt:desc'];
+  const [column, direction] = navSorting.split(':');
+  const [sorting, setSorting] = useState<HistorySorting>({ column, direction });
 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +77,11 @@ export default function HistoryTable() {
     if (!sorting.column || !sorting.direction) return undefined;
     return [`${sorting.column}:${sorting.direction}`];
   }, [sorting]);
+
+  useEffect(() => {
+    if (onNavigationChange)
+      onNavigationChange({ ...filters, sort: asSortArray, pg: page, sz: pageSize });
+  }, [filters, asSortArray, page, pageSize, onNavigationChange]);
 
   const load = useCallback(async () => {
     try {
@@ -223,6 +241,7 @@ export default function HistoryTable() {
               input: { endAdornment: <InputAdornment position="end">rows</InputAdornment> },
             }}
           />
+          <Box>total rows: {pageData?.totalItems ?? 0}</Box>
         </Stack>
         <HeaderMenuButton
           menuHeaderAnchor={menuHeaderAnchor}
@@ -243,18 +262,20 @@ export default function HistoryTable() {
                   direction={dir}
                   onClick={() => toggleSort('connectionId')}>
                   {hasFilter(['id']) && <FunnelIcon fontSize="inherit" sx={{ mr: 0.5 }} />}
-                  <b>ID</b>
+                  <b>Connection ID</b>
                 </TableSortLabel>
               </TableCell>
-              <TableCell sortDirection={sorting.column === 'userName' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'userName'}
-                  direction={dir}
-                  onClick={() => toggleSort('userName')}>
-                  {hasFilter(['un']) && <FunnelIcon fontSize="inherit" sx={{ mr: 0.5 }} />}
-                  <b>User</b>
-                </TableSortLabel>
-              </TableCell>
+              {!regularUser ? (
+                <TableCell sortDirection={sorting.column === 'userName' ? sortDir : false}>
+                  <TableSortLabel
+                    active={sorting.column === 'userName'}
+                    direction={dir}
+                    onClick={() => toggleSort('userName')}>
+                    {hasFilter(['un']) && <FunnelIcon fontSize="inherit" sx={{ mr: 0.5 }} />}
+                    <b>User</b>
+                  </TableSortLabel>
+                </TableCell>
+              ) : null}
               <TableCell sortDirection={sorting.column === 'clientHost' ? sortDir : false}>
                 <TableSortLabel
                   active={sorting.column === 'clientHost'}
@@ -315,7 +336,7 @@ export default function HistoryTable() {
                   <TableCell sx={{ paddingY: '13px', fontSizeAdjust: '0.5' }}>
                     <pre style={{ margin: 0 }}>{c.id}</pre>
                   </TableCell>
-                  <TableCell>{c.user?.username || ''}</TableCell>
+                  {!regularUser ? <TableCell>{c.user?.username || ''}</TableCell> : null}
                   <TableCell>{c.clientHost || ''}</TableCell>
                   <TableCell>{c.targetHost || ''}</TableCell>
                   <TableCell>{c.targetPort ?? ''}</TableCell>
@@ -352,6 +373,7 @@ export default function HistoryTable() {
 
       <HistoryFiltersDialog
         open={filtersOpen}
+        regularUser={regularUser}
         value={filters}
         onApply={onFiltersApply}
         onClose={onFiltersClose}

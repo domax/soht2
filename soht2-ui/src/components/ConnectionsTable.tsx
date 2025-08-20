@@ -233,11 +233,11 @@ export default function ConnectionsTable({
 
   if (sortedConnections.length === 0) {
     return (
-      <Stack direction="row" spacing={2}>
-        <Box sx={{ p: 2 }}>
+      <Stack direction="row" spacing={2} justifyContent="space-between">
+        <Box sx={{ p: 2 }} width="100%">
           <Alert severity="info">No active connections</Alert>
         </Box>
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ py: 3 }}>
           <HeaderMenuButton
             menuHeaderAnchor={menuHeaderAnchor}
             handleMenuHeaderOpen={handleMenuHeaderOpen}
@@ -268,7 +268,7 @@ export default function ConnectionsTable({
                   active={sorting.column === 'id'}
                   direction={dir}
                   onClick={() => toggleSort('id')}>
-                  <b>ID</b>
+                  <b>Connection ID</b>
                 </TableSortLabel>
               </TableCell>
               <TableCell sortDirection={sorting.column === 'username' ? sortDir : false}>

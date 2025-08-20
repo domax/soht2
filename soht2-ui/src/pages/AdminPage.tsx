@@ -9,7 +9,7 @@ import Layout from '../components/Layout';
 import TabPanel from '../components/TabPanel';
 import UsersTable, { type UsersSorting } from '../components/UsersTable';
 import ConnectionsTable, { type ConnectionsSorting } from '../components/ConnectionsTable';
-import HistoryTable from '../components/HistoryTable';
+import HistoryTable, { type HistoryNavigation } from '../components/HistoryTable';
 
 type ConnectionSettings = { sorting: ConnectionsSorting; autoRefresh: boolean };
 
@@ -36,6 +36,11 @@ export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }
   }, []);
   const handleConnectionsAutoRefreshChange = useCallback((autoRefresh: boolean) => {
     setConnectionsSettings(settings => ({ ...settings, autoRefresh }));
+  }, []);
+
+  const [historyNavigation, setHistoryNavigation] = useState<HistoryNavigation>({});
+  const handleHistoryNavigationChange = useCallback((hn: HistoryNavigation) => {
+    setHistoryNavigation(hn);
   }, []);
 
   if ((user?.role || '').toUpperCase() !== 'ADMIN') {
@@ -70,7 +75,10 @@ export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }
             />
           </TabPanel>
           <TabPanel prefix={prefix} value={tab} index={2}>
-            <HistoryTable />
+            <HistoryTable
+              navigation={historyNavigation}
+              onNavigationChange={handleHistoryNavigationChange}
+            />
           </TabPanel>
         </Box>
       </Box>

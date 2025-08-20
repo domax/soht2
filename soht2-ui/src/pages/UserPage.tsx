@@ -4,11 +4,11 @@ import { Navigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
-import Typography from '@mui/material/Typography';
 import { httpClient, type Soht2User } from '../api/soht2Api';
 import Layout from '../components/Layout';
 import TabPanel from '../components/TabPanel';
 import ConnectionsTable, { type ConnectionsSorting } from '../components/ConnectionsTable';
+import HistoryTable, { type HistoryNavigation } from '../components/HistoryTable';
 
 type ConnectionSettings = { sorting: ConnectionsSorting; autoRefresh: boolean };
 
@@ -29,7 +29,12 @@ export default function UserPage({ user }: Readonly<{ user?: Soht2User | null }>
     setConnectionsSettings(settings => ({ ...settings, autoRefresh }));
   }, []);
 
-  if ((user?.role || '') === '') {
+  const [historyNavigation, setHistoryNavigation] = useState<HistoryNavigation>({});
+  const handleHistoryNavigationChange = useCallback((hn: HistoryNavigation) => {
+    setHistoryNavigation(hn);
+  }, []);
+
+  if ((user?.role ?? '') === '') {
     httpClient.clearAuth();
     return <Navigate to="/login" replace />;
   }
@@ -57,9 +62,11 @@ export default function UserPage({ user }: Readonly<{ user?: Soht2User | null }>
             />
           </TabPanel>
           <TabPanel prefix={prefix} value={tab} index={1}>
-            <Box sx={{ p: 2 }}>
-              <Typography>Under construction</Typography>
-            </Box>
+            <HistoryTable
+              regularUser={user?.username ?? ''}
+              navigation={historyNavigation}
+              onNavigationChange={handleHistoryNavigationChange}
+            />
           </TabPanel>
         </Box>
       </Box>

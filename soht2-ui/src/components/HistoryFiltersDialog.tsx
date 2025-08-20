@@ -24,11 +24,13 @@ export type HistoryFilters = {
 
 export default function HistoryFiltersDialog({
   open,
+  regularUser,
   value,
   onApply,
   onClose,
 }: Readonly<{
   open: boolean;
+  regularUser?: string;
   value?: HistoryFilters;
   onApply: (filters: HistoryFilters) => void;
   onClose: () => void;
@@ -36,8 +38,19 @@ export default function HistoryFiltersDialog({
   const [draft, setDraft] = useState<HistoryFilters>({});
 
   useEffect(() => {
-    setDraft(value ?? {});
-  }, [value, open]);
+    setDraft(
+      value
+        ? {
+            ...value,
+            un: regularUser ? [regularUser] : value.un,
+            oa: value.oa ? new Date(value.oa).toISOString().split('T')[0] : '',
+            ob: value.ob ? new Date(value.ob).toISOString().split('T')[0] : '',
+            ca: value.ca ? new Date(value.ca).toISOString().split('T')[0] : '',
+            cb: value.cb ? new Date(value.cb).toISOString().split('T')[0] : '',
+          }
+        : {}
+    );
+  }, [value, open, regularUser]);
 
   const parseArray = useCallback((text: string): string[] => {
     return text
@@ -64,17 +77,30 @@ export default function HistoryFiltersDialog({
   const handleApply = useCallback(() => {
     // Sanitize and apply
     const cleaned: HistoryFilters = {};
-    if (draft.un && draft.un.length) cleaned.un = draft.un;
+    if (regularUser) cleaned.un = [regularUser];
+    else if (draft.un && draft.un.length) cleaned.un = draft.un;
     if (draft.id && draft.id.length) cleaned.id = draft.id;
     if (draft.ch) cleaned.ch = draft.ch;
     if (draft.th) cleaned.th = draft.th;
     if (draft.tp && draft.tp.length) cleaned.tp = draft.tp;
-    if (draft.oa) cleaned.oa = draft.oa;
-    if (draft.ob) cleaned.ob = draft.ob;
-    if (draft.ca) cleaned.ca = draft.ca;
-    if (draft.cb) cleaned.cb = draft.cb;
+    if (draft.oa) cleaned.oa = new Date(draft.oa).toISOString().split('T')[0] + 'T00:00:00.000';
+    if (draft.ob) cleaned.ob = new Date(draft.ob).toISOString().split('T')[0] + 'T23:59:59.999';
+    if (draft.ca) cleaned.ca = new Date(draft.ca).toISOString().split('T')[0] + 'T00:00:00.000';
+    if (draft.cb) cleaned.cb = new Date(draft.cb).toISOString().split('T')[0] + 'T23:59:59.999';
     onApply(cleaned);
-  }, [draft, onApply]);
+  }, [
+    draft.ca,
+    draft.cb,
+    draft.ch,
+    draft.id,
+    draft.oa,
+    draft.ob,
+    draft.th,
+    draft.tp,
+    draft.un,
+    onApply,
+    regularUser,
+  ]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -83,15 +109,18 @@ export default function HistoryFiltersDialog({
         <Stack spacing={2} sx={{ mt: 1 }}>
           <Grid2 container spacing={2}>
             <Grid2 size={6}>
+              {/*TODO: Replace with chips (like AllowedTargets)*/}
               <TextField
                 label="Users"
                 value={usersText}
                 onChange={e => setDraft(d => ({ ...d, un: parseArray(e.target.value) }))}
-                helperText="Comma/space separated"
+                helperText={regularUser ? 'Read-only' : 'Comma/space separated'}
+                slotProps={{ input: { readOnly: !!regularUser } }}
                 fullWidth
               />
             </Grid2>
             <Grid2 size={6}>
+              {/*TODO: Replace with chips (like AllowedTargets)*/}
               <TextField
                 label="Connection IDs"
                 value={idsText}
@@ -119,6 +148,7 @@ export default function HistoryFiltersDialog({
               />
             </Grid2>
             <Grid2 size={6}>
+              {/*TODO: Replace with chips (like AllowedTargets)*/}
               <TextField
                 label="Target Ports"
                 value={portsText}
@@ -138,7 +168,7 @@ export default function HistoryFiltersDialog({
                 <Grid2 size={6}>
                   <TextField
                     label="After"
-                    type="datetime-local"
+                    type="date"
                     value={draft.oa ?? ''}
                     onChange={e => setDraft(d => ({ ...d, oa: e.target.value }))}
                     fullWidth
@@ -148,7 +178,7 @@ export default function HistoryFiltersDialog({
                 <Grid2 size={6}>
                   <TextField
                     label="Before"
-                    type="datetime-local"
+                    type="date"
                     value={draft.ob ?? ''}
                     onChange={e => setDraft(d => ({ ...d, ob: e.target.value }))}
                     fullWidth
@@ -166,7 +196,7 @@ export default function HistoryFiltersDialog({
                 <Grid2 size={6}>
                   <TextField
                     label="After"
-                    type="datetime-local"
+                    type="date"
                     value={draft.ca ?? ''}
                     onChange={e => setDraft(d => ({ ...d, ca: e.target.value }))}
                     fullWidth
@@ -176,7 +206,7 @@ export default function HistoryFiltersDialog({
                 <Grid2 size={6}>
                   <TextField
                     label="Before"
-                    type="datetime-local"
+                    type="date"
                     value={draft.cb ?? ''}
                     onChange={e => setDraft(d => ({ ...d, cb: e.target.value }))}
                     fullWidth
