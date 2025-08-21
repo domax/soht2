@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -28,6 +28,7 @@ import {
   type Soht2Connection,
 } from '../api/soht2Api';
 import HistoryFiltersDialog, { type HistoryFilters } from './HistoryFiltersDialog';
+import useDebounce from '../hooks/useDebounce';
 
 // Server field names for sort
 export type HistorySortColumn =
@@ -64,7 +65,6 @@ export default function HistoryTable({
   const navPageSize = navigation?.sz ?? 50;
   const [pageSize, setPageSize] = useState<number>(navPageSize);
   const [pageSizeInput, setPageSizeInput] = useState<string>(String(navPageSize));
-  const pageSizeDebounceRef = useRef<number | null>(null);
 
   const [navSorting] = navigation?.sort ?? ['openedAt:desc'];
   const [navColumn, navDir] = navSorting.split(':');
@@ -110,57 +110,34 @@ export default function HistoryTable({
     void load();
   }, [load]);
 
-  const onRefresh = useCallback(() => {
+  const handleRefresh = useCallback(() => {
     handleMenuHeaderClose();
     void load();
   }, [handleMenuHeaderClose, load]);
 
-  const onOpenFilters = useCallback(() => {
+  const handleOpenFilters = useCallback(() => {
     handleMenuHeaderClose();
     setFiltersOpen(true);
   }, [handleMenuHeaderClose]);
 
-  const onFiltersApply = useCallback((f: HistoryFilters) => {
+  const handleFiltersApply = useCallback((f: HistoryFilters) => {
     setFilters(f);
     setPage(0);
     setFiltersOpen(false);
   }, []);
 
-  // Keep the input string in sync when pageSize changes externally
-  useEffect(() => {
-    setPageSizeInput(String(pageSize));
-  }, [pageSize]);
-
-  const commitPageSize = useCallback((value: string) => {
-    let n = Number(value);
+  const handlePageSizeInput = useCallback(() => {
+    let n = Number(pageSizeInput);
     if (Number.isNaN(n)) n = 50;
     if (n < 1) n = 1;
     if (n > 1000) n = 1000;
     setPageSize(n);
-    setPage(0);
-  }, []);
+    if (pageData?.paging?.pageSize !== n) setPage(0);
+  }, [pageData?.paging?.pageSize, pageSizeInput]);
 
-  const handlePageSizeInputChange = useCallback(
-    (value: string) => {
-      setPageSizeInput(value);
-      if (pageSizeDebounceRef.current) {
-        window.clearTimeout(pageSizeDebounceRef.current);
-        pageSizeDebounceRef.current = null;
-      }
-      pageSizeDebounceRef.current = window.setTimeout(() => {
-        commitPageSize(value);
-      }, 700);
-    },
-    [commitPageSize]
-  );
+  useDebounce(handlePageSizeInput, 700, [handlePageSizeInput]);
 
-  const handlePageSizeBlur = useCallback(() => {
-    if (pageSizeDebounceRef.current) {
-      window.clearTimeout(pageSizeDebounceRef.current);
-      pageSizeDebounceRef.current = null;
-    }
-    commitPageSize(pageSizeInput);
-  }, [commitPageSize, pageSizeInput]);
+  useEffect(() => setPageSizeInput(String(pageSize)), [pageSize]);
 
   const onFiltersClose = useCallback(() => setFiltersOpen(false), []);
 
@@ -178,6 +155,7 @@ export default function HistoryTable({
     });
   }, []);
 
+  const totalRows = pageData?.totalItems ?? 0;
   const totalPages = pageData?.totalPages ?? 0;
   const data: Soht2Connection[] = pageData?.data ?? [];
 
@@ -191,10 +169,6 @@ export default function HistoryTable({
       return v !== undefined && v !== null && v !== '';
     });
   };
-
-  const handlePageChange = useCallback((_e: unknown, newPage1: number) => {
-    setPage(newPage1 - 1);
-  }, []);
 
   if (loading) {
     return (
@@ -223,9 +197,9 @@ export default function HistoryTable({
         <Stack direction="row" spacing={2} alignItems="center">
           <Pagination
             color="primary"
-            count={totalPages || 1}
+            count={totalPages ?? 1}
             page={(page ?? 0) + 1}
-            onChange={handlePageChange}
+            onChange={(_e, p) => setPage(p - 1)}
             siblingCount={1}
             boundaryCount={2}
             size="small"
@@ -235,17 +209,17 @@ export default function HistoryTable({
             label="Page size"
             type="number"
             value={pageSizeInput}
-            onChange={e => handlePageSizeInputChange(e.target.value)}
-            onBlur={handlePageSizeBlur}
+            onChange={e => setPageSizeInput(e.target.value)}
+            onBlur={handlePageSizeInput}
             onKeyDown={e => {
-              if (e.key === 'Enter') handlePageSizeBlur();
+              if (e.key === 'Enter') handlePageSizeInput();
             }}
             slotProps={{
               htmlInput: { min: 1, max: 1000 },
               input: { endAdornment: <InputAdornment position="end">rows</InputAdornment> },
             }}
           />
-          <Box>total rows: {pageData?.totalItems ?? 0}</Box>
+          <Box>total rows: {totalRows}</Box>
         </Stack>
         <HeaderMenuButton
           menuHeaderAnchor={menuHeaderAnchor}
@@ -361,13 +335,13 @@ export default function HistoryTable({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         keepMounted>
-        <MenuItem onClick={onRefresh}>
+        <MenuItem onClick={handleRefresh}>
           <ListItemIcon>
             <RefreshIcon fontSize="small" />
           </ListItemIcon>
           Refresh
         </MenuItem>
-        <MenuItem onClick={onOpenFilters}>
+        <MenuItem onClick={handleOpenFilters}>
           <ListItemIcon>
             <FunnelIcon fontSize="small" />
           </ListItemIcon>
@@ -379,7 +353,7 @@ export default function HistoryTable({
         open={filtersOpen}
         regularUser={regularUser}
         value={filters}
-        onApply={onFiltersApply}
+        onApply={handleFiltersApply}
         onClose={onFiltersClose}
       />
     </>

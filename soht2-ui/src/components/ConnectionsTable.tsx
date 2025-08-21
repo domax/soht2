@@ -1,5 +1,5 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -29,6 +29,7 @@ import {
 } from '../api/soht2Api';
 import HeaderMenuButton from '../controls/HeaderMenuButton';
 import ConnectionCloseDialog from './ConnectionCloseDialog';
+import useInterval from '../hooks/useInterval';
 
 type SortColumn =
   | 'id'
@@ -102,7 +103,6 @@ export default function ConnectionsTable({
   );
 
   const [autoRefresh, setAutoRefresh] = useState<boolean>(initAutoRefresh);
-  const autoTimerRef = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -122,20 +122,15 @@ export default function ConnectionsTable({
     void load();
   }, [load]);
 
+  const [setRefresh, cancelRefresh] = useInterval(() => {
+    if (menuHeaderAnchor) return;
+    void load();
+  }, 5000);
+
   useEffect(() => {
-    if (autoRefresh) {
-      autoTimerRef.current = window.setInterval(() => {
-        if (menuHeaderAnchor) return;
-        void load();
-      }, 5000);
-    }
-    return () => {
-      if (autoTimerRef.current) {
-        window.clearInterval(autoTimerRef.current);
-        autoTimerRef.current = null;
-      }
-    };
-  }, [autoRefresh, menuHeaderAnchor, load]);
+    if (autoRefresh) setRefresh();
+    return cancelRefresh;
+  }, [autoRefresh, menuHeaderAnchor, load, setRefresh, cancelRefresh]);
 
   const handleMenuHeaderOpen = useCallback((e: MouseEvent<HTMLElement>) => {
     setMenuHeaderAnchor(e.currentTarget);
