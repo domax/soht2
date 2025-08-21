@@ -38,7 +38,8 @@ export type HistorySortColumn =
   | 'targetPort'
   | 'openedAt'
   | 'closedAt';
-export type HistorySorting = { column: HistorySortColumn | null; direction: 'asc' | 'desc' | null };
+export type HistorySortDir = 'asc' | 'desc';
+export type HistorySorting = { column: HistorySortColumn | null; direction: HistorySortDir | null };
 export type HistoryNavigation = HistoryFilters & { sort?: string[]; pg?: number; sz?: number };
 
 export default function HistoryTable({
@@ -66,8 +67,11 @@ export default function HistoryTable({
   const pageSizeDebounceRef = useRef<number | null>(null);
 
   const [navSorting] = navigation?.sort ?? ['openedAt:desc'];
-  const [column, direction] = navSorting.split(':');
-  const [sorting, setSorting] = useState<HistorySorting>({ column, direction });
+  const [navColumn, navDir] = navSorting.split(':');
+  const [sorting, setSorting] = useState<HistorySorting>({
+    column: navColumn as HistorySortColumn,
+    direction: navDir as HistorySortDir,
+  });
 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
