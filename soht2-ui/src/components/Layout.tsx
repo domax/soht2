@@ -14,12 +14,16 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import LogoutIcon from '@mui/icons-material/Logout';
 import LockResetIcon from '@mui/icons-material/LockReset';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useLocation, useNavigate } from 'react-router-dom';
 import soht2Logo from '../assets/soht2_logo.png';
 import { useThemeMode } from '../theme';
 import { httpClient } from '../api/soht2Api';
 import ChangePasswordDialog from './ChangePasswordDialog';
 import ErrorAlert from './ErrorAlert';
+import type { WindowProps } from '../App';
+
+const swaggerUrl = (window as WindowProps).__SWAGGER_URL__ ?? null;
 
 export default function Layout({ children }: Readonly<{ children: ReactNode }>) {
   const { mode, toggle } = useThemeMode();
@@ -86,6 +90,12 @@ export default function Layout({ children }: Readonly<{ children: ReactNode }>) 
               <MenuItem onClick={openChangePassword}>
                 <LockResetIcon fontSize="small" style={{ marginRight: 12 }} />
                 Change Password
+              </MenuItem>
+            )}
+            {swaggerUrl && (
+              <MenuItem component="a" href={swaggerUrl} target="_blank" rel="noopener noreferrer">
+                <OpenInNewIcon fontSize="small" style={{ marginRight: 12 }} />
+                API Playground
               </MenuItem>
             )}
             {!isLogin && <Divider />}

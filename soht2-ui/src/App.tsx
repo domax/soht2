@@ -10,7 +10,7 @@ const LazyLoginPage = lazy(() => import('./pages/LoginPage'));
 const LazyAdminPage = lazy(() => import('./pages/AdminPage'));
 const LazyUserPage = lazy(() => import('./pages/UserPage'));
 
-export type WindowProps = typeof window & { __CONTEXT_PATH__: string };
+export type WindowProps = typeof window & { __CONTEXT_PATH__: string; __SWAGGER_URL__: string };
 
 export default function App() {
   const [user, setUser] = useState<Soht2User | null>(null);
