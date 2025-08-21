@@ -1,6 +1,4 @@
-import { type ApiError, ConnectionApi, type UUID } from '../api/soht2Api.ts';
 import { useCallback, useEffect, useState } from 'react';
-import { APP_ERROR_EVENT } from './ErrorAlert.tsx';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -8,6 +6,8 @@ import Box from '@mui/material/Box';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
+import { APP_ERROR_EVENT } from './ErrorAlert';
+import { type ApiError, ConnectionApi, type UUID } from '../api/soht2Api';
 
 export default function ConnectionCloseDialog({
   open,
