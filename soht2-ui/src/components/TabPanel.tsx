@@ -2,14 +2,12 @@
 import { type ReactNode } from 'react';
 import Box from '@mui/material/Box';
 
-type TabPanelProps = Readonly<{
-  children?: ReactNode;
-  prefix?: string;
-  index: number;
-  value: number;
-}>;
-
-export default function TabPanel({ children, prefix = '', value, index }: TabPanelProps) {
+export default function TabPanel({
+  children,
+  prefix = '',
+  index,
+  value,
+}: Readonly<{ children?: ReactNode; prefix?: string; index: number; value: number }>) {
   return (
     <div
       role="tabpanel"

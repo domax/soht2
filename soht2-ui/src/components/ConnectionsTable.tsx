@@ -27,9 +27,11 @@ import {
   type ISODateTime,
   type Soht2Connection,
 } from '../api/soht2Api';
+import { ConnectionChangedEvent } from '../api/appEvents';
 import HeaderMenuButton from '../controls/HeaderMenuButton';
 import ConnectionCloseDialog from './ConnectionCloseDialog';
 import useInterval from '../hooks/useInterval';
+import useEventListener from '../hooks/useEventListener';
 
 type SortColumn =
   | 'id'
@@ -118,9 +120,9 @@ export default function ConnectionsTable({
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => void load(), [load]);
+
+  useEventListener(ConnectionChangedEvent.TYPE, () => void load());
 
   const [setRefresh, cancelRefresh] = useInterval(() => {
     if (menuHeaderAnchor) return;
@@ -163,13 +165,6 @@ export default function ConnectionsTable({
     setCloseConnectionOpen(true);
   }, [handleMenuRowClose]);
   const handleCloseConnectionClose = useCallback(() => setCloseConnectionOpen(false), []);
-  useEffect(() => {
-    const handler = () => {
-      void load();
-    };
-    window.addEventListener('connections:changed', handler as EventListener);
-    return () => window.removeEventListener('connections:changed', handler as EventListener);
-  }, [load]);
 
   const toggleSort = useCallback(
     (column: Exclude<SortColumn, null>) => {

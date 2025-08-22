@@ -6,7 +6,6 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
-import { APP_ERROR_EVENT } from './ErrorAlert';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
@@ -14,13 +13,16 @@ import Select, { type SelectChangeEvent } from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import { type ApiError, UserApi, type UserRole } from '../api/soht2Api';
+import { dispatchAppErrorEvent, dispatchUserChangedEvent } from '../api/appEvents';
 import AllowedTargets from '../controls/AllowedTargets';
 import PasswordField from '../controls/PasswordField';
 
-type NewUserDialogProps = Readonly<{ open: boolean; onClose: () => void }>;
 type NewUserForm = { username: string; password: string; role: UserRole; allowedTargets: string[] };
 
-export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
+export default function NewUserDialog({
+  open,
+  onClose,
+}: Readonly<{ open: boolean; onClose: () => void }>) {
   const [form, setForm] = useState<NewUserForm>({
     username: '',
     password: '',
@@ -47,13 +49,10 @@ export default function NewUserDialog({ open, onClose }: NewUserDialogProps) {
         role: form.role,
         allowedTargets: form.allowedTargets,
       });
-      // Notify listeners (e.g., UsersTable) that users' list has changed
-      window.dispatchEvent(
-        new CustomEvent('users:changed', { detail: { action: 'create', username: form.username } })
-      );
+      dispatchUserChangedEvent('create', form.username);
       onClose();
     } catch (e) {
-      window.dispatchEvent(new CustomEvent<ApiError>(APP_ERROR_EVENT, { detail: e as ApiError }));
+      dispatchAppErrorEvent(e as ApiError);
     } finally {
       setSubmitting(false);
     }

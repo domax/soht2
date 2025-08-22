@@ -6,7 +6,6 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
-import { APP_ERROR_EVENT } from './ErrorAlert';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
@@ -14,12 +13,15 @@ import Select, { type SelectChangeEvent } from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import { type ApiError, type Soht2User, UserApi, type UserRole } from '../api/soht2Api';
+import { dispatchAppErrorEvent, dispatchUserChangedEvent } from '../api/appEvents';
 import AllowedTargets from '../controls/AllowedTargets';
 import PasswordField from '../controls/PasswordField';
 
-type EditUserDialogProps = Readonly<{ open: boolean; user: Soht2User | null; onClose: () => void }>;
-
-export default function EditUserDialog({ open, user, onClose }: EditUserDialogProps) {
+export default function EditUserDialog({
+  open,
+  user,
+  onClose,
+}: Readonly<{ open: boolean; user: Soht2User | null; onClose: () => void }>) {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>(user?.role || 'USER');
   const [allowedTargets, setAllowedTargets] = useState<string[]>(user?.allowedTargets ?? []);
@@ -48,12 +50,10 @@ export default function EditUserDialog({ open, user, onClose }: EditUserDialogPr
       params.allowedTargets = allowedTargets;
 
       await UserApi.updateUser(user.username, params);
-      window.dispatchEvent(
-        new CustomEvent('users:changed', { detail: { action: 'update', username: user.username } })
-      );
+      dispatchUserChangedEvent('update', user.username);
       onClose();
     } catch (e) {
-      window.dispatchEvent(new CustomEvent<ApiError>(APP_ERROR_EVENT, { detail: e as ApiError }));
+      dispatchAppErrorEvent(e as ApiError);
     } finally {
       setSubmitting(false);
     }

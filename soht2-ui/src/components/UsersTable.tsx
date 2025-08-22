@@ -21,10 +21,12 @@ import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import PersonRemoveAlt1Icon from '@mui/icons-material/PersonRemoveAlt1';
 import { type ApiError, type ISODateTime, type Soht2User, UserApi } from '../api/soht2Api';
+import { UserChangedEvent } from '../api/appEvents';
 import HeaderMenuButton from '../controls/HeaderMenuButton';
 import NewUserDialog from './NewUserDialog';
 import EditUserDialog from './EditUserDialog';
 import DeleteUserDialog from './DeleteUserDialog';
+import useEventListener from '../hooks/useEventListener';
 
 type SortColumn = 'username' | 'role' | 'createdAt' | null;
 export type UsersSorting = { column: SortColumn; direction: 'asc' | 'desc' | null };
@@ -85,18 +87,9 @@ export default function UsersTable({
   const handleEditUserClose = useCallback(() => setEditUserOpen(false), []);
   const handleDeleteUserClose = useCallback(() => setDeleteUserOpen(false), []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => void load(), [load]);
 
-  // Listen for external notifications about users' changes (e.g., from NewUserDialog)
-  useEffect(() => {
-    const handler = () => {
-      void load();
-    };
-    window.addEventListener('users:changed', handler as EventListener);
-    return () => window.removeEventListener('users:changed', handler as EventListener);
-  }, [load]);
+  useEventListener(UserChangedEvent.TYPE, () => void load());
 
   const [sorting, setSorting] = useState(initSorting ?? { column: null, direction: null });
 

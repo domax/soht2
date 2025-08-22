@@ -6,8 +6,8 @@ import Box from '@mui/material/Box';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
-import { APP_ERROR_EVENT } from './ErrorAlert';
 import { type ApiError, ConnectionApi, type UUID } from '../api/soht2Api';
+import { dispatchAppErrorEvent, dispatchConnectionChangedEvent } from '../api/appEvents';
 
 export default function ConnectionCloseDialog({
   open,
@@ -26,12 +26,10 @@ export default function ConnectionCloseDialog({
 
     try {
       await ConnectionApi.close(connectionId);
-      window.dispatchEvent(
-        new CustomEvent('connections:changed', { detail: { action: 'close', connectionId } })
-      );
+      dispatchConnectionChangedEvent('close', connectionId);
       onClose();
     } catch (e) {
-      window.dispatchEvent(new CustomEvent<ApiError>(APP_ERROR_EVENT, { detail: e as ApiError }));
+      dispatchAppErrorEvent(e as ApiError);
     } finally {
       setClosing(false);
     }

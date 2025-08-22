@@ -7,19 +7,6 @@ import IconButton from '@mui/material/IconButton';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import Visibility from '@mui/icons-material/Visibility';
 
-type PasswordEyeProps = Readonly<{
-  password?: string;
-  label?: string;
-  helperText?: string;
-  variant?: TextFieldVariants;
-  fullWidth?: boolean;
-  margin?: 'dense' | 'normal' | 'none';
-  required?: boolean;
-  autoComplete?: string;
-  onChange: (password: string) => void;
-  onEnter?: () => void;
-}>;
-
 export default function PasswordField({
   password,
   label = 'Password',
@@ -31,7 +18,18 @@ export default function PasswordField({
   autoComplete = 'new-password',
   onChange,
   onEnter,
-}: PasswordEyeProps) {
+}: Readonly<{
+  password?: string;
+  label?: string;
+  helperText?: string;
+  variant?: TextFieldVariants;
+  fullWidth?: boolean;
+  margin?: 'dense' | 'normal' | 'none';
+  required?: boolean;
+  autoComplete?: string;
+  onChange: (password: string) => void;
+  onEnter?: () => void;
+}>) {
   const [showPassword, setShowPassword] = useState(false);
 
   const handlePasswordChange = useCallback(

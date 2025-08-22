@@ -9,16 +9,14 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
-import { APP_ERROR_EVENT } from './ErrorAlert';
 import { type ApiError, type Soht2User, UserApi } from '../api/soht2Api';
+import { dispatchAppErrorEvent, dispatchUserChangedEvent } from '../api/appEvents';
 
-type DeleteUserDialogProps = Readonly<{
-  open: boolean;
-  user: Soht2User | null;
-  onClose: () => void;
-}>;
-
-export default function DeleteUserDialog({ open, user, onClose }: DeleteUserDialogProps) {
+export default function DeleteUserDialog({
+  open,
+  user,
+  onClose,
+}: Readonly<{ open: boolean; user: Soht2User | null; onClose: () => void }>) {
   const [deleteHistory, setDeleteHistory] = useState(true);
   const [deleteForce, setDeleteForce] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -36,12 +34,10 @@ export default function DeleteUserDialog({ open, user, onClose }: DeleteUserDial
     setDeleting(true);
     try {
       await UserApi.deleteUser(user.username, { force: deleteForce, history: deleteHistory });
-      window.dispatchEvent(
-        new CustomEvent('users:changed', { detail: { action: 'delete', username: user.username } })
-      );
+      dispatchUserChangedEvent('delete', user.username);
       onClose();
     } catch (e) {
-      window.dispatchEvent(new CustomEvent<ApiError>(APP_ERROR_EVENT, { detail: e as ApiError }));
+      dispatchAppErrorEvent(e as ApiError);
     } finally {
       setDeleting(false);
     }

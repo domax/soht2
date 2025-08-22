@@ -5,8 +5,8 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
-import { APP_ERROR_EVENT } from '../components/ErrorAlert';
 import { type ApiError, httpClient, type Soht2User, UserApi } from '../api/soht2Api';
+import { dispatchAppErrorEvent } from '../api/appEvents';
 import Layout from '../components/Layout';
 import PasswordField from '../controls/PasswordField';
 
@@ -26,7 +26,7 @@ export default function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2U
       navigate((user.role || '').toUpperCase() === 'ADMIN' ? '/admin' : '/user', { replace: true });
     } catch (e) {
       httpClient.clearAuth();
-      window.dispatchEvent(new CustomEvent<ApiError>(APP_ERROR_EVENT, { detail: e as ApiError }));
+      dispatchAppErrorEvent(e as ApiError);
     } finally {
       setLoading(false);
     }

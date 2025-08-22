@@ -6,8 +6,8 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
-import { APP_ERROR_EVENT } from './ErrorAlert';
 import { ApiError, UserApi } from '../api/soht2Api';
+import { dispatchAppErrorEvent } from '../api/appEvents';
 import PasswordField from '../controls/PasswordField';
 
 export default function ChangePasswordDialog({
@@ -30,11 +30,7 @@ export default function ChangePasswordDialog({
 
   const handleSubmit = useCallback(async () => {
     if (oldPassword === newPassword) {
-      window.dispatchEvent(
-        new CustomEvent<ApiError>(APP_ERROR_EVENT, {
-          detail: new ApiError('New password must be different'),
-        })
-      );
+      dispatchAppErrorEvent(new ApiError('New password must be different'));
       return;
     }
     setLoading(true);
@@ -45,7 +41,7 @@ export default function ChangePasswordDialog({
       setNewPassword('');
       onClose();
     } catch (e) {
-      window.dispatchEvent(new CustomEvent<ApiError>(APP_ERROR_EVENT, { detail: e as ApiError }));
+      dispatchAppErrorEvent(e as ApiError);
     } finally {
       setLoading(false);
     }

@@ -16,7 +16,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useLocation, useNavigate } from 'react-router-dom';
-import soht2Logo from '../assets/soht2_logo.png';
+import soht2Logo40 from '../assets/soht2_logo_40.png';
 import { useThemeMode } from '../theme';
 import { httpClient } from '../api/soht2Api';
 import ChangePasswordDialog from './ChangePasswordDialog';
@@ -66,7 +66,7 @@ export default function Layout({ children }: Readonly<{ children: ReactNode }>) 
     <>
       <AppBar position="fixed">
         <Toolbar>
-          <img src={soht2Logo} alt="Logo" style={{ height: 40, marginRight: 16 }} />
+          <img src={soht2Logo40} alt="Logo" style={{ height: 40, marginRight: 16 }} />
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             SOHT2 Server
           </Typography>
