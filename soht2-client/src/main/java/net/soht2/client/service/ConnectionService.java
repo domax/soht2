@@ -118,7 +118,12 @@ public class ConnectionService {
         sessions.put(state.connection.id(), state);
         log.debug("connect: connection={}", state.connection);
 
-        CompletableFuture.runAsync(() -> exchange(state));
+        CompletableFuture.runAsync(() -> exchange(state))
+            .thenRun(
+                () -> {
+                  Try.run(state.in::close);
+                  Try.run(state.out::close);
+                });
       } catch (Exception e) {
         log.atError().setMessage("connect: {}").addArgument(e::toString).setCause(e).log();
       }
