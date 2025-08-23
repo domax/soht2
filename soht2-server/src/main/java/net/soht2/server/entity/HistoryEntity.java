@@ -45,8 +45,14 @@ public class HistoryEntity {
   @Column(name = "opened_at", nullable = false, updatable = false)
   private LocalDateTime openedAt;
 
-  @Column(name = "closed_at", nullable = false)
+  @Column(name = "closed_at", nullable = false, updatable = false)
   private LocalDateTime closedAt;
+
+  @Column(name = "bytes_read", nullable = false, updatable = false)
+  private Long bytesRead;
+
+  @Column(name = "bytes_written", nullable = false, updatable = false)
+  private Long bytesWritten;
 
   @SuppressWarnings("java:S2097")
   @Override
@@ -70,7 +76,9 @@ public class HistoryEntity {
         && Objects.equals(targetHost, that.targetHost)
         && Objects.equals(targetPort, that.targetPort)
         && Objects.equals(openedAt, that.openedAt)
-        && Objects.equals(closedAt, that.closedAt);
+        && Objects.equals(closedAt, that.closedAt)
+        && Objects.equals(bytesRead, that.bytesRead)
+        && Objects.equals(bytesWritten, that.bytesWritten);
   }
 
   @Override
@@ -88,6 +96,8 @@ public class HistoryEntity {
         .targetPort(targetPort)
         .openedAt(openedAt)
         .closedAt(closedAt)
+        .bytesRead(bytesRead)
+        .bytesWritten(bytesWritten)
         .build();
   }
 }

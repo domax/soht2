@@ -27,6 +27,7 @@ import {
   type HistoryPage,
   type Soht2Connection,
 } from '../api/soht2Api';
+import { formatBytes } from '../api/functions';
 import HistoryFiltersDialog, { type HistoryFilters } from './HistoryFiltersDialog';
 import useDebounce from '../hooks/useDebounce';
 
@@ -38,7 +39,9 @@ export type HistorySortColumn =
   | 'targetHost'
   | 'targetPort'
   | 'openedAt'
-  | 'closedAt';
+  | 'closedAt'
+  | 'bytesRead'
+  | 'bytesWritten';
 export type HistorySortDir = 'asc' | 'desc';
 export type HistorySorting = { column: HistorySortColumn | null; direction: HistorySortDir | null };
 export type HistoryNavigation = HistoryFilters & { sort?: string[]; pg?: number; sz?: number };
@@ -299,6 +302,22 @@ export default function HistoryTable({
                   <b>Closed</b>
                 </TableSortLabel>
               </TableCell>
+              <TableCell sortDirection={sorting.column === 'bytesRead' ? sortDir : false}>
+                <TableSortLabel
+                  active={sorting.column === 'bytesRead'}
+                  direction={dir}
+                  onClick={() => toggleSort('bytesRead')}>
+                  <b>Read</b>
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={sorting.column === 'bytesWritten' ? sortDir : false}>
+                <TableSortLabel
+                  active={sorting.column === 'bytesWritten'}
+                  direction={dir}
+                  onClick={() => toggleSort('bytesWritten')}>
+                  <b>Written</b>
+                </TableSortLabel>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -314,12 +333,14 @@ export default function HistoryTable({
                   <TableCell sx={{ paddingY: '13px', fontSizeAdjust: '0.5' }}>
                     <pre style={{ margin: 0 }}>{c.id}</pre>
                   </TableCell>
-                  {!regularUser ? <TableCell>{c.user?.username || ''}</TableCell> : null}
-                  <TableCell>{c.clientHost || ''}</TableCell>
-                  <TableCell>{c.targetHost || ''}</TableCell>
+                  {!regularUser ? <TableCell>{c.user?.username ?? ''}</TableCell> : null}
+                  <TableCell>{c.clientHost ?? ''}</TableCell>
+                  <TableCell>{c.targetHost ?? ''}</TableCell>
                   <TableCell>{c.targetPort ?? ''}</TableCell>
                   <TableCell>{c.openedAt ? new Date(c.openedAt).toLocaleString() : ''}</TableCell>
                   <TableCell>{c.closedAt ? new Date(c.closedAt).toLocaleString() : ''}</TableCell>
+                  <TableCell>{formatBytes(c.bytesRead ?? 0)}</TableCell>
+                  <TableCell>{formatBytes(c.bytesWritten ?? 0)}</TableCell>
                 </TableRow>
               ))
             )}

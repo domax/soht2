@@ -27,6 +27,7 @@ import {
   type ISODateTime,
   type Soht2Connection,
 } from '../api/soht2Api';
+import { formatBytes } from '../api/functions';
 import { ConnectionChangedEvent } from '../api/appEvents';
 import HeaderMenuButton from '../controls/HeaderMenuButton';
 import ConnectionCloseDialog from './ConnectionCloseDialog';
@@ -40,6 +41,8 @@ type SortColumn =
   | 'targetHost'
   | 'targetPort'
   | 'openedAt'
+  | 'bytesRead'
+  | 'bytesWritten'
   | null;
 export type ConnectionsSorting = { column: SortColumn; direction: 'asc' | 'desc' | null };
 
@@ -197,9 +200,16 @@ export default function ConnectionsTable({
           .toString()
           .toLowerCase();
       };
-      if (sorting.column === 'openedAt') return asTime(a.openedAt) - asTime(b.openedAt);
-      if (sorting.column === 'targetPort') return asNumber(a.targetPort) - asNumber(b.targetPort);
-      return asString(a).localeCompare(asString(b));
+      switch (sorting.column) {
+        case 'openedAt':
+          return asTime(a[sorting.column]) - asTime(b[sorting.column]);
+        case 'targetPort':
+        case 'bytesRead':
+        case 'bytesWritten':
+          return asNumber(a[sorting.column]) - asNumber(b[sorting.column]);
+        default:
+          return asString(a).localeCompare(asString(b));
+      }
     };
     arr.sort((a, b) => (sorting.direction === 'asc' ? cmp(a, b) : -cmp(a, b)));
     return arr;
@@ -301,6 +311,22 @@ export default function ConnectionsTable({
                   <b>Opened</b>
                 </TableSortLabel>
               </TableCell>
+              <TableCell sortDirection={sorting.column === 'bytesRead' ? sortDir : false}>
+                <TableSortLabel
+                  active={sorting.column === 'bytesRead'}
+                  direction={dir}
+                  onClick={() => toggleSort('bytesRead')}>
+                  <b>Read</b>
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={sorting.column === 'bytesWritten' ? sortDir : false}>
+                <TableSortLabel
+                  active={sorting.column === 'bytesWritten'}
+                  direction={dir}
+                  onClick={() => toggleSort('bytesWritten')}>
+                  <b>Written</b>
+                </TableSortLabel>
+              </TableCell>
               <TableCell align="right">
                 <HeaderMenuButton
                   menuHeaderAnchor={menuHeaderAnchor}
@@ -316,11 +342,13 @@ export default function ConnectionsTable({
                   <TableCell sx={{ paddingY: '13px', fontSizeAdjust: '0.5' }}>
                     <pre style={{ margin: 0 }}>{c.id}</pre>
                   </TableCell>
-                  <TableCell>{c.user?.username || ''}</TableCell>
-                  <TableCell>{c.clientHost || ''}</TableCell>
-                  <TableCell>{c.targetHost || ''}</TableCell>
+                  <TableCell>{c.user?.username ?? ''}</TableCell>
+                  <TableCell>{c.clientHost ?? ''}</TableCell>
+                  <TableCell>{c.targetHost ?? ''}</TableCell>
                   <TableCell>{c.targetPort ?? ''}</TableCell>
                   <TableCell>{c.openedAt ? new Date(c.openedAt).toLocaleString() : ''}</TableCell>
+                  <TableCell>{formatBytes(c.bytesRead ?? 0)}</TableCell>
+                  <TableCell>{formatBytes(c.bytesWritten ?? 0)}</TableCell>
                   <TableCell align="right">
                     <IconButton
                       size="small"

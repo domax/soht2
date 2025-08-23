@@ -25,6 +25,8 @@ export interface Soht2Connection {
   targetPort?: number | null;
   openedAt?: ISODateTime | null;
   closedAt?: ISODateTime | null;
+  bytesRead?: number | null;
+  bytesWritten?: number | null;
 }
 
 // Paging related
@@ -36,7 +38,9 @@ export type HistorySorting =
   | 'targetHost'
   | 'targetPort'
   | 'openedAt'
-  | 'closedAt';
+  | 'closedAt'
+  | 'bytesRead'
+  | 'bytesWritten';
 
 export interface SortingOrder<F extends string> {
   field: F;

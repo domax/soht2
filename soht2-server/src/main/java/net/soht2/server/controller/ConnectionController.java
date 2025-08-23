@@ -201,7 +201,8 @@ public class ConnectionController {
               description =
                   "Sorting criteria (supported fields: "
                       + "userName, connectionId, clientHost, "
-                      + "targetHost, targetPort, openedAt, closedAt)",
+                      + "targetHost, targetPort, openedAt, closedAt, "
+                      + "bytesRead, bytesWritten)",
               example = "openedAt:desc",
               array =
                   @ArraySchema(
@@ -212,7 +213,8 @@ public class ConnectionController {
                               type = "string",
                               pattern =
                                   "^(userName|connectionId|clientHost|targetHost|targetPort"
-                                      + "|openedAt|closedAt):(asc|desc)$")))
+                                      + "|openedAt|closedAt|bytesRead|bytesWritten)"
+                                      + ":(asc|desc)$")))
           @RequestParam(name = "sort", required = false, defaultValue = "openedAt:desc")
           List<String> sortBy,
       @Parameter(description = "0-based page number")

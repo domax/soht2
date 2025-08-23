@@ -61,6 +61,8 @@ public class Soht2HistoryService {
                     .targetPort(connection.targetPort())
                     .openedAt(connection.openedAt())
                     .closedAt(connection.closedAt())
+                    .bytesRead(connection.bytesRead())
+                    .bytesWritten(connection.bytesWritten())
                     .build())
         .mapTry(historyEntityRepository::save)
         .onSuccess(v -> log.info("addHistory: {}", v))

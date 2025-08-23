@@ -119,7 +119,7 @@ public class Soht2Service {
     return connections.values().stream()
         .filter(sc -> usernames.contains(sc.soht2().user().username().toLowerCase()))
         .map(sc -> updateConnectionWithUser(sc, users::get))
-        .map(ServerConnection::soht2)
+        .map(sc -> sc.soht2().withBytesExchanged(sc.bytesRead(), sc.bytesWritten()))
         .toList();
   }
 
@@ -146,14 +146,16 @@ public class Soht2Service {
         .mapTry(
             connection -> {
               if (ofNullable(data).filter(v -> v.length > 0).isPresent()) {
-                connection.outputStream().write(compressorCache.apply(encoding).decompress(data));
+                val dataOut = compressorCache.apply(encoding).decompress(data);
+                connection.outputStream().write(dataOut);
                 connection.outputStream().flush();
+                connection.addBytesWritten(dataOut.length);
               }
               val buffer = new byte[(int) soht2ServerConfig.getReadBufferSize().toBytes()];
               val bufferLen = connection.inputStream().read(buffer);
               if (bufferLen <= 0) return EMPTY;
-              if (bufferLen >= buffer.length) return buffer;
-              return Arrays.copyOf(buffer, bufferLen);
+              connection.addBytesRead(bufferLen);
+              return bufferLen >= buffer.length ? buffer : Arrays.copyOf(buffer, bufferLen);
             })
         .recover(SocketTimeoutException.class, e -> EMPTY)
         .onFailure(e -> log.error("exchange: id={} - {}", id, e.toString()))
@@ -244,7 +246,11 @@ public class Soht2Service {
   }
 
   private void postCloseAction(ServerConnection connection) {
-    val soht2 = connection.soht2().withClosedAt(LocalDateTime.now());
+    val soht2 =
+        connection
+            .soht2()
+            .withClosedAt(LocalDateTime.now())
+            .withBytesExchanged(connection.bytesRead(), connection.bytesWritten());
     connections.remove(soht2.id());
     if (soht2ServerConfig.isEnableHistory()) soht2HistoryService.addHistory(soht2);
   }

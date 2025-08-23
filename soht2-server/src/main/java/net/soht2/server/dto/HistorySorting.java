@@ -16,7 +16,9 @@ public enum HistorySorting implements SortingField {
   targetHost("target_host"),
   targetPort("target_port"),
   openedAt("opened_at"),
-  closedAt("closed_at");
+  closedAt("closed_at"),
+  bytesRead("bytes_read"),
+  bytesWritten("bytes_written");
 
   private final String field;
 }

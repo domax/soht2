@@ -24,9 +24,13 @@ class Soht2ConnectionTest {
                     .username("c")
                     .role("d")
                     .createdAt(timestamp)
-                    .updatedAt(timestamp)
+                    .updatedAt(timestamp.plusDays(1))
                     .allowedTargets(Set.of("*:*"))
                     .build())
+            .openedAt(timestamp.plusDays(2))
+            .closedAt(timestamp.plusDays(3))
+            .bytesRead(100L)
+            .bytesWritten(200L)
             .build();
     assertThat(object.id()).isNotNull();
     assertThat(object.targetHost()).isEqualTo("a");
@@ -35,8 +39,12 @@ class Soht2ConnectionTest {
     assertThat(object.user().username()).isEqualTo("c");
     assertThat(object.user().role()).isEqualTo("d");
     assertThat(object.user().createdAt()).isEqualTo(timestamp);
-    assertThat(object.user().updatedAt()).isEqualTo(timestamp);
+    assertThat(object.user().updatedAt()).isEqualTo(timestamp.plusDays(1));
     assertThat(object.user().allowedTargets()).containsExactly("*:*");
+    assertThat(object.openedAt()).isEqualTo(timestamp.plusDays(2));
+    assertThat(object.closedAt()).isEqualTo(timestamp.plusDays(3));
+    assertThat(object.bytesRead()).isEqualTo(100L);
+    assertThat(object.bytesWritten()).isEqualTo(200L);
 
     val objectMapper = getObjectMapper();
     val json = objectMapper.writeValueAsString(object);

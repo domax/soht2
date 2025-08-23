@@ -10,6 +10,7 @@ import java.net.Socket;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import lombok.AccessLevel;
@@ -44,6 +45,12 @@ public class ServerConnection implements Closeable {
 
   @Getter(AccessLevel.NONE)
   AtomicBoolean isOpened = new AtomicBoolean();
+
+  @Getter(AccessLevel.NONE)
+  AtomicLong bytesRead = new AtomicLong(0);
+
+  @Getter(AccessLevel.NONE)
+  AtomicLong bytesWritten = new AtomicLong(0);
 
   @Builder
   private ServerConnection(
@@ -103,6 +110,34 @@ public class ServerConnection implements Closeable {
    */
   public Duration connectionAge() {
     return Duration.between(soht2.get().openedAt(), lastActivity.get());
+  }
+
+  /**
+   * Adds the specified number of bytes to the total number of bytes read from the connection.
+   *
+   * @param bytes the number of bytes to add
+   */
+  public void addBytesRead(long bytes) {
+    bytesRead.getAndAdd(bytes);
+  }
+
+  /**
+   * Adds the specified number of bytes to the total number of bytes written to the connection.
+   *
+   * @param bytes the number of bytes to add
+   */
+  public void addBytesWritten(long bytes) {
+    bytesWritten.getAndAdd(bytes);
+  }
+
+  /** Returns the total number of bytes read from the connection. */
+  public long bytesRead() {
+    return bytesRead.get();
+  }
+
+  /** Returns the total number of bytes written to the connection. */
+  public long bytesWritten() {
+    return bytesWritten.get();
   }
 
   /** Closes the connection, releasing resources associated with the socket and streams. */

@@ -88,6 +88,8 @@ class Soht2HistoryServiceTest {
             .targetPort(443)
             .openedAt(LocalDateTime.now())
             .closedAt(LocalDateTime.now())
+            .bytesRead(100L)
+            .bytesWritten(200L)
             .build();
     val he2 =
         HistoryEntity.builder()
@@ -98,6 +100,8 @@ class Soht2HistoryServiceTest {
             .targetPort(443)
             .openedAt(LocalDateTime.now())
             .closedAt(LocalDateTime.now())
+            .bytesRead(300L)
+            .bytesWritten(400L)
             .build();
     historyEntityRepository.saveAllAndFlush(List.of(he1, he2));
 
@@ -241,6 +245,8 @@ class Soht2HistoryServiceTest {
                 .targetPort(22)
                 .openedAt(LocalDateTime.parse("2025-08-08T16:00"))
                 .closedAt(LocalDateTime.parse("2025-08-08T17:00"))
+                .bytesRead(100L)
+                .bytesWritten(200L)
                 .build(),
             HistoryEntity.builder() // 1
                 .userName("user1")
@@ -250,6 +256,8 @@ class Soht2HistoryServiceTest {
                 .targetPort(22)
                 .openedAt(LocalDateTime.parse("2025-08-08T16:10"))
                 .closedAt(LocalDateTime.parse("2025-08-08T17:10"))
+                .bytesRead(300L)
+                .bytesWritten(400L)
                 .build(),
             HistoryEntity.builder() // 2
                 .userName("user1")
@@ -259,6 +267,8 @@ class Soht2HistoryServiceTest {
                 .targetPort(22)
                 .openedAt(LocalDateTime.parse("2025-08-08T16:20"))
                 .closedAt(LocalDateTime.parse("2025-08-08T17:20"))
+                .bytesRead(500L)
+                .bytesWritten(600L)
                 .build(),
             HistoryEntity.builder() // 3
                 .userName("user1")
@@ -268,6 +278,8 @@ class Soht2HistoryServiceTest {
                 .targetPort(22)
                 .openedAt(LocalDateTime.parse("2025-08-08T16:30"))
                 .closedAt(LocalDateTime.parse("2025-08-08T17:30"))
+                .bytesRead(700L)
+                .bytesWritten(800L)
                 .build(),
             HistoryEntity.builder() // 4
                 .userName("user2")
@@ -277,6 +289,8 @@ class Soht2HistoryServiceTest {
                 .targetPort(22)
                 .openedAt(LocalDateTime.parse("2025-08-08T16:40"))
                 .closedAt(LocalDateTime.parse("2025-08-08T17:40"))
+                .bytesRead(900L)
+                .bytesWritten(1000L)
                 .build(),
             HistoryEntity.builder() // 5
                 .userName("user2")
@@ -286,6 +300,8 @@ class Soht2HistoryServiceTest {
                 .targetPort(443)
                 .openedAt(LocalDateTime.parse("2025-08-08T16:50"))
                 .closedAt(LocalDateTime.parse("2025-08-08T17:50"))
+                .bytesRead(1100L)
+                .bytesWritten(1200L)
                 .build(),
             HistoryEntity.builder() // 6
                 .userName("user2")
@@ -295,6 +311,8 @@ class Soht2HistoryServiceTest {
                 .targetPort(443)
                 .openedAt(LocalDateTime.parse("2025-08-08T17:00"))
                 .closedAt(LocalDateTime.parse("2025-08-08T18:00"))
+                .bytesRead(1200L)
+                .bytesWritten(1300L)
                 .build(),
             HistoryEntity.builder() // 7
                 .userName("user2")
@@ -304,6 +322,8 @@ class Soht2HistoryServiceTest {
                 .targetPort(443)
                 .openedAt(LocalDateTime.parse("2025-08-08T17:10"))
                 .closedAt(LocalDateTime.parse("2025-08-08T18:10"))
+                .bytesRead(1400L)
+                .bytesWritten(1500L)
                 .build()));
   }
 }
