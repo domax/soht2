@@ -1,9 +1,4 @@
 /* SOHT2 © Licensed under MIT 2025. */
-
-// Minimal client UI API for soht2-ui matching soht2-server UserController and ConnectionController
-// - Uses fetch with JSON handling and optional Basic Auth header
-// - Provides typed functions for each controller endpoint
-
 export type UUID = string; // NOSONAR typescript:S6564
 export type ISODateTime = string; // NOSONAR typescript:S6564
 export type UserRole = 'USER' | 'ADMIN';
@@ -30,8 +25,10 @@ export interface Soht2Connection {
 }
 
 // Paging related
-export type SortingDir = 'ASC' | 'DESC' | 'asc' | 'desc';
-export type HistorySorting =
+export type SortingDirUpper = 'ASC' | 'DESC';
+export type SortingDirLower = 'asc' | 'desc';
+export type SortingDir = SortingDirUpper | SortingDirLower;
+export type HistorySortColumn =
   | 'userName'
   | 'connectionId'
   | 'clientHost'
@@ -42,27 +39,34 @@ export type HistorySorting =
   | 'bytesRead'
   | 'bytesWritten';
 
-export interface SortingOrder<F extends string> {
-  field: F;
+export type TableSorting<SortColumn extends string> = {
+  column: SortColumn | null;
+  direction: SortingDirLower | null;
+};
+
+export interface SortingOrder<SortColumn extends string> {
+  field: SortColumn;
   direction: SortingDir;
 }
 
-export interface Paging<F extends string> {
+export interface Paging<SortColumn extends string> {
   pageNumber: number;
   pageSize: number;
-  sorting?: SortingOrder<F>[] | null;
+  sorting?: SortingOrder<SortColumn>[] | null;
 }
 
-export interface Page<T, F extends string> {
-  paging?: Paging<F> | null;
+export interface Page<DataType, SortColumn extends string> {
+  paging?: Paging<SortColumn> | null;
   totalItems?: number | null;
-  data?: T[] | null;
+  data?: DataType[] | null;
   totalPages?: number | null; // computed by server
 }
 
-export type HistoryOrder = SortingOrder<HistorySorting>;
-export type HistoryPaging = Paging<HistorySorting> & { sorting?: HistoryOrder[] | null };
-export type HistoryPage = Page<Soht2Connection, HistorySorting> & { paging?: HistoryPaging | null };
+export type HistoryOrder = SortingOrder<HistorySortColumn>;
+export type HistoryPaging = Paging<HistorySortColumn> & { sorting?: HistoryOrder[] | null };
+export type HistoryPage = Page<Soht2Connection, HistorySortColumn> & {
+  paging?: HistoryPaging | null;
+};
 
 export type ValidationError = { defaultMessage: string; arguments: unknown[] };
 export class ApiError extends Error {
@@ -125,7 +129,7 @@ class HttpClient {
     this.authHeader = null;
   }
 
-  private headers(extra?: HeadersInit, contentType?: string): HeadersInit {
+  private headers(contentType?: string, extra?: HeadersInit): HeadersInit {
     const headers: Record<string, string> = {};
     if (contentType) headers['Content-Type'] = contentType;
     if (this.authHeader) headers['Authorization'] = this.authHeader;
@@ -157,7 +161,7 @@ class HttpClient {
   async postJson<T>(path: string, body?: unknown, query?: Query): Promise<T> {
     const res = await fetch(this.makeUrl(path, query), {
       method: 'POST',
-      headers: this.headers(undefined, 'application/json'),
+      headers: this.headers('application/json'),
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (!res.ok) throw await this.toError(res);
@@ -167,7 +171,7 @@ class HttpClient {
   async putJson<T>(path: string, body?: unknown, query?: Query): Promise<T> {
     const res = await fetch(this.makeUrl(path, query), {
       method: 'PUT',
-      headers: this.headers(undefined, 'application/json'),
+      headers: this.headers('application/json'),
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (!res.ok) throw await this.toError(res);

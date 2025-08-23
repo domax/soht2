@@ -6,7 +6,6 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
-import TableSortLabel from '@mui/material/TableSortLabel';
 import TableRow from '@mui/material/TableRow';
 import IconButton from '@mui/material/IconButton';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -20,20 +19,20 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import ToggleOnIcon from '@mui/icons-material/ToggleOn';
 import ToggleOffIcon from '@mui/icons-material/ToggleOff';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
-import Stack from '@mui/material/Stack';
 import {
   type ApiError,
   ConnectionApi,
-  type ISODateTime,
   type Soht2Connection,
+  type TableSorting,
 } from '../api/soht2Api';
-import { formatBytes } from '../api/functions';
+import { compareNumbers, compareStrings, compareTimes, formatBytes } from '../api/functions';
 import { ConnectionChangedEvent } from '../api/appEvents';
-import { useInterval, useEventListener } from '../hooks';
+import { useEventListener, useInterval } from '../hooks';
 import HeaderMenuButton from '../controls/HeaderMenuButton';
 import ConnectionCloseDialog from './ConnectionCloseDialog';
+import TableHeaderCell from './TableHeaderCell';
 
-type SortColumn =
+type ConnectionSortColumn =
   | 'id'
   | 'username'
   | 'clientHost'
@@ -41,58 +40,19 @@ type SortColumn =
   | 'targetPort'
   | 'openedAt'
   | 'bytesRead'
-  | 'bytesWritten'
-  | null;
-export type ConnectionsSorting = { column: SortColumn; direction: 'asc' | 'desc' | null };
-
-function HeaderMenu({
-  menuHeaderAnchor,
-  autoRefresh,
-  handleMenuHeaderClose,
-  handleManualRefresh,
-  handleToggleAutoRefresh,
-}: Readonly<{
-  menuHeaderAnchor: HTMLElement | null;
-  autoRefresh: boolean;
-  handleMenuHeaderClose: () => void;
-  handleManualRefresh: () => void;
-  handleToggleAutoRefresh: () => void;
-}>) {
-  return (
-    <Menu
-      id="connections-header-menu"
-      anchorEl={menuHeaderAnchor}
-      open={!!menuHeaderAnchor}
-      onClose={handleMenuHeaderClose}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-      keepMounted>
-      <MenuItem onClick={handleManualRefresh}>
-        <ListItemIcon>
-          <RefreshIcon fontSize="small" />
-        </ListItemIcon>
-        Manual Refresh
-      </MenuItem>
-      <MenuItem onClick={handleToggleAutoRefresh}>
-        <ListItemIcon>
-          {autoRefresh ? <ToggleOffIcon fontSize="small" /> : <ToggleOnIcon fontSize="small" />}
-        </ListItemIcon>
-        {`Automatic Refresh ${autoRefresh ? 'Off' : 'On'}`}
-      </MenuItem>
-    </Menu>
-  );
-}
+  | 'bytesWritten';
+export type ConnectionsSorting = TableSorting<ConnectionSortColumn>;
 
 export default function ConnectionsTable({
   initSorting,
-  onSortingChange,
   initAutoRefresh = false,
+  onSortingChange,
   onAutoRefreshChange,
 }: Readonly<{
   initSorting?: ConnectionsSorting;
-  onSortingChange?: (s: ConnectionsSorting) => void;
   initAutoRefresh?: boolean;
-  onAutoRefreshChange?: (r: boolean) => void;
+  onSortingChange: (s: ConnectionsSorting) => void;
+  onAutoRefreshChange: (r: boolean) => void;
 }>) {
   const [connections, setConnections] = useState<Soht2Connection[] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -149,7 +109,7 @@ export default function ConnectionsTable({
   const handleToggleAutoRefresh = useCallback(() => {
     setAutoRefresh(prev => {
       const newAutoRefresh = !prev;
-      if (onAutoRefreshChange) onAutoRefreshChange(newAutoRefresh);
+      onAutoRefreshChange(newAutoRefresh);
       return newAutoRefresh;
     });
     handleMenuHeaderClose();
@@ -168,46 +128,26 @@ export default function ConnectionsTable({
   }, [handleMenuRowClose]);
   const handleCloseConnectionClose = useCallback(() => setCloseConnectionOpen(false), []);
 
-  const toggleSort = useCallback(
-    (column: Exclude<SortColumn, null>) => {
-      const nextSorting: ConnectionsSorting = { column, direction: 'asc' };
-      if (sorting.column !== column) {
-        nextSorting.column = column;
-      } else if (sorting.direction === 'asc') {
-        nextSorting.direction = 'desc';
-      } else if (sorting.direction === 'desc') {
-        nextSorting.column = null;
-        nextSorting.direction = null;
-      }
-      setSorting(nextSorting);
-      if (onSortingChange) onSortingChange(nextSorting);
-    },
-    [onSortingChange, sorting.column, sorting.direction]
-  );
+  useEffect(() => onSortingChange(sorting), [onSortingChange, sorting]);
 
   const sortedConnections = useMemo(() => {
     const list = connections ?? [];
     if (!sorting.column || !sorting.direction) return list;
     const arr = [...list];
-    type Col = Exclude<SortColumn, null>;
     const cmp = (a: Soht2Connection, b: Soht2Connection): number => {
-      const asTime = (t?: ISODateTime | null) => (t ? new Date(t).getTime() : 0);
-      const asNumber = (n?: number | null) => Number(n ?? 0);
-      const asString = (c: Soht2Connection) => {
-        const col = sorting.column as Col;
-        return (col === 'username' ? (c.user?.username ?? '') : (c[col] ?? ''))
-          .toString()
-          .toLowerCase();
-      };
       switch (sorting.column) {
+        case null:
+          return 0;
         case 'openedAt':
-          return asTime(a[sorting.column]) - asTime(b[sorting.column]);
+          return compareTimes(a[sorting.column], b[sorting.column]);
         case 'targetPort':
         case 'bytesRead':
         case 'bytesWritten':
-          return asNumber(a[sorting.column]) - asNumber(b[sorting.column]);
+          return compareNumbers(a[sorting.column], b[sorting.column]);
+        case 'username':
+          return compareStrings(a.user?.username, b.user?.username);
         default:
-          return asString(a).localeCompare(asString(b));
+          return compareStrings(a[sorting.column], b[sorting.column]);
       }
     };
     arr.sort((a, b) => (sorting.direction === 'asc' ? cmp(a, b) : -cmp(a, b)));
@@ -222,110 +162,60 @@ export default function ConnectionsTable({
     );
   }
 
-  if (error) {
-    return (
-      <Box sx={{ p: 2 }}>
-        <Alert severity="error">{error}</Alert>
-      </Box>
-    );
-  }
-
-  if (sortedConnections.length === 0) {
-    return (
-      <Stack direction="row" spacing={2} justifyContent="space-between">
-        <Box sx={{ p: 2 }} width="100%">
-          <Alert severity="info">No active connections</Alert>
-        </Box>
-        <Box sx={{ py: 3 }}>
-          <HeaderMenuButton
-            menuHeaderAnchor={menuHeaderAnchor}
-            handleMenuHeaderOpen={handleMenuHeaderOpen}
-          />
-          <HeaderMenu
-            menuHeaderAnchor={menuHeaderAnchor}
-            autoRefresh={autoRefresh}
-            handleMenuHeaderClose={handleMenuHeaderClose}
-            handleManualRefresh={handleManualRefresh}
-            handleToggleAutoRefresh={handleToggleAutoRefresh}
-          />
-        </Box>
-      </Stack>
-    );
-  }
-
-  const sortDir = sorting.direction ?? false;
-  const dir = sorting.direction ?? 'asc';
-
   return (
     <>
       <TableContainer component={Paper} sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
         <Table stickyHeader size="small" aria-label="connections table">
           <TableHead>
             <TableRow>
-              <TableCell sortDirection={sorting.column === 'id' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'id'}
-                  direction={dir}
-                  onClick={() => toggleSort('id')}>
-                  <b>Connection ID</b>
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sortDirection={sorting.column === 'username' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'username'}
-                  direction={dir}
-                  onClick={() => toggleSort('username')}>
-                  <b>User</b>
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sortDirection={sorting.column === 'clientHost' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'clientHost'}
-                  direction={dir}
-                  onClick={() => toggleSort('clientHost')}>
-                  <b>Client Host</b>
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sortDirection={sorting.column === 'targetHost' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'targetHost'}
-                  direction={dir}
-                  onClick={() => toggleSort('targetHost')}>
-                  <b>Target Host</b>
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sortDirection={sorting.column === 'targetPort' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'targetPort'}
-                  direction={dir}
-                  onClick={() => toggleSort('targetPort')}>
-                  <b>Target Port</b>
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sortDirection={sorting.column === 'openedAt' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'openedAt'}
-                  direction={dir}
-                  onClick={() => toggleSort('openedAt')}>
-                  <b>Opened</b>
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sortDirection={sorting.column === 'bytesRead' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'bytesRead'}
-                  direction={dir}
-                  onClick={() => toggleSort('bytesRead')}>
-                  <b>Read</b>
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sortDirection={sorting.column === 'bytesWritten' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'bytesWritten'}
-                  direction={dir}
-                  onClick={() => toggleSort('bytesWritten')}>
-                  <b>Written</b>
-                </TableSortLabel>
-              </TableCell>
+              <TableHeaderCell
+                label="Connection ID"
+                column="id"
+                sorting={sorting}
+                onSortingChange={setSorting}
+              />
+              <TableHeaderCell
+                label="User"
+                column="username"
+                sorting={sorting}
+                onSortingChange={setSorting}
+              />
+              <TableHeaderCell
+                label="Client Host"
+                column="clientHost"
+                sorting={sorting}
+                onSortingChange={setSorting}
+              />
+              <TableHeaderCell
+                label="Target Host"
+                column="targetHost"
+                sorting={sorting}
+                onSortingChange={setSorting}
+              />
+              <TableHeaderCell
+                label="Target Port"
+                column="targetPort"
+                sorting={sorting}
+                onSortingChange={setSorting}
+              />
+              <TableHeaderCell
+                label="Opened"
+                column="openedAt"
+                sorting={sorting}
+                onSortingChange={setSorting}
+              />
+              <TableHeaderCell
+                label="Read"
+                column="bytesRead"
+                sorting={sorting}
+                onSortingChange={setSorting}
+              />
+              <TableHeaderCell
+                label="Written"
+                column="bytesWritten"
+                sorting={sorting}
+                onSortingChange={setSorting}
+              />
               <TableCell align="right">
                 <HeaderMenuButton
                   menuHeaderAnchor={menuHeaderAnchor}
@@ -335,43 +225,69 @@ export default function ConnectionsTable({
             </TableRow>
           </TableHead>
           <TableBody>
-            {sortedConnections.map(c => {
-              return (
-                <TableRow key={c.id} hover>
-                  <TableCell sx={{ paddingY: '13px', fontSizeAdjust: '0.5' }}>
-                    <pre style={{ margin: 0 }}>{c.id}</pre>
-                  </TableCell>
-                  <TableCell>{c.user?.username ?? ''}</TableCell>
-                  <TableCell>{c.clientHost ?? ''}</TableCell>
-                  <TableCell>{c.targetHost ?? ''}</TableCell>
-                  <TableCell>{c.targetPort ?? ''}</TableCell>
-                  <TableCell>{c.openedAt ? new Date(c.openedAt).toLocaleString() : ''}</TableCell>
-                  <TableCell>{formatBytes(c.bytesRead ?? 0)}</TableCell>
-                  <TableCell>{formatBytes(c.bytesWritten ?? 0)}</TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      aria-label={`actions-${c.id}`}
-                      aria-controls={menuRowAnchor ? 'connection-row-menu' : undefined}
-                      aria-haspopup="true"
-                      onClick={e => handleMenuRowOpen(e, c)}>
-                      <MoreVertIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {!!error || sortedConnections.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9}>
+                  {error ? (
+                    <Alert severity="error">{error}</Alert>
+                  ) : (
+                    <Alert severity="info">No active connections.</Alert>
+                  )}
+                </TableCell>
+              </TableRow>
+            ) : (
+              sortedConnections.map(c => {
+                return (
+                  <TableRow key={c.id} hover>
+                    <TableCell sx={{ paddingY: '13px', fontSizeAdjust: '0.5' }}>
+                      <pre style={{ margin: 0 }}>{c.id}</pre>
+                    </TableCell>
+                    <TableCell>{c.user?.username ?? ''}</TableCell>
+                    <TableCell>{c.clientHost ?? ''}</TableCell>
+                    <TableCell>{c.targetHost ?? ''}</TableCell>
+                    <TableCell>{c.targetPort ?? ''}</TableCell>
+                    <TableCell>{c.openedAt ? new Date(c.openedAt).toLocaleString() : ''}</TableCell>
+                    <TableCell>{formatBytes(c.bytesRead ?? 0)}</TableCell>
+                    <TableCell>{formatBytes(c.bytesWritten ?? 0)}</TableCell>
+                    <TableCell align="right">
+                      <IconButton
+                        size="small"
+                        aria-label={`actions-${c.id}`}
+                        aria-controls={menuRowAnchor ? 'connection-row-menu' : undefined}
+                        aria-haspopup="true"
+                        onClick={e => handleMenuRowOpen(e, c)}>
+                        <MoreVertIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </TableContainer>
 
-      <HeaderMenu
-        menuHeaderAnchor={menuHeaderAnchor}
-        autoRefresh={autoRefresh}
-        handleMenuHeaderClose={handleMenuHeaderClose}
-        handleManualRefresh={handleManualRefresh}
-        handleToggleAutoRefresh={handleToggleAutoRefresh}
-      />
+      <Menu
+        id="connections-header-menu"
+        anchorEl={menuHeaderAnchor}
+        open={!!menuHeaderAnchor}
+        onClose={handleMenuHeaderClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        keepMounted>
+        <MenuItem onClick={handleManualRefresh}>
+          <ListItemIcon>
+            <RefreshIcon fontSize="small" />
+          </ListItemIcon>
+          Refresh
+        </MenuItem>
+        <MenuItem onClick={handleToggleAutoRefresh}>
+          <ListItemIcon>
+            {autoRefresh ? <ToggleOffIcon fontSize="small" /> : <ToggleOnIcon fontSize="small" />}
+          </ListItemIcon>
+          {`Automatic Refresh ${autoRefresh ? 'Off' : 'On'}`}
+        </MenuItem>
+      </Menu>
 
       <Menu
         id="connection-row-menu"

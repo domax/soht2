@@ -6,7 +6,6 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
-import TableSortLabel from '@mui/material/TableSortLabel';
 import TableRow from '@mui/material/TableRow';
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
@@ -25,26 +24,52 @@ import {
   type ApiError,
   ConnectionApi,
   type HistoryPage,
-  type Soht2Connection,
+  type HistorySortColumn,
+  type SortingDirLower,
+  type TableSorting,
 } from '../api/soht2Api';
 import { formatBytes } from '../api/functions';
 import { useDebounce } from '../hooks';
 import HistoryFiltersDialog, { type HistoryFilters } from './HistoryFiltersDialog';
+import TableHeaderCell from './TableHeaderCell';
 
-// Server field names for sort
-export type HistorySortColumn =
-  | 'connectionId'
-  | 'userName'
-  | 'clientHost'
-  | 'targetHost'
-  | 'targetPort'
-  | 'openedAt'
-  | 'closedAt'
-  | 'bytesRead'
-  | 'bytesWritten';
-export type HistorySortDir = 'asc' | 'desc';
-export type HistorySorting = { column: HistorySortColumn | null; direction: HistorySortDir | null };
+export type HistoryTableSorting = TableSorting<HistorySortColumn>;
 export type HistoryNavigation = HistoryFilters & { sort?: string[]; pg?: number; sz?: number };
+
+function HistoryTableCell({
+  label,
+  sorting,
+  column,
+  filters,
+  keys = [],
+  onSortingChange,
+}: Readonly<{
+  label: string;
+  sorting: HistoryTableSorting;
+  column: HistorySortColumn | null;
+  filters: HistoryFilters;
+  keys?: (keyof HistoryFilters)[];
+  onSortingChange: (s: HistoryTableSorting) => void;
+}>) {
+  const hasFilter = useMemo(
+    () =>
+      keys.some(k => {
+        const v = (filters as Record<string, unknown>)[k];
+        if (Array.isArray(v)) return v.length > 0;
+        return v !== undefined && v !== null && v !== '';
+      }),
+    [filters, keys]
+  );
+  return (
+    <TableHeaderCell
+      label={label}
+      sorting={sorting}
+      column={column}
+      onSortingChange={onSortingChange}
+      hasFilter={hasFilter}
+    />
+  );
+}
 
 export default function HistoryTable({
   regularUser,
@@ -71,9 +96,9 @@ export default function HistoryTable({
 
   const [navSorting] = navigation?.sort ?? ['openedAt:desc'];
   const [navColumn, navDir] = navSorting.split(':');
-  const [sorting, setSorting] = useState<HistorySorting>({
+  const [sorting, setSorting] = useState<HistoryTableSorting>({
     column: navColumn as HistorySortColumn,
-    direction: navDir as HistorySortDir,
+    direction: navDir as SortingDirLower,
   });
 
   const [loading, setLoading] = useState<boolean>(false);
@@ -109,9 +134,7 @@ export default function HistoryTable({
     }
   }, [filters, asSortArray, page, pageSize]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => void load(), [load]);
 
   const handleRefresh = useCallback(() => {
     handleMenuHeaderClose();
@@ -144,47 +167,14 @@ export default function HistoryTable({
 
   const onFiltersClose = useCallback(() => setFiltersOpen(false), []);
 
-  const toggleSort = useCallback((column: Exclude<HistorySortColumn, never>) => {
-    setSorting(prev => {
-      let next: HistorySorting = { column, direction: 'asc' };
-      if (prev.column !== column) {
-        next = { column, direction: 'asc' };
-      } else if (prev.direction === 'asc') {
-        next = { column, direction: 'desc' };
-      } else if (prev.direction === 'desc') {
-        next = { column: null, direction: null };
-      }
-      return next;
-    });
-  }, []);
-
   const totalRows = pageData?.totalItems ?? 0;
   const totalPages = pageData?.totalPages ?? 0;
-  const data: Soht2Connection[] = pageData?.data ?? [];
-
-  const sortDir = sorting.direction ?? false;
-  const dir = sorting.direction ?? 'asc';
-
-  const hasFilter = (keys: (keyof HistoryFilters)[]): boolean => {
-    return keys.some(k => {
-      const v = (filters as Record<string, unknown>)[k];
-      if (Array.isArray(v)) return v.length > 0;
-      return v !== undefined && v !== null && v !== '';
-    });
-  };
+  const data = pageData?.data ?? [];
 
   if (loading) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
         <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box sx={{ p: 2 }}>
-        <Alert severity="error">{error}</Alert>
       </Box>
     );
   }
@@ -200,7 +190,7 @@ export default function HistoryTable({
         <Stack direction="row" spacing={2} alignItems="center">
           <Pagination
             color="primary"
-            count={totalPages ?? 1}
+            count={totalPages}
             page={(page ?? 0) + 1}
             onChange={(_e, p) => setPage(p - 1)}
             siblingCount={1}
@@ -235,96 +225,89 @@ export default function HistoryTable({
         <Table stickyHeader size="small" aria-label="history table">
           <TableHead>
             <TableRow>
-              <TableCell
-                sortDirection={sorting.column === 'connectionId' ? sortDir : false}
-                sx={{ paddingY: '10px' }}>
-                <TableSortLabel
-                  active={sorting.column === 'connectionId'}
-                  direction={dir}
-                  onClick={() => toggleSort('connectionId')}>
-                  {hasFilter(['id']) && <FunnelIcon fontSize="inherit" sx={{ mr: 0.5 }} />}
-                  <b>Connection ID</b>
-                </TableSortLabel>
-              </TableCell>
+              <HistoryTableCell
+                label="Connection ID"
+                column="connectionId"
+                sorting={sorting}
+                filters={filters}
+                keys={['id']}
+                onSortingChange={setSorting}
+              />
               {!regularUser ? (
-                <TableCell sortDirection={sorting.column === 'userName' ? sortDir : false}>
-                  <TableSortLabel
-                    active={sorting.column === 'userName'}
-                    direction={dir}
-                    onClick={() => toggleSort('userName')}>
-                    {hasFilter(['un']) && <FunnelIcon fontSize="inherit" sx={{ mr: 0.5 }} />}
-                    <b>User</b>
-                  </TableSortLabel>
-                </TableCell>
+                <HistoryTableCell
+                  label="User"
+                  column="userName"
+                  sorting={sorting}
+                  filters={filters}
+                  keys={['un']}
+                  onSortingChange={setSorting}
+                />
               ) : null}
-              <TableCell sortDirection={sorting.column === 'clientHost' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'clientHost'}
-                  direction={dir}
-                  onClick={() => toggleSort('clientHost')}>
-                  {hasFilter(['ch']) && <FunnelIcon fontSize="inherit" sx={{ mr: 0.5 }} />}
-                  <b>Client Host</b>
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sortDirection={sorting.column === 'targetHost' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'targetHost'}
-                  direction={dir}
-                  onClick={() => toggleSort('targetHost')}>
-                  {hasFilter(['th']) && <FunnelIcon fontSize="inherit" sx={{ mr: 0.5 }} />}
-                  <b>Target Host</b>
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sortDirection={sorting.column === 'targetPort' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'targetPort'}
-                  direction={dir}
-                  onClick={() => toggleSort('targetPort')}>
-                  {hasFilter(['tp']) && <FunnelIcon fontSize="inherit" sx={{ mr: 0.5 }} />}
-                  <b>Target Port</b>
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sortDirection={sorting.column === 'openedAt' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'openedAt'}
-                  direction={dir}
-                  onClick={() => toggleSort('openedAt')}>
-                  {hasFilter(['oa', 'ob']) && <FunnelIcon fontSize="inherit" sx={{ mr: 0.5 }} />}
-                  <b>Opened</b>
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sortDirection={sorting.column === 'closedAt' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'closedAt'}
-                  direction={dir}
-                  onClick={() => toggleSort('closedAt')}>
-                  {hasFilter(['ca', 'cb']) && <FunnelIcon fontSize="inherit" sx={{ mr: 0.5 }} />}
-                  <b>Closed</b>
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sortDirection={sorting.column === 'bytesRead' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'bytesRead'}
-                  direction={dir}
-                  onClick={() => toggleSort('bytesRead')}>
-                  <b>Read</b>
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sortDirection={sorting.column === 'bytesWritten' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'bytesWritten'}
-                  direction={dir}
-                  onClick={() => toggleSort('bytesWritten')}>
-                  <b>Written</b>
-                </TableSortLabel>
-              </TableCell>
+              <HistoryTableCell
+                label="Client Host"
+                column="clientHost"
+                sorting={sorting}
+                filters={filters}
+                keys={['ch']}
+                onSortingChange={setSorting}
+              />
+              <HistoryTableCell
+                label="Target Host"
+                column="targetHost"
+                sorting={sorting}
+                filters={filters}
+                keys={['th']}
+                onSortingChange={setSorting}
+              />
+              <HistoryTableCell
+                label="Target Port"
+                column="targetPort"
+                sorting={sorting}
+                filters={filters}
+                keys={['tp']}
+                onSortingChange={setSorting}
+              />
+              <HistoryTableCell
+                label="Opened"
+                column="openedAt"
+                sorting={sorting}
+                filters={filters}
+                keys={['oa', 'ob']}
+                onSortingChange={setSorting}
+              />
+              <HistoryTableCell
+                label="Closed"
+                column="closedAt"
+                sorting={sorting}
+                filters={filters}
+                keys={['ca', 'cb']}
+                onSortingChange={setSorting}
+              />
+              <HistoryTableCell
+                label="Read"
+                column="bytesRead"
+                sorting={sorting}
+                filters={filters}
+                onSortingChange={setSorting}
+              />
+              <HistoryTableCell
+                label="Written"
+                column="bytesWritten"
+                sorting={sorting}
+                filters={filters}
+                onSortingChange={setSorting}
+              />
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.length === 0 ? (
+            {!!error || data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7}>
-                  <Alert severity="info">No history records found</Alert>
+                <TableCell colSpan={!regularUser ? 9 : 8}>
+                  {error ? (
+                    <Alert severity="error">{error}</Alert>
+                  ) : (
+                    <Alert severity="info">No history records found.</Alert>
+                  )}
                 </TableCell>
               </TableRow>
             ) : (

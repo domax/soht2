@@ -6,10 +6,7 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
-import TableSortLabel from '@mui/material/TableSortLabel';
 import TableRow from '@mui/material/TableRow';
-import IconButton from '@mui/material/IconButton';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
@@ -17,19 +14,24 @@ import Chip from '@mui/material/Chip';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
+import IconButton from '@mui/material/IconButton';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import PersonRemoveAlt1Icon from '@mui/icons-material/PersonRemoveAlt1';
-import { type ApiError, type ISODateTime, type Soht2User, UserApi } from '../api/soht2Api';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import { type ApiError, type Soht2User, type TableSorting, UserApi } from '../api/soht2Api';
+import { compareStrings, compareTimes } from '../api/functions';
 import { UserChangedEvent } from '../api/appEvents';
 import { useEventListener } from '../hooks';
 import HeaderMenuButton from '../controls/HeaderMenuButton';
 import NewUserDialog from './NewUserDialog';
 import EditUserDialog from './EditUserDialog';
 import DeleteUserDialog from './DeleteUserDialog';
+import TableHeaderCell from './TableHeaderCell';
 
-type SortColumn = 'username' | 'role' | 'createdAt' | null;
-export type UsersSorting = { column: SortColumn; direction: 'asc' | 'desc' | null };
+type UserSortColumn = 'username' | 'role' | 'createdAt';
+export type UsersSorting = TableSorting<UserSortColumn>;
 
 export default function UsersTable({
   initSorting,
@@ -64,6 +66,10 @@ export default function UsersTable({
     setMenuHeaderAnchor(e.currentTarget);
   }, []);
   const handleMenuHeaderClose = useCallback(() => setMenuHeaderAnchor(null), []);
+  const handleManualRefresh = useCallback(() => {
+    handleMenuHeaderClose();
+    void load();
+  }, [handleMenuHeaderClose, load]);
   const handleNewUserOpen = useCallback(() => {
     handleMenuHeaderClose();
     setNewUserOpen(true);
@@ -93,33 +99,18 @@ export default function UsersTable({
 
   const [sorting, setSorting] = useState(initSorting ?? { column: null, direction: null });
 
-  const toggleSort = useCallback(
-    (column: Exclude<SortColumn, null>) => {
-      const nextSorting: UsersSorting = { column, direction: 'asc' };
-      if (sorting.column !== column) {
-        nextSorting.column = column;
-      } else if (sorting.direction === 'asc') {
-        nextSorting.direction = 'desc';
-      } else if (sorting.direction === 'desc') {
-        nextSorting.column = null;
-        nextSorting.direction = null;
-      }
-      setSorting(nextSorting);
-      if (onSortingChange) onSortingChange(nextSorting);
-    },
-    [onSortingChange, sorting.column, sorting.direction]
-  );
+  useEffect(() => {
+    if (onSortingChange) onSortingChange(sorting);
+  }, [onSortingChange, sorting]);
 
   const sortedUsers = useMemo(() => {
     const list = users ?? [];
     if (!sorting.column || !sorting.direction) return list;
     const arr = [...list];
-    type Col = Exclude<SortColumn, null>;
     const cmp = (a: Soht2User, b: Soht2User): number => {
-      const asTime = (t?: ISODateTime | null) => (t ? new Date(t).getTime() : 0);
-      const asString = (u: Soht2User) => (u[sorting.column as Col] ?? '').toString().toLowerCase();
-      if (sorting.column === 'createdAt') return asTime(a.createdAt) - asTime(b.createdAt);
-      return asString(a).localeCompare(asString(b));
+      if (!sorting.column) return 0;
+      if (sorting.column === 'createdAt') return compareTimes(a.createdAt, b.createdAt);
+      return compareStrings(a[sorting.column], b[sorting.column]);
     };
     arr.sort((a, b) => (sorting.direction === 'asc' ? cmp(a, b) : -cmp(a, b)));
     return arr;
@@ -133,46 +124,30 @@ export default function UsersTable({
     );
   }
 
-  if (error) {
-    return (
-      <Box sx={{ p: 2 }}>
-        <Alert severity="error">{error}</Alert>
-      </Box>
-    );
-  }
-
-  const sortDir = sorting.direction ?? false;
-  const dir = sorting.direction ?? 'asc';
   return (
     <>
       <TableContainer component={Paper} sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
         <Table stickyHeader size="small" aria-label="users table">
           <TableHead>
             <TableRow>
-              <TableCell sortDirection={sorting.column === 'username' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'username'}
-                  direction={dir}
-                  onClick={() => toggleSort('username')}>
-                  <b>Name</b>
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sortDirection={sorting.column === 'role' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'role'}
-                  direction={dir}
-                  onClick={() => toggleSort('role')}>
-                  <b>Role</b>
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sortDirection={sorting.column === 'createdAt' ? sortDir : false}>
-                <TableSortLabel
-                  active={sorting.column === 'createdAt'}
-                  direction={dir}
-                  onClick={() => toggleSort('createdAt')}>
-                  <b>Created</b>
-                </TableSortLabel>
-              </TableCell>
+              <TableHeaderCell
+                label="Name"
+                column="username"
+                sorting={sorting}
+                onSortingChange={setSorting}
+              />
+              <TableHeaderCell
+                label="Role"
+                column="role"
+                sorting={sorting}
+                onSortingChange={setSorting}
+              />
+              <TableHeaderCell
+                label="Created"
+                column="createdAt"
+                sorting={sorting}
+                onSortingChange={setSorting}
+              />
               <TableCell>
                 <b>Allowed Targets</b>
               </TableCell>
@@ -185,35 +160,47 @@ export default function UsersTable({
             </TableRow>
           </TableHead>
           <TableBody>
-            {sortedUsers.map(u => {
-              const targets = u.allowedTargets ?? [];
-              return (
-                <TableRow key={u.username} hover>
-                  <TableCell>{u.username}</TableCell>
-                  <TableCell>{(u.role ?? '').toString()}</TableCell>
-                  <TableCell>{u.createdAt ? new Date(u.createdAt).toLocaleString() : ''}</TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {targets.length > 0 ? (
-                        targets.map(t => <Chip key={t} label={t} size="small" variant="outlined" />)
-                      ) : (
-                        <span>—</span>
-                      )}
-                    </Box>
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      aria-label={`actions-${u.username}`}
-                      aria-controls={menuRowAnchor ? 'user-row-menu' : undefined}
-                      aria-haspopup="true"
-                      onClick={e => handleMenuRowOpen(e, u)}>
-                      <MoreVertIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {error ? (
+              <TableRow>
+                <TableCell colSpan={9}>
+                  <Alert severity="error">{error}</Alert>
+                </TableCell>
+              </TableRow>
+            ) : (
+              sortedUsers.map(u => {
+                const targets = u.allowedTargets ?? [];
+                return (
+                  <TableRow key={u.username} hover>
+                    <TableCell>{u.username}</TableCell>
+                    <TableCell>{(u.role ?? '').toString()}</TableCell>
+                    <TableCell>
+                      {u.createdAt ? new Date(u.createdAt).toLocaleString() : ''}
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {targets.length > 0 ? (
+                          targets.map(t => (
+                            <Chip key={t} label={t} size="small" variant="outlined" />
+                          ))
+                        ) : (
+                          <span>—</span>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell align="right">
+                      <IconButton
+                        size="small"
+                        aria-label={`actions-${u.username}`}
+                        aria-controls={menuRowAnchor ? 'user-row-menu' : undefined}
+                        aria-haspopup="true"
+                        onClick={e => handleMenuRowOpen(e, u)}>
+                        <MoreVertIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </TableContainer>
@@ -226,6 +213,12 @@ export default function UsersTable({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         keepMounted>
+        <MenuItem onClick={handleManualRefresh}>
+          <ListItemIcon>
+            <RefreshIcon fontSize="small" />
+          </ListItemIcon>
+          Refresh
+        </MenuItem>
         <MenuItem onClick={handleNewUserOpen}>
           <PersonAddAlt1Icon fontSize="small" style={{ marginRight: 12 }} />
           New User
