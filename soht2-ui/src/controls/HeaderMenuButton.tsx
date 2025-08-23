@@ -1,3 +1,4 @@
+/* SOHT2 © Licensed under MIT 2025. */
 import type { MouseEvent } from 'react';
 import IconButton from '@mui/material/IconButton';
 import MoreVertIcon from '@mui/icons-material/MoreVert';

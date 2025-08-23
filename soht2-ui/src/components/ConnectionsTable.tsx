@@ -29,10 +29,9 @@ import {
 } from '../api/soht2Api';
 import { formatBytes } from '../api/functions';
 import { ConnectionChangedEvent } from '../api/appEvents';
+import { useInterval, useEventListener } from '../hooks';
 import HeaderMenuButton from '../controls/HeaderMenuButton';
 import ConnectionCloseDialog from './ConnectionCloseDialog';
-import useInterval from '../hooks/useInterval';
-import useEventListener from '../hooks/useEventListener';
 
 type SortColumn =
   | 'id'

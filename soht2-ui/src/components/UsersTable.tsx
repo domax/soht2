@@ -22,11 +22,11 @@ import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import PersonRemoveAlt1Icon from '@mui/icons-material/PersonRemoveAlt1';
 import { type ApiError, type ISODateTime, type Soht2User, UserApi } from '../api/soht2Api';
 import { UserChangedEvent } from '../api/appEvents';
+import { useEventListener } from '../hooks';
 import HeaderMenuButton from '../controls/HeaderMenuButton';
 import NewUserDialog from './NewUserDialog';
 import EditUserDialog from './EditUserDialog';
 import DeleteUserDialog from './DeleteUserDialog';
-import useEventListener from '../hooks/useEventListener';
 
 type SortColumn = 'username' | 'role' | 'createdAt' | null;
 export type UsersSorting = { column: SortColumn; direction: 'asc' | 'desc' | null };
@@ -117,7 +117,7 @@ export default function UsersTable({
     type Col = Exclude<SortColumn, null>;
     const cmp = (a: Soht2User, b: Soht2User): number => {
       const asTime = (t?: ISODateTime | null) => (t ? new Date(t).getTime() : 0);
-      const asString = (u: Soht2User) => (u[sorting.column as Col] || '').toString().toLowerCase();
+      const asString = (u: Soht2User) => (u[sorting.column as Col] ?? '').toString().toLowerCase();
       if (sorting.column === 'createdAt') return asTime(a.createdAt) - asTime(b.createdAt);
       return asString(a).localeCompare(asString(b));
     };
@@ -190,7 +190,7 @@ export default function UsersTable({
               return (
                 <TableRow key={u.username} hover>
                   <TableCell>{u.username}</TableCell>
-                  <TableCell>{(u.role || '').toString()}</TableCell>
+                  <TableCell>{(u.role ?? '').toString()}</TableCell>
                   <TableCell>{u.createdAt ? new Date(u.createdAt).toLocaleString() : ''}</TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>

@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import { AppErrorEvent } from '../api/appEvents';
-import useEventListener from '../hooks/useEventListener';
+import { useEventListener } from '../hooks';
 
 export default function ErrorAlert() {
   const [message, setMessage] = useState<string | null>(null);

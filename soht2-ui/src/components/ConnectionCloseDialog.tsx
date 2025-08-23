@@ -1,3 +1,4 @@
+/* SOHT2 © Licensed under MIT 2025. */
 import { useCallback, useEffect, useState } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';

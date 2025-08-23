@@ -3,6 +3,9 @@ import { type KeyboardEvent, useCallback, useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import Chip from '@mui/material/Chip';
+import InputAdornment from '@mui/material/InputAdornment';
+import AddCircleIcon from '@mui/icons-material/AddCircle';
+import IconButton from '@mui/material/IconButton';
 
 export default function MultiInputField<T>({
   label,
@@ -85,7 +88,22 @@ export default function MultiInputField<T>({
         error={!!valueError}
         helperText={valueError ?? helperText}
         fullWidth
-        slotProps={readonly ? { input: { readOnly: true } } : undefined}
+        slotProps={{
+          input: {
+            readOnly: readonly,
+            endAdornment: !readonly ? (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label={'Add value'}
+                  onClick={handleAddValue}
+                  edge="end"
+                  size="small">
+                  <AddCircleIcon />
+                </IconButton>
+              </InputAdornment>
+            ) : undefined,
+          },
+        }}
       />
       {(values?.length ?? []) > 0 && (
         <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>

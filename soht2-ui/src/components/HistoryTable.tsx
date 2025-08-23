@@ -28,8 +28,8 @@ import {
   type Soht2Connection,
 } from '../api/soht2Api';
 import { formatBytes } from '../api/functions';
+import { useDebounce } from '../hooks';
 import HistoryFiltersDialog, { type HistoryFilters } from './HistoryFiltersDialog';
-import useDebounce from '../hooks/useDebounce';
 
 // Server field names for sort
 export type HistorySortColumn =
