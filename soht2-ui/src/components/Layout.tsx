@@ -18,10 +18,9 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useLocation, useNavigate } from 'react-router-dom';
 import soht2Logo40 from '../assets/soht2_logo_40.png';
 import { useThemeMode } from '../theme';
-import { httpClient } from '../api/soht2Api';
+import { httpClient, type WindowProps } from '../api/soht2Api';
 import ChangePasswordDialog from './ChangePasswordDialog';
 import ErrorAlert from './ErrorAlert';
-import type { WindowProps } from '../App';
 
 const swaggerUrl = (window as WindowProps).__SWAGGER_URL__ ?? null;
 

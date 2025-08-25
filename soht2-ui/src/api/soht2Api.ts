@@ -3,6 +3,8 @@ export type UUID = string; // NOSONAR typescript:S6564
 export type ISODateTime = string; // NOSONAR typescript:S6564
 export type UserRole = 'USER' | 'ADMIN';
 
+export type WindowProps = typeof window & { __CONTEXT_PATH__: string; __SWAGGER_URL__: string };
+
 // ===== Common DTOs =====
 export interface Soht2User {
   username: string;
@@ -198,7 +200,10 @@ class HttpClient {
 }
 
 // Export a singleton client with defaults; consumers may create their own.
-export const httpClient = new HttpClient({ baseUrl: `${import.meta.env.VITE_APP_API_ORIGIN}` });
+const apiOrigin = import.meta.env.VITE_APP_API_ORIGIN;
+export const httpClient = new HttpClient({
+  baseUrl: `${apiOrigin.length > 0 ? apiOrigin : (window as WindowProps).__CONTEXT_PATH__}`,
+});
 
 // ===== UserController API =====
 export const UserApi = {

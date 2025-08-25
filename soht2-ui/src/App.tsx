@@ -3,14 +3,12 @@ import './App.css';
 import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ThemeModeProvider } from './theme';
-import type { Soht2User } from './api/soht2Api';
+import type { Soht2User, WindowProps } from './api/soht2Api';
 import CircularProgress from '@mui/material/CircularProgress';
 
 const LazyLoginPage = lazy(() => import('./pages/LoginPage'));
 const LazyAdminPage = lazy(() => import('./pages/AdminPage'));
 const LazyUserPage = lazy(() => import('./pages/UserPage'));
-
-export type WindowProps = typeof window & { __CONTEXT_PATH__: string; __SWAGGER_URL__: string };
 
 export default function App() {
   const [user, setUser] = useState<Soht2User | null>(null);
@@ -20,7 +18,7 @@ export default function App() {
 
   return (
     <ThemeModeProvider>
-      <BrowserRouter basename={(window as WindowProps).__CONTEXT_PATH__ || '/'}>
+      <BrowserRouter basename={(window as WindowProps).__CONTEXT_PATH__ ?? '/'}>
         <Routes>
           <Route
             path="/"
