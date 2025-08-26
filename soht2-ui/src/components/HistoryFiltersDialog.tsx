@@ -125,7 +125,7 @@ export default function HistoryFiltersDialog({
                 label="Client Host"
                 value={draft.ch ?? ''}
                 onChange={e => setDraft(d => ({ ...d, ch: e.target.value }))}
-                helperText="Text occurs in the host name"
+                placeholder="Host name occurrence"
                 fullWidth
               />
             </Grid2>
@@ -134,14 +134,14 @@ export default function HistoryFiltersDialog({
                 label="Target Host"
                 value={draft.th ?? ''}
                 onChange={e => setDraft(d => ({ ...d, th: e.target.value }))}
-                helperText="Text occurs in the host name"
+                placeholder="Host name occurrence"
                 fullWidth
               />
             </Grid2>
             <Grid2 size={6}>
               <MultiInputField<number>
                 label="Target Ports"
-                placeholder="Enter username"
+                placeholder="Enter port number"
                 values={draft?.tp ?? []}
                 valueInputPredicate={v => !isNaN(Number(v))}
                 valueErrorHint="Target port must be a number."

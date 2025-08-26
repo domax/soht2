@@ -67,3 +67,9 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+@media (display-mode: standalone) {
+  body {
+    background-color: #242424;
+  }
+}

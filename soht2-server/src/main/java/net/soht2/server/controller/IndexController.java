@@ -18,7 +18,7 @@ public class IndexController {
   private String swaggerUrl;
 
   @Operation(hidden = true)
-  @GetMapping({"/*"})
+  @GetMapping({"", "/", "/login", "/admin", "/user"})
   public ModelAndView index(ModelMap model) {
     model.addAttribute("contextPath", contextPath);
     model.addAttribute("swaggerUrl", swaggerUrl);

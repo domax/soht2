@@ -12,7 +12,7 @@ export default function MultiInputField<T>({
   values = [],
   valueErrorHint,
   placeholder,
-  helperText = 'Press Enter to add value',
+  helperText,
   readonly = false,
   valueInputPredicate = () => true,
   stringToValue = (v: string) => v as T,
