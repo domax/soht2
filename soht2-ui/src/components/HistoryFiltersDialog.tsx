@@ -9,6 +9,10 @@ import TextField from '@mui/material/TextField';
 import Stack from '@mui/material/Stack';
 import Grid2 from '@mui/material/Grid2';
 import Typography from '@mui/material/Typography';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
 import MultiInputField from '../controls/MultiInputField';
 import type { UUID } from '../api/soht2Api';
 
@@ -152,63 +156,53 @@ export default function HistoryFiltersDialog({
             </Grid2>
           </Grid2>
 
-          <Grid2 container spacing={2}>
-            <Grid2 size={6}>
-              <Typography variant="subtitle2" sx={{ paddingBottom: 2 }}>
-                Opened
-              </Typography>
-              <Grid2 container spacing={2}>
-                <Grid2 size={6}>
-                  <TextField
-                    label="From"
-                    type="date"
-                    value={draft.oa ?? ''}
-                    onChange={e => setDraft(d => ({ ...d, oa: e.target.value }))}
-                    fullWidth
-                    slotProps={{ inputLabel: { shrink: true } }}
-                  />
-                </Grid2>
-                <Grid2 size={6}>
-                  <TextField
-                    label="To"
-                    type="date"
-                    value={draft.ob ?? ''}
-                    onChange={e => setDraft(d => ({ ...d, ob: e.target.value }))}
-                    fullWidth
-                    slotProps={{ inputLabel: { shrink: true } }}
-                  />
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <Grid2 container spacing={2}>
+              <Grid2 size={6}>
+                <Typography variant="subtitle2" sx={{ paddingBottom: 2 }}>
+                  Opened
+                </Typography>
+                <Grid2 container spacing={2}>
+                  <Grid2 size={6}>
+                    <DatePicker
+                      label="From"
+                      value={draft.oa ? dayjs(draft.oa) : undefined}
+                      onChange={v => setDraft(d => ({ ...d, oa: v ? v.toISOString() : undefined }))}
+                    />
+                  </Grid2>
+                  <Grid2 size={6}>
+                    <DatePicker
+                      label="To"
+                      value={draft.ob ? dayjs(draft.ob) : undefined}
+                      onChange={v => setDraft(d => ({ ...d, ob: v ? v.toISOString() : undefined }))}
+                    />
+                  </Grid2>
                 </Grid2>
               </Grid2>
-            </Grid2>
 
-            <Grid2 size={6}>
-              <Typography variant="subtitle2" sx={{ paddingBottom: 2 }}>
-                Closed
-              </Typography>
-              <Grid2 container spacing={2}>
-                <Grid2 size={6}>
-                  <TextField
-                    label="From"
-                    type="date"
-                    value={draft.ca ?? ''}
-                    onChange={e => setDraft(d => ({ ...d, ca: e.target.value }))}
-                    fullWidth
-                    slotProps={{ inputLabel: { shrink: true } }}
-                  />
-                </Grid2>
-                <Grid2 size={6}>
-                  <TextField
-                    label="To"
-                    type="date"
-                    value={draft.cb ?? ''}
-                    onChange={e => setDraft(d => ({ ...d, cb: e.target.value }))}
-                    fullWidth
-                    slotProps={{ inputLabel: { shrink: true } }}
-                  />
+              <Grid2 size={6}>
+                <Typography variant="subtitle2" sx={{ paddingBottom: 2 }}>
+                  Closed
+                </Typography>
+                <Grid2 container spacing={2}>
+                  <Grid2 size={6}>
+                    <DatePicker
+                      label="From"
+                      value={draft.ca ? dayjs(draft.ca) : undefined}
+                      onChange={v => setDraft(d => ({ ...d, ca: v ? v.toISOString() : undefined }))}
+                    />
+                  </Grid2>
+                  <Grid2 size={6}>
+                    <DatePicker
+                      label="To"
+                      value={draft.cb ? dayjs(draft.cb) : undefined}
+                      onChange={v => setDraft(d => ({ ...d, cb: v ? v.toISOString() : undefined }))}
+                    />
+                  </Grid2>
                 </Grid2>
               </Grid2>
             </Grid2>
-          </Grid2>
+          </LocalizationProvider>
         </Stack>
       </DialogContent>
       <DialogActions>
