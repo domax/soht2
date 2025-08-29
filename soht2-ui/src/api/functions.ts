@@ -1,5 +1,23 @@
 /* SOHT2 © Licensed under MIT 2025. */
 import type { ISODateTime } from './soht2Api';
+import type { SxProps } from '@mui/system';
+import { type Theme } from '@mui/material/styles';
+import { gridClasses } from '@mui/x-data-grid';
+
+function dataGridStyle(theme: Theme): SxProps<Theme> {
+  const { mode, grey } = theme.palette;
+  return {
+    [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: { outline: 'none' },
+    [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]: {
+      outline: 'none',
+    },
+    '& .MuiDataGrid-columnHeaderTitle': { fontWeight: 'bold' },
+    '& .MuiDataGrid-virtualScrollerContent': {
+      backgroundColor: `${mode === 'light' ? grey[100] : grey[900]}`,
+    },
+    '& .MuiDataGrid-row:hover': { backgroundColor: `${mode === 'light' ? grey[300] : grey[800]}` },
+  };
+}
 
 function formatBytes(bytes: number, decimals: number = 2): string {
   if (!+bytes) return '0 Bytes';
@@ -36,4 +54,4 @@ function compareStrings(a?: string | null, b?: string | null) {
   return asString(a).localeCompare(asString(b));
 }
 
-export { formatBytes, compareTimes, compareNumbers, compareStrings };
+export { dataGridStyle, formatBytes, compareTimes, compareNumbers, compareStrings };

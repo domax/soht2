@@ -1,15 +1,7 @@
 /* SOHT2 © Licensed under MIT 2025. */
 import { type MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Paper from '@mui/material/Paper';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
-import Alert from '@mui/material/Alert';
 import Chip from '@mui/material/Chip';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
@@ -20,47 +12,73 @@ import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import PersonRemoveAlt1Icon from '@mui/icons-material/PersonRemoveAlt1';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import {
+  DataGrid,
+  getGridDateOperators,
+  type GridColDef,
+  type GridColumnVisibilityModel,
+  type GridFilterModel,
+  type GridSortModel,
+} from '@mui/x-data-grid';
 import { type ApiError, type Soht2User, type TableSorting, UserApi } from '../api/soht2Api';
-import { compareStrings, compareTimes } from '../api/functions';
-import { UserChangedEvent } from '../api/appEvents';
+import { dataGridStyle } from '../api/functions';
+import { dispatchAppErrorEvent, UserChangedEvent } from '../api/appEvents';
 import { useEventListener } from '../hooks';
 import HeaderMenuButton from '../controls/HeaderMenuButton';
 import NewUserDialog from './NewUserDialog';
 import EditUserDialog from './EditUserDialog';
 import DeleteUserDialog from './DeleteUserDialog';
-import TableHeaderCell from './TableHeaderCell';
+import DateTimeGridFilter from '../controls/DateTimeGridFilter';
+import { LoadingOverlay, NoRowsOverlay } from '../controls/dataGridOverlays';
+import { useTheme } from '@mui/material/styles';
 
 type UserSortColumn = 'username' | 'role' | 'createdAt';
 export type UsersSorting = TableSorting<UserSortColumn>;
 
+type UserVisibilityColumn = 'role' | 'createdAt' | 'allowedTargets';
+export type UsersVisibility = { [K in UserVisibilityColumn]?: boolean };
+
+export type UserFilter = { field: UserSortColumn; operator: string; value: string | number | null };
+
+export type UserSettings = {
+  sorting: UsersSorting;
+  visibility: UsersVisibility;
+  filters: UserFilter[];
+};
+
 export default function UsersTable({
-  initSorting,
-  onSortingChange,
-}: Readonly<{ initSorting?: UsersSorting; onSortingChange?: (s: UsersSorting) => void }>) {
+  initSettings,
+  onSettingsChange,
+}: Readonly<{ initSettings?: UserSettings; onSettingsChange?: (s: UserSettings) => void }>) {
+  const theme = useTheme();
+
   const [users, setUsers] = useState<Soht2User[] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
   const [menuHeaderAnchor, setMenuHeaderAnchor] = useState<HTMLElement | null>(null);
   const [menuRowAnchor, setMenuRowAnchor] = useState<HTMLElement | null>(null);
   const [selectedUser, setSelectedUser] = useState<Soht2User | null>(null);
   const [newUserOpen, setNewUserOpen] = useState(false);
   const [editUserOpen, setEditUserOpen] = useState(false);
   const [deleteUserOpen, setDeleteUserOpen] = useState(false);
+  const [sorting, setSorting] = useState(
+    initSettings?.sorting ?? { column: null, direction: null }
+  );
+  const [visibility, setVisibility] = useState(initSettings?.visibility ?? {});
+  const [filters, setFilters] = useState<UserFilter[]>(initSettings?.filters ?? []);
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
       const data = await UserApi.listUsers();
       setUsers(data ?? []);
     } catch (e) {
-      const apiError = e as ApiError;
-      setError(apiError.message);
+      dispatchAppErrorEvent(e as ApiError);
     } finally {
       setLoading(false);
     }
   }, []);
+  useEffect(() => void load(), [load]);
+  useEventListener(UserChangedEvent.TYPE, () => void load());
 
   const handleMenuHeaderOpen = useCallback((e: MouseEvent<HTMLElement>) => {
     setMenuHeaderAnchor(e.currentTarget);
@@ -93,117 +111,145 @@ export default function UsersTable({
   const handleEditUserClose = useCallback(() => setEditUserOpen(false), []);
   const handleDeleteUserClose = useCallback(() => setDeleteUserOpen(false), []);
 
-  useEffect(() => void load(), [load]);
-
-  useEventListener(UserChangedEvent.TYPE, () => void load());
-
-  const [sorting, setSorting] = useState(initSorting ?? { column: null, direction: null });
-
   useEffect(() => {
-    if (onSortingChange) onSortingChange(sorting);
-  }, [onSortingChange, sorting]);
+    if (onSettingsChange) onSettingsChange({ sorting, visibility, filters });
+  }, [filters, onSettingsChange, sorting, visibility]);
 
-  const sortedUsers = useMemo(() => {
-    const list = users ?? [];
-    if (!sorting.column || !sorting.direction) return list;
-    const arr = [...list];
-    const cmp = (a: Soht2User, b: Soht2User): number => {
-      if (!sorting.column) return 0;
-      if (sorting.column === 'createdAt') return compareTimes(a.createdAt, b.createdAt);
-      return compareStrings(a[sorting.column], b[sorting.column]);
-    };
-    arr.sort((a, b) => (sorting.direction === 'asc' ? cmp(a, b) : -cmp(a, b)));
-    return arr;
-  }, [users, sorting.column, sorting.direction]);
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <CircularProgress />
-      </Box>
+  const sortModel: GridSortModel = useMemo(() => {
+    if (!sorting.column || !sorting.direction) return [];
+    return [{ field: sorting.column, sort: sorting.direction }];
+  }, [sorting]);
+  const handleSortModelChange = useCallback((model: GridSortModel) => {
+    if (!model || model.length === 0) {
+      setSorting({ column: null, direction: null });
+      return;
+    }
+    const m = model[0];
+    setSorting({
+      column: m.field as UserSortColumn,
+      direction: (m.sort ?? null) as UsersSorting['direction'],
+    });
+  }, []);
+  const handleColumnVisibilityModelChange = useCallback(
+    (m: GridColumnVisibilityModel) => setVisibility(m as UsersVisibility),
+    []
+  );
+  const handleFilterModelChange = useCallback((m: GridFilterModel) => {
+    setFilters(
+      (m?.items ?? []).map<UserFilter>(v => ({
+        field: v.field as UserSortColumn,
+        operator: v.operator,
+        value: v.value,
+      }))
     );
-  }
+  }, []);
+
+  const rows = useMemo(() => (users ?? []).map(u => ({ ...u, id: u.username })), [users]);
+
+  const columns: GridColDef[] = useMemo(
+    () => [
+      { field: 'username', headerName: 'Name', flex: 1, minWidth: 150, hideable: false },
+      {
+        field: 'role',
+        headerName: 'Role',
+        flex: 0.7,
+        minWidth: 120,
+        renderCell: params => String(params.value ?? ''),
+      },
+      {
+        field: 'createdAt',
+        type: 'dateTime',
+        headerName: 'Created',
+        flex: 1,
+        minWidth: 180,
+        valueGetter: value => new Date(value),
+        renderCell: params => (params.value ? new Date(params.value).toLocaleString() : ''),
+        filterOperators: getGridDateOperators(true).map(operator => ({
+          ...operator,
+          InputComponent: operator.InputComponent ? DateTimeGridFilter : undefined,
+        })),
+      },
+      {
+        field: 'allowedTargets',
+        headerName: 'Allowed Targets',
+        flex: 2,
+        minWidth: 220,
+        sortable: false,
+        filterable: false,
+        renderCell: params => {
+          const targets = (params.value as string[] | undefined) ?? [];
+          return (
+            <Box
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 0.5,
+                alignItems: 'center',
+                paddingTop: 1.5,
+              }}>
+              {targets.map(t => (
+                <Chip key={t} label={t} size="small" variant="outlined" />
+              ))}
+            </Box>
+          );
+        },
+      },
+      {
+        field: '__rowActions',
+        headerName: 'Row Actions',
+        width: 60,
+        align: 'right',
+        headerAlign: 'right',
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        hideable: false,
+        renderHeader: () => (
+          <HeaderMenuButton
+            menuHeaderAnchor={menuHeaderAnchor}
+            handleMenuHeaderOpen={handleMenuHeaderOpen}
+          />
+        ),
+        renderCell: params => (
+          <IconButton
+            size="small"
+            aria-label={`actions-${(params.row as Soht2User).username}`}
+            aria-controls={menuRowAnchor ? 'user-row-menu' : undefined}
+            aria-haspopup="true"
+            onClick={e => handleMenuRowOpen(e, params.row as Soht2User)}>
+            <MoreVertIcon />
+          </IconButton>
+        ),
+      },
+    ],
+    [handleMenuHeaderOpen, handleMenuRowOpen, menuHeaderAnchor, menuRowAnchor]
+  );
 
   return (
     <>
-      <TableContainer component={Paper} sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
-        <Table stickyHeader size="small" aria-label="users table">
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell
-                label="Name"
-                column="username"
-                sorting={sorting}
-                onSortingChange={setSorting}
-              />
-              <TableHeaderCell
-                label="Role"
-                column="role"
-                sorting={sorting}
-                onSortingChange={setSorting}
-              />
-              <TableHeaderCell
-                label="Created"
-                column="createdAt"
-                sorting={sorting}
-                onSortingChange={setSorting}
-              />
-              <TableCell>
-                <b>Allowed Targets</b>
-              </TableCell>
-              <TableCell align="right">
-                <HeaderMenuButton
-                  menuHeaderAnchor={menuHeaderAnchor}
-                  handleMenuHeaderOpen={handleMenuHeaderOpen}
-                />
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {error ? (
-              <TableRow>
-                <TableCell colSpan={9}>
-                  <Alert severity="error">{error}</Alert>
-                </TableCell>
-              </TableRow>
-            ) : (
-              sortedUsers.map(u => {
-                const targets = u.allowedTargets ?? [];
-                return (
-                  <TableRow key={u.username} hover>
-                    <TableCell>{u.username}</TableCell>
-                    <TableCell>{(u.role ?? '').toString()}</TableCell>
-                    <TableCell>
-                      {u.createdAt ? new Date(u.createdAt).toLocaleString() : ''}
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {targets.length > 0 ? (
-                          targets.map(t => (
-                            <Chip key={t} label={t} size="small" variant="outlined" />
-                          ))
-                        ) : (
-                          <span>—</span>
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        size="small"
-                        aria-label={`actions-${u.username}`}
-                        aria-controls={menuRowAnchor ? 'user-row-menu' : undefined}
-                        aria-haspopup="true"
-                        onClick={e => handleMenuRowOpen(e, u)}>
-                        <MoreVertIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <Paper sx={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ flex: 1 }}>
+          <DataGrid
+            columns={columns}
+            rows={rows}
+            initialState={{ filter: { filterModel: { items: filters } } }}
+            getRowId={row => (row as Soht2User).username}
+            sortingMode="client"
+            loading={loading}
+            sortModel={sortModel}
+            columnVisibilityModel={visibility}
+            onSortModelChange={handleSortModelChange}
+            onColumnVisibilityModelChange={handleColumnVisibilityModelChange}
+            onFilterModelChange={handleFilterModelChange}
+            disableRowSelectionOnClick
+            hideFooter={true}
+            paginationModel={{ page: 0, pageSize: rows.length }}
+            slots={{ noRowsOverlay: NoRowsOverlay, loadingOverlay: LoadingOverlay }}
+            slotProps={{ noRowsOverlay: { message: 'No user records available to display.' } }}
+            sx={{ ...dataGridStyle(theme), border: 0, height: 'calc(100vh - 130px)' }}
+          />
+        </Box>
+      </Paper>
 
       <Menu
         id="user-header-menu"

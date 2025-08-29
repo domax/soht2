@@ -2,10 +2,12 @@
 import { useCallback, useRef } from 'react';
 
 export default function useInterval(
-  callback: () => void,
-  delay: number
+  delay: number,
+  callback: () => void
 ): Readonly<[() => void, () => void]> {
   const intervalRef = useRef<number>(undefined);
+
+  const cb = useCallback(callback, [callback]);
 
   const cancel = useCallback(() => {
     if (intervalRef.current) {
@@ -16,8 +18,8 @@ export default function useInterval(
 
   const set = useCallback(() => {
     cancel();
-    intervalRef.current = window.setInterval(callback, delay);
-  }, [callback, cancel, delay]);
+    intervalRef.current = window.setInterval(cb, delay);
+  }, [cb, cancel, delay]);
 
   return [set, cancel];
 }

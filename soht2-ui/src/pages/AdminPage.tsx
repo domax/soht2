@@ -4,14 +4,12 @@ import { Navigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
-import { httpClient, type Soht2User } from '../api/soht2Api';
+import { type HistoryRequestParams, httpClient, type Soht2User } from '../api/soht2Api';
 import Layout from '../components/Layout';
 import TabPanel from '../components/TabPanel';
-import UsersTable, { type UsersSorting } from '../components/UsersTable';
-import ConnectionsTable, { type ConnectionsSorting } from '../components/ConnectionsTable';
-import HistoryTable, { type HistoryNavigation } from '../components/HistoryTable';
-
-type ConnectionSettings = { sorting: ConnectionsSorting; autoRefresh: boolean };
+import UsersTable, { type UserSettings } from '../components/UsersTable';
+import ConnectionsTable, { type ConnectionSettings } from '../components/ConnectionsTable';
+import HistoryTable from '../components/HistoryTable';
 
 export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }>) {
   const prefix = 'admin-';
@@ -19,31 +17,25 @@ export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }
   const [tab, setTab] = useState(0);
   const handleTabChange = useCallback((_: SyntheticEvent, newTab: number) => setTab(newTab), []);
 
-  const [usersSorting, setUsersSorting] = useState<UsersSorting>({
-    column: 'username',
-    direction: 'asc',
+  const [usersSettings, setUsersSettings] = useState<UserSettings>({
+    sorting: { column: 'username', direction: 'asc' },
+    filters: [],
+    visibility: {},
   });
-  const handleUsersSortingChange = useCallback((sorting: UsersSorting) => {
-    setUsersSorting(sorting);
-  }, []);
 
   const [connectionsSettings, setConnectionsSettings] = useState<ConnectionSettings>({
     sorting: { column: 'openedAt', direction: 'desc' },
+    visibility: {},
+    filters: [],
     autoRefresh: false,
   });
-  const handleConnectionsSortingChange = useCallback((sorting: ConnectionsSorting) => {
-    setConnectionsSettings(settings => ({ ...settings, sorting }));
-  }, []);
-  const handleConnectionsAutoRefreshChange = useCallback((autoRefresh: boolean) => {
-    setConnectionsSettings(settings => ({ ...settings, autoRefresh }));
-  }, []);
 
-  const [historyNavigation, setHistoryNavigation] = useState<HistoryNavigation>({});
-  const handleHistoryNavigationChange = useCallback((hn: HistoryNavigation) => {
+  const [historyNavigation, setHistoryNavigation] = useState<HistoryRequestParams>({});
+  const handleHistoryNavigationChange = useCallback((hn: HistoryRequestParams) => {
     setHistoryNavigation(hn);
   }, []);
 
-  if ((user?.role || '').toUpperCase() !== 'ADMIN') {
+  if ((user?.role ?? '').toUpperCase() !== 'ADMIN') {
     httpClient.clearAuth();
     return <Navigate to="/login" replace />;
   }
@@ -64,14 +56,12 @@ export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }
         </Tabs>
         <Box sx={{ flex: 1, minHeight: 0 }}>
           <TabPanel prefix={prefix} value={tab} index={0}>
-            <UsersTable initSorting={usersSorting} onSortingChange={handleUsersSortingChange} />
+            <UsersTable initSettings={usersSettings} onSettingsChange={setUsersSettings} />
           </TabPanel>
           <TabPanel prefix={prefix} value={tab} index={1}>
             <ConnectionsTable
-              initSorting={connectionsSettings.sorting}
-              initAutoRefresh={connectionsSettings.autoRefresh}
-              onSortingChange={handleConnectionsSortingChange}
-              onAutoRefreshChange={handleConnectionsAutoRefreshChange}
+              initSettings={connectionsSettings}
+              onSettingsChange={setConnectionsSettings}
             />
           </TabPanel>
           <TabPanel prefix={prefix} value={tab} index={2}>

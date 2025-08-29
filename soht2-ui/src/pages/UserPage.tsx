@@ -4,13 +4,11 @@ import { Navigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
-import { httpClient, type Soht2User } from '../api/soht2Api';
+import { type HistoryRequestParams, httpClient, type Soht2User } from '../api/soht2Api';
 import Layout from '../components/Layout';
 import TabPanel from '../components/TabPanel';
-import ConnectionsTable, { type ConnectionsSorting } from '../components/ConnectionsTable';
-import HistoryTable, { type HistoryNavigation } from '../components/HistoryTable';
-
-type ConnectionSettings = { sorting: ConnectionsSorting; autoRefresh: boolean };
+import ConnectionsTable, { type ConnectionSettings } from '../components/ConnectionsTable';
+import HistoryTable from '../components/HistoryTable';
 
 export default function UserPage({ user }: Readonly<{ user?: Soht2User | null }>) {
   const prefix = 'user-';
@@ -20,17 +18,13 @@ export default function UserPage({ user }: Readonly<{ user?: Soht2User | null }>
 
   const [connectionsSettings, setConnectionsSettings] = useState<ConnectionSettings>({
     sorting: { column: 'openedAt', direction: 'desc' },
+    visibility: {},
+    filters: [],
     autoRefresh: false,
   });
-  const handleConnectionsSortingChange = useCallback((sorting: ConnectionsSorting) => {
-    setConnectionsSettings(settings => ({ ...settings, sorting }));
-  }, []);
-  const handleConnectionsAutoRefreshChange = useCallback((autoRefresh: boolean) => {
-    setConnectionsSettings(settings => ({ ...settings, autoRefresh }));
-  }, []);
 
-  const [historyNavigation, setHistoryNavigation] = useState<HistoryNavigation>({});
-  const handleHistoryNavigationChange = useCallback((hn: HistoryNavigation) => {
+  const [historyNavigation, setHistoryNavigation] = useState<HistoryRequestParams>({});
+  const handleHistoryNavigationChange = useCallback((hn: HistoryRequestParams) => {
     setHistoryNavigation(hn);
   }, []);
 
@@ -55,10 +49,8 @@ export default function UserPage({ user }: Readonly<{ user?: Soht2User | null }>
         <Box sx={{ flex: 1, minHeight: 0 }}>
           <TabPanel prefix={prefix} value={tab} index={0}>
             <ConnectionsTable
-              initSorting={connectionsSettings.sorting}
-              initAutoRefresh={connectionsSettings.autoRefresh}
-              onSortingChange={handleConnectionsSortingChange}
-              onAutoRefreshChange={handleConnectionsAutoRefreshChange}
+              initSettings={connectionsSettings}
+              onSettingsChange={setConnectionsSettings}
             />
           </TabPanel>
           <TabPanel prefix={prefix} value={tab} index={1}>

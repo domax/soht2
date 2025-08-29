@@ -2,8 +2,8 @@
 import { useCallback, useRef } from 'react';
 
 export default function useTimeout(
-  callback: () => void,
-  delay: number
+  delay: number,
+  callback: () => void
 ): Readonly<[() => void, () => void]> {
   const timeoutRef = useRef<number>(undefined);
 

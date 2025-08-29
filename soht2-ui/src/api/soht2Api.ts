@@ -31,8 +31,8 @@ export type SortingDirUpper = 'ASC' | 'DESC';
 export type SortingDirLower = 'asc' | 'desc';
 export type SortingDir = SortingDirUpper | SortingDirLower;
 export type HistorySortColumn =
-  | 'userName'
   | 'connectionId'
+  | 'userName'
   | 'clientHost'
   | 'targetHost'
   | 'targetPort'
@@ -269,6 +269,23 @@ export const UserApi = {
 };
 
 // ===== ConnectionController API =====
+export type HistoryFilters = {
+  un?: string[]; // usernames e.g. ["user1", "user2"]
+  id?: UUID[]; // connection IDs e.g. ["53eded2b-..-2b12a57a592a", "87a06042-..-42457d6efc3c"]
+  ch?: string; // client host
+  th?: string; // target host
+  tp?: number[]; // target ports e.g. [80, 443]
+  oa?: ISODateTime; // opened after
+  ob?: ISODateTime; // opened before
+  ca?: ISODateTime; // closed after
+  cb?: ISODateTime; // closed before
+};
+export type HistoryRequestParams = HistoryFilters & {
+  sort?: string[]; // sorting criteria e.g. ["targetHost:asc", "openedAt:desc"]
+  pg?: number; // page number - default is 0
+  sz?: number; // page size - default is 10
+};
+
 export const ConnectionApi = {
   // GET /api/connection
   list: async (client: HttpClient = httpClient): Promise<Soht2Connection[]> => {
@@ -277,20 +294,7 @@ export const ConnectionApi = {
 
   // GET /api/connection/history with many filters
   history: async (
-    filters: {
-      un?: string[]; // usernames e.g. ["user1", "user2"]
-      id?: UUID[]; // connection IDs e.g. ["53eded2b-..-2b12a57a592a", "87a06042-..-42457d6efc3c"]
-      ch?: string; // client host
-      th?: string; // target host
-      tp?: number[]; // target ports e.g. [80, 443]
-      oa?: ISODateTime; // opened after
-      ob?: ISODateTime; // opened before
-      ca?: ISODateTime; // closed after
-      cb?: ISODateTime; // closed before
-      sort?: string[]; // sorting criteria e.g. ["targetHost:asc", "openedAt:desc"]
-      pg?: number; // page number - default is 0
-      sz?: number; // page size - default is 10
-    } = {},
+    filters: HistoryRequestParams = {},
     client: HttpClient = httpClient
   ): Promise<HistoryPage> => {
     return client.getJson<HistoryPage>('/api/connection/history', filters as Query);

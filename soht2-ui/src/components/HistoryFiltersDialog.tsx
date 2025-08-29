@@ -14,19 +14,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import MultiInputField from '../controls/MultiInputField';
-import type { UUID } from '../api/soht2Api';
-
-export type HistoryFilters = {
-  un?: string[]; // Users
-  id?: string[]; // UUIDs
-  ch?: string; // Client Host contains
-  th?: string; // Target Host contains
-  tp?: number[]; // Target Ports
-  oa?: string; // Opened After (ISO)
-  ob?: string; // Opened Before (ISO)
-  ca?: string; // Closed After (ISO)
-  cb?: string; // Closed Before (ISO)
-};
+import type { HistoryFilters, UUID } from '../api/soht2Api';
 
 const RE_USERNAME = /^\w{3,30}$/;
 const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

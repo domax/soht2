@@ -23,18 +23,27 @@ import HeaderMenuButton from '../controls/HeaderMenuButton';
 import {
   type ApiError,
   ConnectionApi,
+  type HistoryFilters,
   type HistoryPage,
+  type HistoryRequestParams,
   type HistorySortColumn,
   type SortingDirLower,
   type TableSorting,
 } from '../api/soht2Api';
 import { formatBytes } from '../api/functions';
 import { useDebounce } from '../hooks';
-import HistoryFiltersDialog, { type HistoryFilters } from './HistoryFiltersDialog';
+import HistoryFiltersDialog from './HistoryFiltersDialog';
 import TableHeaderCell from './TableHeaderCell';
 
-export type HistoryTableSorting = TableSorting<HistorySortColumn>;
-export type HistoryNavigation = HistoryFilters & { sort?: string[]; pg?: number; sz?: number };
+export type HistorySorting = TableSorting<HistorySortColumn>;
+type ConnectionVisibilityColumn = Exclude<HistorySortColumn, 'connectionId'>;
+export type HistoryVisibility = { [K in ConnectionVisibilityColumn]?: boolean };
+
+export type HistorySettings = {
+  sorting: HistorySorting;
+  visibility: HistoryVisibility;
+  requestParams: HistoryRequestParams;
+};
 
 function HistoryTableCell({
   label,
@@ -45,11 +54,11 @@ function HistoryTableCell({
   onSortingChange,
 }: Readonly<{
   label: string;
-  sorting: HistoryTableSorting;
+  sorting: HistorySorting;
   column: HistorySortColumn | null;
   filters: HistoryFilters;
   keys?: (keyof HistoryFilters)[];
-  onSortingChange: (s: HistoryTableSorting) => void;
+  onSortingChange: (s: HistorySorting) => void;
 }>) {
   const hasFilter = useMemo(
     () =>
@@ -77,13 +86,14 @@ export default function HistoryTable({
   onNavigationChange,
 }: Readonly<{
   regularUser?: string;
-  navigation?: HistoryNavigation;
-  onNavigationChange?: (n: HistoryNavigation) => void;
+  navigation?: HistoryRequestParams;
+  onNavigationChange?: (n: HistoryRequestParams) => void;
 }>) {
   const [menuHeaderAnchor, setMenuHeaderAnchor] = useState<HTMLElement | null>(null);
-  const handleMenuHeaderOpen = useCallback((e: MouseEvent<HTMLElement>) => {
-    setMenuHeaderAnchor(e.currentTarget);
-  }, []);
+  const handleMenuHeaderOpen = useCallback(
+    (e: MouseEvent<HTMLElement>) => setMenuHeaderAnchor(e.currentTarget),
+    []
+  );
   const handleMenuHeaderClose = useCallback(() => setMenuHeaderAnchor(null), []);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -96,7 +106,7 @@ export default function HistoryTable({
 
   const [navSorting] = navigation?.sort ?? ['openedAt:desc'];
   const [navColumn, navDir] = navSorting.split(':');
-  const [sorting, setSorting] = useState<HistoryTableSorting>({
+  const [sorting, setSorting] = useState<HistorySorting>({
     column: navColumn as HistorySortColumn,
     direction: navDir as SortingDirLower,
   });
@@ -161,7 +171,7 @@ export default function HistoryTable({
     if (pageData?.paging?.pageSize !== n) setPage(0);
   }, [pageData?.paging?.pageSize, pageSizeInput]);
 
-  useDebounce(handlePageSizeInput, 700, [handlePageSizeInput]);
+  useDebounce(700, handlePageSizeInput);
 
   useEffect(() => setPageSizeInput(String(pageSize)), [pageSize]);
 
