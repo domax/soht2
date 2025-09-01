@@ -136,7 +136,7 @@ class Soht2HistoryServiceTest {
             .sorting(
                 List.of(
                     HistoryOrder.builder()
-                        .field(HistorySorting.userName)
+                        .field(HistorySorting.username)
                         .direction(SortingDir.ASC)
                         .build(),
                     HistoryOrder.builder()
@@ -147,7 +147,7 @@ class Soht2HistoryServiceTest {
 
     val actual =
         soht2HistoryService.searchHistory(
-            Set.of(), Set.of(), null, null, Set.of(), null, null, null, null, paging, auth);
+            null, null, null, null, Set.of(), null, null, null, null, paging, auth);
 
     assertThat(actual.totalItems()).isEqualTo(historySoht2.size());
     assertThat(actual.paging()).isEqualTo(paging);
@@ -157,8 +157,8 @@ class Soht2HistoryServiceTest {
   @ParameterizedTest
   @MethodSource("searchHistory_Filter_OK_Args")
   void searchHistory_Filter_OK(
-      Set<String> userNames,
-      Set<UUID> connectionIds,
+      String userName,
+      String connectionId,
       String clientHost,
       String targetHost,
       Set<Integer> targetPorts,
@@ -178,8 +178,8 @@ class Soht2HistoryServiceTest {
 
     val actual =
         soht2HistoryService.searchHistory(
-            userNames,
-            connectionIds,
+            userName,
+            connectionId,
             clientHost,
             targetHost,
             targetPorts,
@@ -197,24 +197,12 @@ class Soht2HistoryServiceTest {
 
   static Stream<Arguments> searchHistory_Filter_OK_Args() {
     return Stream.of(
+        Arguments.of("user1", "*-41*", null, null, Set.of(), null, null, null, null, List.of(2, 3)),
         Arguments.of(
-            Set.of("user1"),
-            Set.of(
-                UUID.fromString("a522f1bc-6e46-4ae6-a2f1-bc6e465ae63c"),
-                UUID.fromString("6e8f991f-183b-419a-8f99-1f183b919af8")),
             null,
             null,
-            Set.of(),
-            null,
-            null,
-            null,
-            null,
-            List.of(2, 3)),
-        Arguments.of(
-            Set.of(),
-            Set.of(),
-            "0.0.1",
-            "example",
+            "*0.0.1",
+            "example*",
             Set.of(443),
             null,
             null,
@@ -222,8 +210,8 @@ class Soht2HistoryServiceTest {
             null,
             List.of(5)),
         Arguments.of(
-            Set.of(),
-            Set.of(),
+            null,
+            null,
             null,
             null,
             Set.of(),
@@ -261,7 +249,7 @@ class Soht2HistoryServiceTest {
                 .build(),
             HistoryEntity.builder() // 2
                 .userName("user1")
-                .connectionId(UUID.fromString("a522f1bc-6e46-4ae6-a2f1-bc6e465ae63c"))
+                .connectionId(UUID.fromString("a522f1bc-6e46-41e6-a2f1-bc6e465ae63c"))
                 .clientHost("localhost")
                 .targetHost("test.com")
                 .targetPort(22)
@@ -325,5 +313,18 @@ class Soht2HistoryServiceTest {
                 .bytesRead(1400L)
                 .bytesWritten(1500L)
                 .build()));
+  }
+
+  @Test
+  void asLikeParam() {
+    assertThat(Soht2HistoryService.asLikeParam(null)).isNull();
+    assertThat(Soht2HistoryService.asLikeParam("")).isNull();
+    assertThat(Soht2HistoryService.asLikeParam("test")).isEqualTo("test");
+    assertThat(Soht2HistoryService.asLikeParam("*test")).isEqualTo("%test");
+    assertThat(Soht2HistoryService.asLikeParam("test*")).isEqualTo("test%");
+    assertThat(Soht2HistoryService.asLikeParam("*test*")).isEqualTo("%test%");
+    assertThat(Soht2HistoryService.asLikeParam("*te*st*")).isEqualTo("%te*st%");
+    assertThat(Soht2HistoryService.asLikeParam("_te%st_")).isEqualTo("\\_te\\%st\\_");
+    assertThat(Soht2HistoryService.asLikeParam("__te%%st__")).isEqualTo("\\_\\_te\\%\\%st\\_\\_");
   }
 }

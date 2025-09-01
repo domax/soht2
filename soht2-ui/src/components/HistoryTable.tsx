@@ -1,375 +1,251 @@
 /* SOHT2 © Licensed under MIT 2025. */
-import { type MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Paper from '@mui/material/Paper';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
 import Box from '@mui/material/Box';
-import Alert from '@mui/material/Alert';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import Stack from '@mui/material/Stack';
-import Pagination from '@mui/material/Pagination';
-import TextField from '@mui/material/TextField';
-import InputAdornment from '@mui/material/InputAdornment';
-import FunnelIcon from '@mui/icons-material/FilterAlt';
-import CircularProgress from '@mui/material/CircularProgress';
-import HeaderMenuButton from '../controls/HeaderMenuButton';
+import { useTheme } from '@mui/material/styles';
+import {
+  DataGrid,
+  getGridNumericOperators,
+  getGridStringOperators,
+  type GridColDef,
+  type GridFilterModel,
+  type GridPaginationModel,
+  type GridSortModel,
+} from '@mui/x-data-grid';
 import {
   type ApiError,
   ConnectionApi,
   type HistoryFilters,
-  type HistoryPage,
   type HistoryRequestParams,
   type HistorySortColumn,
+  type Soht2Connection,
   type SortingDirLower,
-  type TableSorting,
 } from '../api/soht2Api';
-import { formatBytes } from '../api/functions';
+import {
+  formatBytes,
+  getDataGridStyle,
+  getDateTimeFilter,
+  getDateTimeFilterItem,
+  getDateTimeOperators,
+  getNumberArrayFilter,
+  getPortFilterItem,
+  getStringFilter,
+  getStringFilterItem,
+} from '../api/functions';
+import { dispatchAppErrorEvent } from '../api/appEvents';
 import { useDebounce } from '../hooks';
-import HistoryFiltersDialog from './HistoryFiltersDialog';
-import TableHeaderCell from './TableHeaderCell';
+import { LoadingOverlay, NoRowsOverlay } from '../controls/dataGridOverlays';
 
-export type HistorySorting = TableSorting<HistorySortColumn>;
 type ConnectionVisibilityColumn = Exclude<HistorySortColumn, 'connectionId'>;
 export type HistoryVisibility = { [K in ConnectionVisibilityColumn]?: boolean };
 
 export type HistorySettings = {
-  sorting: HistorySorting;
   visibility: HistoryVisibility;
   requestParams: HistoryRequestParams;
 };
 
-function HistoryTableCell({
-  label,
-  sorting,
-  column,
-  filters,
-  keys = [],
-  onSortingChange,
-}: Readonly<{
-  label: string;
-  sorting: HistorySorting;
-  column: HistorySortColumn | null;
-  filters: HistoryFilters;
-  keys?: (keyof HistoryFilters)[];
-  onSortingChange: (s: HistorySorting) => void;
-}>) {
-  const hasFilter = useMemo(
-    () =>
-      keys.some(k => {
-        const v = (filters as Record<string, unknown>)[k];
-        if (Array.isArray(v)) return v.length > 0;
-        return v !== undefined && v !== null && v !== '';
-      }),
-    [filters, keys]
-  );
-  return (
-    <TableHeaderCell
-      label={label}
-      sorting={sorting}
-      column={column}
-      onSortingChange={onSortingChange}
-      hasFilter={hasFilter}
-    />
-  );
+function getGridFilterModel(historyFilters?: HistoryFilters): GridFilterModel {
+  const hf = historyFilters ?? {};
+  const items = [
+    getStringFilterItem('id', hf.id) ?? null,
+    getStringFilterItem('username', hf.un) ?? null,
+    getStringFilterItem('clientHost', hf.ch) ?? null,
+    getStringFilterItem('targetHost', hf.th) ?? null,
+    getPortFilterItem('targetPort', hf.tp) ?? null,
+    getDateTimeFilterItem('openedAt', hf.oa, hf.ob) ?? null,
+    getDateTimeFilterItem('closedAt', hf.ca, hf.cb) ?? null,
+  ].filter(v => v !== null);
+  return { items };
+}
+
+function getHistoryFilters(filterModel?: GridFilterModel): HistoryFilters {
+  const items = filterModel?.items ?? [];
+  const opened = getDateTimeFilter(items.find(f => f.field === 'openedAt'));
+  const closed = getDateTimeFilter(items.find(f => f.field === 'closedAt'));
+  return {
+    id: getStringFilter(items.find(f => f.field === 'id')),
+    un: getStringFilter(items.find(f => f.field === 'username')),
+    ch: getStringFilter(items.find(f => f.field === 'clientHost')),
+    th: getStringFilter(items.find(f => f.field === 'targetHost')),
+    tp: getNumberArrayFilter(items.find(f => f.field === 'targetPort')),
+    oa: opened ? opened.after : undefined,
+    ob: opened ? opened.before : undefined,
+    ca: closed ? closed.after : undefined,
+    cb: closed ? closed.before : undefined,
+  };
 }
 
 export default function HistoryTable({
   regularUser,
-  navigation,
-  onNavigationChange,
+  initSettings,
+  onSettingsChange,
 }: Readonly<{
   regularUser?: string;
-  navigation?: HistoryRequestParams;
-  onNavigationChange?: (n: HistoryRequestParams) => void;
+  initSettings?: HistorySettings;
+  onSettingsChange?: (s: HistorySettings) => void;
 }>) {
-  const [menuHeaderAnchor, setMenuHeaderAnchor] = useState<HTMLElement | null>(null);
-  const handleMenuHeaderOpen = useCallback(
-    (e: MouseEvent<HTMLElement>) => setMenuHeaderAnchor(e.currentTarget),
-    []
-  );
-  const handleMenuHeaderClose = useCallback(() => setMenuHeaderAnchor(null), []);
+  const theme = useTheme();
 
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filters, setFilters] = useState<HistoryFilters>(navigation ?? {});
-
-  const [page, setPage] = useState<number>(navigation?.pg ?? 0); // 0-based for API
-  const navPageSize = navigation?.sz ?? 50;
-  const [pageSize, setPageSize] = useState<number>(navPageSize);
-  const [pageSizeInput, setPageSizeInput] = useState<string>(String(navPageSize));
-
-  const [navSorting] = navigation?.sort ?? ['openedAt:desc'];
-  const [navColumn, navDir] = navSorting.split(':');
-  const [sorting, setSorting] = useState<HistorySorting>({
-    column: navColumn as HistorySortColumn,
-    direction: navDir as SortingDirLower,
+  const [visibility, setVisibility] = useState(initSettings?.visibility ?? {});
+  const [sortModel, setSortModel] = useState<GridSortModel>(() => {
+    const m = initSettings?.requestParams?.sort ?? [];
+    if (m.length === 0) return [];
+    const [c, d] = m[0].split(':');
+    return [{ field: c as HistorySortColumn, sort: d.toLowerCase() as SortingDirLower }];
   });
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    page: initSettings?.requestParams?.pg ?? 0,
+    pageSize: initSettings?.requestParams?.sz ?? 50,
+  });
+  const [filterModel, setFilterModel] = useState<GridFilterModel>(() =>
+    getGridFilterModel(initSettings?.requestParams)
+  );
 
+  const [requestParams, setRequestParams] = useState<HistoryRequestParams>(
+    initSettings?.requestParams ?? {}
+  );
+  const [rows, setRows] = useState<Soht2Connection[]>([]);
+  const [rowCount, setRowCount] = useState(0);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pageData, setPageData] = useState<HistoryPage | null>(null);
 
-  const asSortArray = useMemo(() => {
-    if (!sorting.column || !sorting.direction) return undefined;
-    return [`${sorting.column}:${sorting.direction}`];
-  }, [sorting]);
-
-  useEffect(() => {
-    if (onNavigationChange)
-      onNavigationChange({ ...filters, sort: asSortArray, pg: page, sz: pageSize });
-  }, [filters, asSortArray, page, pageSize, onNavigationChange]);
-
-  const load = useCallback(async () => {
+  const load = useCallback(async (param: HistoryRequestParams) => {
     try {
       setLoading(true);
-      setError(null);
-      const res = await ConnectionApi.history({
-        ...filters,
-        sort: asSortArray,
-        pg: page,
-        sz: pageSize,
-      });
-      setPageData(res);
+      const res = await ConnectionApi.history(param);
+      setRows((res?.data ?? []).map(c => ({ ...c, username: c.user?.username ?? '' })));
+      setRowCount(res?.totalItems ?? 0);
     } catch (e) {
-      const apiError = e as ApiError;
-      setError(apiError.message);
+      dispatchAppErrorEvent(e as ApiError);
     } finally {
       setLoading(false);
     }
-  }, [filters, asSortArray, page, pageSize]);
-
-  useEffect(() => void load(), [load]);
-
-  const handleRefresh = useCallback(() => {
-    handleMenuHeaderClose();
-    void load();
-  }, [handleMenuHeaderClose, load]);
-
-  const handleOpenFilters = useCallback(() => {
-    handleMenuHeaderClose();
-    setFiltersOpen(true);
-  }, [handleMenuHeaderClose]);
-
-  const handleFiltersApply = useCallback((f: HistoryFilters) => {
-    setFilters(f);
-    setPage(0);
-    setFiltersOpen(false);
   }, []);
+  useEffect(() => void load(requestParams), [load, requestParams]);
 
-  const handlePageSizeInput = useCallback(() => {
-    let n = Number(pageSizeInput);
-    if (Number.isNaN(n)) n = 50;
-    if (n < 1) n = 1;
-    if (n > 1000) n = 1000;
-    setPageSize(n);
-    if (pageData?.paging?.pageSize !== n) setPage(0);
-  }, [pageData?.paging?.pageSize, pageSizeInput]);
+  useEffect(() => {
+    const [si] = sortModel;
+    const sort = si?.field && si?.sort ? [`${si.field}:${si.sort}`] : undefined;
+    const pg = paginationModel.page;
+    const sz = paginationModel.pageSize;
+    setRequestParams(p => ({ ...p, sort, pg, sz }));
+  }, [paginationModel.page, paginationModel.pageSize, sortModel]);
 
-  useDebounce(700, handlePageSizeInput);
+  const handleFilterModel = useCallback(() => {
+    setRequestParams(op => {
+      const np = { ...op, ...getHistoryFilters(filterModel) };
+      return JSON.stringify(op) === JSON.stringify(np) ? op : np;
+    });
+  }, [filterModel]);
+  useDebounce(700, handleFilterModel, [handleFilterModel]);
 
-  useEffect(() => setPageSizeInput(String(pageSize)), [pageSize]);
+  useEffect(() => {
+    if (onSettingsChange) onSettingsChange({ visibility, requestParams });
+  }, [onSettingsChange, requestParams, visibility]);
 
-  const onFiltersClose = useCallback(() => setFiltersOpen(false), []);
-
-  const totalRows = pageData?.totalItems ?? 0;
-  const totalPages = pageData?.totalPages ?? 0;
-  const data = pageData?.data ?? [];
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <CircularProgress />
-      </Box>
+  const columns = useMemo<GridColDef[]>(() => {
+    const stringOperators = getGridStringOperators().filter(
+      op => !op.value.startsWith('doesNot') && !op.value.startsWith('is')
     );
-  }
+    const portOperators = getGridNumericOperators().filter(
+      op => op.value === '=' || op.value === 'isAnyOf'
+    );
+    const dateTimeOperators = getDateTimeOperators();
+    const cols: GridColDef[] = [
+      {
+        field: 'id',
+        type: 'string',
+        headerName: 'Connection ID',
+        flex: 1.5,
+        minWidth: 330,
+        hideable: false,
+        renderCell: params => <pre style={{ margin: 0 }}>{params.value ?? ''}</pre>,
+      },
+      { field: 'username', type: 'string', headerName: 'User', flex: 0.7, minWidth: 120 },
+      { field: 'clientHost', type: 'string', headerName: 'Client Host', flex: 0.7, minWidth: 120 },
+      { field: 'targetHost', type: 'string', headerName: 'Target Host', flex: 0.7, minWidth: 120 },
+      {
+        field: 'targetPort',
+        type: 'number',
+        headerName: 'Target Port',
+        flex: 0.3,
+        minWidth: 120,
+        align: 'right',
+        valueGetter: value => Number(value),
+      },
+      {
+        field: 'openedAt',
+        type: 'dateTime',
+        headerName: 'Opened',
+        flex: 1,
+        minWidth: 180,
+        valueGetter: value => new Date(value),
+        renderCell: params => (params.value ? new Date(params.value).toLocaleString() : ''),
+        filterOperators: dateTimeOperators,
+      },
+      {
+        field: 'closedAt',
+        type: 'dateTime',
+        headerName: 'Closed',
+        flex: 1,
+        minWidth: 180,
+        valueGetter: value => new Date(value),
+        renderCell: params => (params.value ? new Date(params.value).toLocaleString() : ''),
+        filterOperators: dateTimeOperators,
+      },
+      {
+        field: 'bytesRead',
+        type: 'number',
+        headerName: 'Read',
+        filterable: false,
+        flex: 0.5,
+        minWidth: 120,
+        valueGetter: value => Number(value),
+        renderCell: params => formatBytes(params.value ?? 0),
+      },
+      {
+        field: 'bytesWritten',
+        type: 'number',
+        headerName: 'Written',
+        filterable: false,
+        flex: 0.5,
+        minWidth: 120,
+        valueGetter: value => Number(value),
+        renderCell: params => formatBytes(params.value ?? 0),
+      },
+    ];
+    return cols
+      .filter(c => c.field !== 'username' || !regularUser)
+      .map(c => (c.type === 'string' ? { ...c, filterOperators: stringOperators } : c))
+      .map(c => (c.field === 'targetPort' ? { ...c, filterOperators: portOperators } : c));
+  }, [regularUser]);
 
   return (
-    <>
-      <Stack
-        direction="row"
-        spacing={2}
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{ paddingTop: 2 }}>
-        <Stack direction="row" spacing={2} alignItems="center">
-          <Pagination
-            color="primary"
-            count={totalPages}
-            page={(page ?? 0) + 1}
-            onChange={(_e, p) => setPage(p - 1)}
-            siblingCount={1}
-            boundaryCount={2}
-            size="small"
-          />
-          <TextField
-            size="small"
-            label="Page size"
-            type="number"
-            value={pageSizeInput}
-            onChange={e => setPageSizeInput(e.target.value)}
-            onBlur={handlePageSizeInput}
-            onKeyDown={e => {
-              if (e.key === 'Enter') handlePageSizeInput();
-            }}
-            slotProps={{
-              htmlInput: { min: 1, max: 1000 },
-              input: { endAdornment: <InputAdornment position="end">rows</InputAdornment> },
-            }}
-          />
-          <Box>total rows: {totalRows}</Box>
-        </Stack>
-        <HeaderMenuButton
-          menuHeaderAnchor={menuHeaderAnchor}
-          handleMenuHeaderOpen={handleMenuHeaderOpen}
+    <Paper sx={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ flex: 1 }}>
+        <DataGrid
+          columns={columns}
+          rows={rows}
+          rowCount={rowCount}
+          getRowId={(row: Soht2Connection) => row.id}
+          sortingMode="server"
+          filterMode="server"
+          paginationMode="server"
+          loading={loading}
+          sortModel={sortModel}
+          filterModel={filterModel}
+          paginationModel={paginationModel}
+          columnVisibilityModel={visibility}
+          pageSizeOptions={[20, 50, 100]}
+          onSortModelChange={setSortModel}
+          onColumnVisibilityModelChange={setVisibility}
+          onFilterModelChange={setFilterModel}
+          onPaginationModelChange={setPaginationModel}
+          disableRowSelectionOnClick
+          slots={{ noRowsOverlay: NoRowsOverlay, loadingOverlay: LoadingOverlay }}
+          slotProps={{ noRowsOverlay: { message: 'No history records found.' } }}
+          sx={{ ...getDataGridStyle(theme) }}
         />
-      </Stack>
-      <TableContainer
-        component={Paper}
-        sx={{ height: 'calc(100vh - 186px)', width: '100%', overflow: 'auto' }}>
-        <Table stickyHeader size="small" aria-label="history table">
-          <TableHead>
-            <TableRow>
-              <HistoryTableCell
-                label="Connection ID"
-                column="connectionId"
-                sorting={sorting}
-                filters={filters}
-                keys={['id']}
-                onSortingChange={setSorting}
-              />
-              {!regularUser ? (
-                <HistoryTableCell
-                  label="User"
-                  column="userName"
-                  sorting={sorting}
-                  filters={filters}
-                  keys={['un']}
-                  onSortingChange={setSorting}
-                />
-              ) : null}
-              <HistoryTableCell
-                label="Client Host"
-                column="clientHost"
-                sorting={sorting}
-                filters={filters}
-                keys={['ch']}
-                onSortingChange={setSorting}
-              />
-              <HistoryTableCell
-                label="Target Host"
-                column="targetHost"
-                sorting={sorting}
-                filters={filters}
-                keys={['th']}
-                onSortingChange={setSorting}
-              />
-              <HistoryTableCell
-                label="Target Port"
-                column="targetPort"
-                sorting={sorting}
-                filters={filters}
-                keys={['tp']}
-                onSortingChange={setSorting}
-              />
-              <HistoryTableCell
-                label="Opened"
-                column="openedAt"
-                sorting={sorting}
-                filters={filters}
-                keys={['oa', 'ob']}
-                onSortingChange={setSorting}
-              />
-              <HistoryTableCell
-                label="Closed"
-                column="closedAt"
-                sorting={sorting}
-                filters={filters}
-                keys={['ca', 'cb']}
-                onSortingChange={setSorting}
-              />
-              <HistoryTableCell
-                label="Read"
-                column="bytesRead"
-                sorting={sorting}
-                filters={filters}
-                onSortingChange={setSorting}
-              />
-              <HistoryTableCell
-                label="Written"
-                column="bytesWritten"
-                sorting={sorting}
-                filters={filters}
-                onSortingChange={setSorting}
-              />
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {!!error || data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={!regularUser ? 9 : 8}>
-                  {error ? (
-                    <Alert severity="error">{error}</Alert>
-                  ) : (
-                    <Alert severity="info">No history records found.</Alert>
-                  )}
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.map(c => (
-                <TableRow key={c.id} hover>
-                  <TableCell sx={{ paddingY: '13px', fontSizeAdjust: '0.5' }}>
-                    <pre style={{ margin: 0 }}>{c.id}</pre>
-                  </TableCell>
-                  {!regularUser ? <TableCell>{c.user?.username ?? ''}</TableCell> : null}
-                  <TableCell>{c.clientHost ?? ''}</TableCell>
-                  <TableCell>{c.targetHost ?? ''}</TableCell>
-                  <TableCell>{c.targetPort ?? ''}</TableCell>
-                  <TableCell>{c.openedAt ? new Date(c.openedAt).toLocaleString() : ''}</TableCell>
-                  <TableCell>{c.closedAt ? new Date(c.closedAt).toLocaleString() : ''}</TableCell>
-                  <TableCell>{formatBytes(c.bytesRead ?? 0)}</TableCell>
-                  <TableCell>{formatBytes(c.bytesWritten ?? 0)}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Menu
-        id="history-header-menu"
-        anchorEl={menuHeaderAnchor}
-        open={!!menuHeaderAnchor}
-        onClose={handleMenuHeaderClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        keepMounted>
-        <MenuItem onClick={handleRefresh}>
-          <ListItemIcon>
-            <RefreshIcon fontSize="small" />
-          </ListItemIcon>
-          Refresh
-        </MenuItem>
-        <MenuItem onClick={handleOpenFilters}>
-          <ListItemIcon>
-            <FunnelIcon fontSize="small" />
-          </ListItemIcon>
-          Filters
-        </MenuItem>
-      </Menu>
-
-      <HistoryFiltersDialog
-        open={filtersOpen}
-        regularUser={regularUser}
-        value={filters}
-        onApply={handleFiltersApply}
-        onClose={onFiltersClose}
-      />
-    </>
+      </Box>
+    </Paper>
   );
 }

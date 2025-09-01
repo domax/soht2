@@ -121,10 +121,10 @@ public class ConnectionController {
    * Retrieves a paginated list of connection history records based on specified filters and sorting
    * criteria.
    *
-   * @param userNames a set of usernames to filter the history records. Fetches records for
-   *     specified usernames if provided.
-   * @param connectionIds a set of connection IDs to filter the history records. Fetches records for
-   *     specified connection IDs if provided.
+   * @param username a substring to filter the records by username. Fetches records matching the
+   *     substring if provided.
+   * @param connectionId a substring to filter the records by connection ID. Fetches records
+   *     matching the substring if provided.
    * @param clientHost a substring to filter the records by client host. Fetches records matching
    *     the substring if provided.
    * @param targetHost a substring to filter the records by target host. Fetches records matching
@@ -170,39 +170,47 @@ public class ConnectionController {
   @GetMapping(path = "/history", produces = APPLICATION_JSON_VALUE)
   public HistoryPage searchHistory(
       // <editor-fold desc="un, id, ch, th, tp, oa, ob, ca, cb, sort, pg, sz>
-      @Parameter(description = "Get only history of specified usernames")
+      @Parameter(description = "Get only history of specified substring in username")
           @RequestParam(name = "un", required = false)
-          @Nullable Set<String> userNames,
-      @Parameter(description = "Get only history of specified connection IDs")
+          @Nullable
+          String username,
+      @Parameter(description = "Get only history of specified substring in connection ID")
           @RequestParam(name = "id", required = false)
-          @Nullable Set<UUID> connectionIds,
+          @Nullable
+          String connectionId,
       @Parameter(description = "Get only history of specified substring in client host")
           @RequestParam(name = "ch", required = false)
-          @Nullable String clientHost,
+          @Nullable
+          String clientHost,
       @Parameter(description = "Get only history of specified substring in target host")
           @RequestParam(name = "th", required = false)
-          @Nullable String targetHost,
+          @Nullable
+          String targetHost,
       @Parameter(description = "Get only history of specified target ports")
           @RequestParam(name = "tp", required = false)
-          @Nullable Set<Integer> targetPorts,
+          @Nullable
+          Set<Integer> targetPorts,
       @Parameter(description = "Get only connections opened after timestamp " + TS)
           @RequestParam(name = "oa", required = false)
-          @Nullable LocalDateTime openedAfter,
+          @Nullable
+          LocalDateTime openedAfter,
       @Parameter(description = "Get only connections opened before timestamp " + TS)
           @RequestParam(name = "ob", required = false)
-          @Nullable LocalDateTime openedBefore,
+          @Nullable
+          LocalDateTime openedBefore,
       @Parameter(description = "Get only connections closed after timestamp " + TS)
           @RequestParam(name = "ca", required = false)
-          @Nullable LocalDateTime closedAfter,
+          @Nullable
+          LocalDateTime closedAfter,
       @Parameter(description = "Get only connections closed before timestamp " + TS)
           @RequestParam(name = "cb", required = false)
-          @Nullable LocalDateTime closedBefore,
+          @Nullable
+          LocalDateTime closedBefore,
       @Parameter(
               description =
                   "Sorting criteria (supported fields: "
-                      + "userName, connectionId, clientHost, "
-                      + "targetHost, targetPort, openedAt, closedAt, "
-                      + "bytesRead, bytesWritten)",
+                      + "username, id, clientHost, targetHost, targetPort, "
+                      + "openedAt, closedAt, bytesRead, bytesWritten)",
               example = "openedAt:desc",
               array =
                   @ArraySchema(
@@ -212,22 +220,24 @@ public class ConnectionController {
                           @Schema(
                               type = "string",
                               pattern =
-                                  "^(userName|connectionId|clientHost|targetHost|targetPort"
+                                  "^(username|id|clientHost|targetHost|targetPort"
                                       + "|openedAt|closedAt|bytesRead|bytesWritten)"
                                       + ":(asc|desc)$")))
           @RequestParam(name = "sort", required = false, defaultValue = "openedAt:desc")
           List<String> sortBy,
       @Parameter(description = "0-based page number")
           @RequestParam(name = "pg", required = false, defaultValue = "0")
-          @Min(0) int pageNumber,
+          @Min(0)
+          int pageNumber,
       @Parameter(description = "Number of records per page (up to 1000)")
           @RequestParam(name = "sz", required = false, defaultValue = "10")
-          @Max(1000) int pageSize,
+          @Max(1000)
+          int pageSize,
       // </editor-fold>
       Authentication authentication) {
     return soht2HistoryService.searchHistory(
-        ofNullable(userNames).orElse(Set.of()),
-        ofNullable(connectionIds).orElse(Set.of()),
+        username,
+        connectionId,
         clientHost,
         targetHost,
         ofNullable(targetPorts).orElse(Set.of()),

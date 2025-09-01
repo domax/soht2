@@ -1,7 +1,7 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.server.service;
 
-import static java.util.stream.Collectors.toSet;
+import static java.util.Optional.ofNullable;
 import static net.soht2.server.service.ExceptionHelper.forbidden;
 import static net.soht2.server.service.ExceptionHelper.serviceUnavailable;
 import static net.soht2.server.service.Soht2UserService.getCurrentUser;
@@ -10,8 +10,6 @@ import io.vavr.control.Try;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -25,6 +23,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 /**
  * Service for managing connection history in the SOHT2 application. This service provides
@@ -86,8 +85,8 @@ public class Soht2HistoryService {
   /**
    * Searches the connection history based on the specified filters.
    *
-   * @param userNames a collection of usernames to filter the history records by
-   * @param connectionIds a collection of connection IDs to filter the history records by
+   * @param userName the usernames to filter the history records by
+   * @param connectionId the connection IDs to filter the history records by
    * @param clientHost the client hosts to filter the history records by
    * @param targetHost the target hosts to filter the history records by
    * @param targetPorts a collection of target ports to filter the history records by
@@ -107,8 +106,8 @@ public class Soht2HistoryService {
   @SuppressWarnings("java:S107")
   @Transactional(readOnly = true)
   public HistoryPage searchHistory(
-      Collection<String> userNames,
-      Collection<UUID> connectionIds,
+      @Nullable String userName,
+      @Nullable String connectionId,
       @Nullable String clientHost,
       @Nullable String targetHost,
       Collection<Integer> targetPorts,
@@ -121,8 +120,8 @@ public class Soht2HistoryService {
     if (!soht2ServerConfig.isEnableHistory()) throw serviceUnavailable(ERR_HISTORY_DISABLED);
     log.info(
         "searchHistory"
-            + ": userNames={}"
-            + ", connectionIds={}"
+            + ": userName={}"
+            + ", connectionId={}"
             + ", clientHost={}"
             + ", targetHost={}"
             + ", targetPorts={}"
@@ -132,8 +131,8 @@ public class Soht2HistoryService {
             + ", closedBefore={}"
             + ", paging={}"
             + ", authentication={}",
-        userNames,
-        connectionIds,
+        userName,
+        connectionId,
         clientHost,
         targetHost,
         targetPorts,
@@ -144,20 +143,17 @@ public class Soht2HistoryService {
         paging,
         authentication);
 
-    val users =
+    val un =
         getCurrentUser(authentication)
-            .map(
-                currentUser ->
-                    currentUser.isAdmin()
-                        ? userNames.stream().map(String::toLowerCase).collect(toSet())
-                        : Set.of(currentUser.name().toLowerCase()))
+            .map(cu -> cu.isAdmin() ? ofNullable(userName).orElse("") : cu.name())
             .orElseThrow(() -> forbidden("Search requires authentication"));
+
     val total =
         historyEntityRepository.countAll(
-            users,
-            connectionIds,
-            clientHost,
-            targetHost,
+            asLikeParam(un),
+            asLikeParam(connectionId),
+            asLikeParam(clientHost),
+            asLikeParam(targetHost),
             targetPorts,
             openedAfter,
             openedBefore,
@@ -167,20 +163,25 @@ public class Soht2HistoryService {
         total > 0
             ? historyEntityRepository
                 .findAll(
-                    users,
-                    connectionIds,
-                    clientHost,
-                    targetHost,
+                    asLikeParam(un),
+                    asLikeParam(connectionId),
+                    asLikeParam(clientHost),
+                    asLikeParam(targetHost),
                     targetPorts,
                     openedAfter,
                     openedBefore,
                     closedAfter,
                     closedBefore,
-                    paging.toPageable(false))
+                    paging.toPageable(true))
                 .stream()
                 .map(HistoryEntity::toSoht2Connection)
                 .toList()
             : List.<Soht2Connection>of();
     return HistoryPage.builder().paging(paging).totalItems(total).data(data).build();
+  }
+
+  static @Nullable String asLikeParam(@Nullable String param) {
+    if (!StringUtils.hasLength(param)) return null;
+    return param.replaceAll("[%_]", "\\\\$0").replaceFirst("^\\*", "%").replaceFirst("\\*$", "%");
   }
 }

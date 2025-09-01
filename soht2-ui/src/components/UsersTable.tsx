@@ -21,7 +21,7 @@ import {
   type GridSortModel,
 } from '@mui/x-data-grid';
 import { type ApiError, type Soht2User, type TableSorting, UserApi } from '../api/soht2Api';
-import { dataGridStyle } from '../api/functions';
+import { getDataGridStyle } from '../api/functions';
 import { dispatchAppErrorEvent, UserChangedEvent } from '../api/appEvents';
 import { useEventListener } from '../hooks';
 import HeaderMenuButton from '../controls/HeaderMenuButton';
@@ -246,7 +246,7 @@ export default function UsersTable({
             paginationModel={{ page: 0, pageSize: rows.length }}
             slots={{ noRowsOverlay: NoRowsOverlay, loadingOverlay: LoadingOverlay }}
             slotProps={{ noRowsOverlay: { message: 'No user records available to display.' } }}
-            sx={{ ...dataGridStyle(theme), border: 0, height: 'calc(100vh - 130px)' }}
+            sx={{ ...getDataGridStyle(theme) }}
           />
         </Box>
       </Paper>

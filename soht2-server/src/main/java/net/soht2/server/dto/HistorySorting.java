@@ -10,8 +10,8 @@ import lombok.experimental.Accessors;
 @Accessors(fluent = true)
 @RequiredArgsConstructor
 public enum HistorySorting implements SortingField {
-  userName("user_name"),
-  connectionId("connection_id"),
+  username("user_name"),
+  id("connection_id"),
   clientHost("client_host"),
   targetHost("target_host"),
   targetPort("target_port"),

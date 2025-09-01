@@ -270,10 +270,10 @@ export const UserApi = {
 
 // ===== ConnectionController API =====
 export type HistoryFilters = {
-  un?: string[]; // usernames e.g. ["user1", "user2"]
-  id?: UUID[]; // connection IDs e.g. ["53eded2b-..-2b12a57a592a", "87a06042-..-42457d6efc3c"]
-  ch?: string; // client host
-  th?: string; // target host
+  id?: string; // connection ID occurrence
+  un?: string; // username occurrence
+  ch?: string; // client host occurrence
+  th?: string; // target host occurrence
   tp?: number[]; // target ports e.g. [80, 443]
   oa?: ISODateTime; // opened after
   ob?: ISODateTime; // opened before

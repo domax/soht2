@@ -4,12 +4,12 @@ import { Navigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
-import { type HistoryRequestParams, httpClient, type Soht2User } from '../api/soht2Api';
+import { httpClient, type Soht2User } from '../api/soht2Api';
 import Layout from '../components/Layout';
 import TabPanel from '../components/TabPanel';
 import UsersTable, { type UserSettings } from '../components/UsersTable';
 import ConnectionsTable, { type ConnectionSettings } from '../components/ConnectionsTable';
-import HistoryTable from '../components/HistoryTable';
+import HistoryTable, { type HistorySettings } from '../components/HistoryTable';
 
 export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }>) {
   const prefix = 'admin-';
@@ -30,10 +30,10 @@ export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }
     autoRefresh: false,
   });
 
-  const [historyNavigation, setHistoryNavigation] = useState<HistoryRequestParams>({});
-  const handleHistoryNavigationChange = useCallback((hn: HistoryRequestParams) => {
-    setHistoryNavigation(hn);
-  }, []);
+  const [historySettings, setHistorySettings] = useState<HistorySettings>({
+    requestParams: { sort: ['openedAt:desc'] },
+    visibility: {},
+  });
 
   if ((user?.role ?? '').toUpperCase() !== 'ADMIN') {
     httpClient.clearAuth();
@@ -65,10 +65,7 @@ export default function AdminPage({ user }: Readonly<{ user?: Soht2User | null }
             />
           </TabPanel>
           <TabPanel prefix={prefix} value={tab} index={2}>
-            <HistoryTable
-              navigation={historyNavigation}
-              onNavigationChange={handleHistoryNavigationChange}
-            />
+            <HistoryTable initSettings={historySettings} onSettingsChange={setHistorySettings} />
           </TabPanel>
         </Box>
       </Box>

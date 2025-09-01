@@ -6,6 +6,7 @@ import static java.util.Optional.ofNullable;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.Builder;
+import net.soht2.common.util.AuxUtil;
 
 public record Soht2Connection(
     UUID id,
@@ -29,7 +30,7 @@ public record Soht2Connection(
       LocalDateTime closedAt,
       Long bytesRead,
       Long bytesWritten) {
-    this.id = ofNullable(id).orElseGet(UUID::randomUUID);
+    this.id = ofNullable(id).orElseGet(AuxUtil::generateUUIDv7);
     this.user = user;
     this.clientHost = clientHost;
     this.targetHost = targetHost;

@@ -25,7 +25,7 @@ import {
   type Soht2Connection,
   type TableSorting,
 } from '../api/soht2Api';
-import { dataGridStyle, formatBytes } from '../api/functions';
+import { getDataGridStyle, formatBytes } from '../api/functions';
 import { ConnectionChangedEvent, dispatchAppErrorEvent } from '../api/appEvents';
 import { useEventListener, useInterval } from '../hooks';
 import HeaderMenuButton from '../controls/HeaderMenuButton';
@@ -222,7 +222,7 @@ export default function ConnectionsTable({
         flex: 0.5,
         minWidth: 120,
         valueGetter: value => Number(value),
-        renderCell: params => (params.value ? formatBytes(params.value ?? 0) : ''),
+        renderCell: params => formatBytes(params.value ?? 0),
       },
       {
         field: 'bytesWritten',
@@ -231,7 +231,7 @@ export default function ConnectionsTable({
         flex: 0.5,
         minWidth: 120,
         valueGetter: value => Number(value),
-        renderCell: params => (params.value ? formatBytes(params.value ?? 0) : ''),
+        renderCell: params => formatBytes(params.value ?? 0),
       },
       {
         field: '__rowActions',
@@ -272,7 +272,7 @@ export default function ConnectionsTable({
             columns={columns}
             rows={rows}
             initialState={{ filter: { filterModel: { items: filters } } }}
-            getRowId={row => (row as Soht2Connection).id}
+            getRowId={(row: Soht2Connection) => row.id}
             sortingMode="client"
             loading={loading}
             sortModel={sortModel}
@@ -291,7 +291,7 @@ export default function ConnectionsTable({
             slotProps={{
               noRowsOverlay: { message: 'No active connections available to display.' },
             }}
-            sx={{ ...dataGridStyle(theme), border: 0, height: 'calc(100vh - 130px)' }}
+            sx={{ ...getDataGridStyle(theme) }}
           />
         </Box>
       </Paper>

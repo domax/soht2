@@ -1,3 +1,4 @@
+/* SOHT2 © Licensed under MIT 2025. */
 import type { NoRowsOverlayPropsOverrides } from '@mui/x-data-grid';
 import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';

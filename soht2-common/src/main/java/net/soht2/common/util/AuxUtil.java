@@ -1,7 +1,10 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.common.util;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import lombok.AccessLevel;
@@ -14,6 +17,8 @@ import lombok.NoArgsConstructor;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class AuxUtil {
+
+  private static final TimeBasedEpochGenerator UUID_V7 = Generators.timeBasedEpochGenerator();
 
   /**
    * Returns a unary operator that applies the given consumer to its input and returns the input
@@ -29,5 +34,10 @@ public final class AuxUtil {
       consumer.accept(v);
       return v;
     };
+  }
+
+  /** Generates a UUID using version 7 (Unix Epoch time+random based). */
+  public static UUID generateUUIDv7() {
+    return UUID_V7.generate();
   }
 }

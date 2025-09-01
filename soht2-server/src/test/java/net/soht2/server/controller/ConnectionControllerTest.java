@@ -19,6 +19,7 @@ import java.util.UUID;
 import lombok.val;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.common.dto.Soht2User;
+import net.soht2.common.util.AuxUtil;
 import net.soht2.server.config.SecurityConfig;
 import net.soht2.server.config.Soht2ServerConfig;
 import net.soht2.server.dto.*;
@@ -65,9 +66,9 @@ class ConnectionControllerTest {
     val now = LocalDateTime.parse("2025-07-10T23:23:19");
 
     try (val localDateTime = mockStatic(LocalDateTime.class);
-        val uuid = mockStatic(UUID.class)) {
+        val auxUtil = mockStatic(AuxUtil.class)) {
       localDateTime.when(LocalDateTime::now).thenReturn(now);
-      uuid.when(UUID::randomUUID).thenReturn(randomUUID);
+      auxUtil.when(AuxUtil::generateUUIDv7).thenReturn(randomUUID);
 
       val sohtConnection =
           Soht2Connection.builder()
@@ -151,7 +152,7 @@ class ConnectionControllerTest {
             .sorting(
                 List.of(
                     HistoryOrder.builder()
-                        .field(HistorySorting.userName)
+                        .field(HistorySorting.username)
                         .direction(SortingDir.ASC)
                         .build(),
                     HistoryOrder.builder()
@@ -188,8 +189,8 @@ class ConnectionControllerTest {
     doReturn(page)
         .when(soht2HistoryService)
         .searchHistory(
-            anyCollection(),
-            anyCollection(),
+            any(),
+            any(),
             any(),
             any(),
             anyCollection(),
@@ -204,8 +205,8 @@ class ConnectionControllerTest {
         .perform(
             get("/api/connection/history")
                 .header(HttpHeaders.AUTHORIZATION, AUTH)
-                .queryParam("un", "user1,user2")
-                .queryParam("id", id1 + "," + id2)
+                .queryParam("un", "user*")
+                .queryParam("id", "*-4f*")
                 .queryParam("ch", "168.1")
                 .queryParam("th", ".com")
                 .queryParam("tp", "22,80,443")
@@ -213,7 +214,7 @@ class ConnectionControllerTest {
                 .queryParam("ob", "2025-08-07T22:00")
                 .queryParam("ca", "2025-08-07T21:30")
                 .queryParam("cb", "2025-08-07T22:30")
-                .queryParam("sort", "userName:asc,openedAt:desc")
+                .queryParam("sort", "username:asc,openedAt:desc")
                 .queryParam("pg", "1")
                 .queryParam("sz", "2")
                 .contentType(APPLICATION_JSON))
@@ -228,8 +229,8 @@ class ConnectionControllerTest {
 
     verify(soht2HistoryService)
         .searchHistory(
-            eq(Set.of("user1", "user2")),
-            eq(Set.of(id1, id2)),
+            eq("user*"),
+            eq("*-4f*"),
             eq("168.1"),
             eq(".com"),
             eq(Set.of(22, 80, 443)),
