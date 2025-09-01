@@ -199,16 +199,7 @@ class Soht2HistoryServiceTest {
     return Stream.of(
         Arguments.of("user1", "*-41*", null, null, Set.of(), null, null, null, null, List.of(2, 3)),
         Arguments.of(
-            null,
-            null,
-            "*0.0.1",
-            "example*",
-            Set.of(443),
-            null,
-            null,
-            null,
-            null,
-            List.of(5)),
+            null, null, "*0.0.1", "example*", Set.of(443), null, null, null, null, List.of(5)),
         Arguments.of(
             null,
             null,

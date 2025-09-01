@@ -172,40 +172,31 @@ public class ConnectionController {
       // <editor-fold desc="un, id, ch, th, tp, oa, ob, ca, cb, sort, pg, sz>
       @Parameter(description = "Get only history of specified substring in username")
           @RequestParam(name = "un", required = false)
-          @Nullable
-          String username,
+          @Nullable String username,
       @Parameter(description = "Get only history of specified substring in connection ID")
           @RequestParam(name = "id", required = false)
-          @Nullable
-          String connectionId,
+          @Nullable String connectionId,
       @Parameter(description = "Get only history of specified substring in client host")
           @RequestParam(name = "ch", required = false)
-          @Nullable
-          String clientHost,
+          @Nullable String clientHost,
       @Parameter(description = "Get only history of specified substring in target host")
           @RequestParam(name = "th", required = false)
-          @Nullable
-          String targetHost,
+          @Nullable String targetHost,
       @Parameter(description = "Get only history of specified target ports")
           @RequestParam(name = "tp", required = false)
-          @Nullable
-          Set<Integer> targetPorts,
+          @Nullable Set<Integer> targetPorts,
       @Parameter(description = "Get only connections opened after timestamp " + TS)
           @RequestParam(name = "oa", required = false)
-          @Nullable
-          LocalDateTime openedAfter,
+          @Nullable LocalDateTime openedAfter,
       @Parameter(description = "Get only connections opened before timestamp " + TS)
           @RequestParam(name = "ob", required = false)
-          @Nullable
-          LocalDateTime openedBefore,
+          @Nullable LocalDateTime openedBefore,
       @Parameter(description = "Get only connections closed after timestamp " + TS)
           @RequestParam(name = "ca", required = false)
-          @Nullable
-          LocalDateTime closedAfter,
+          @Nullable LocalDateTime closedAfter,
       @Parameter(description = "Get only connections closed before timestamp " + TS)
           @RequestParam(name = "cb", required = false)
-          @Nullable
-          LocalDateTime closedBefore,
+          @Nullable LocalDateTime closedBefore,
       @Parameter(
               description =
                   "Sorting criteria (supported fields: "
@@ -227,12 +218,10 @@ public class ConnectionController {
           List<String> sortBy,
       @Parameter(description = "0-based page number")
           @RequestParam(name = "pg", required = false, defaultValue = "0")
-          @Min(0)
-          int pageNumber,
+          @Min(0) int pageNumber,
       @Parameter(description = "Number of records per page (up to 1000)")
           @RequestParam(name = "sz", required = false, defaultValue = "10")
-          @Max(1000)
-          int pageSize,
+          @Max(1000) int pageSize,
       // </editor-fold>
       Authentication authentication) {
     return soht2HistoryService.searchHistory(
