@@ -151,22 +151,3 @@ Tips & Tricks
 * [SOHT2 Server](doc/tips-server.md)
 * [SOHT2 Client](doc/tips-client.md)
 
-TODO List
----------
-
-- [X] Implement support for client side compression
-- [X] Add proxy support for the client side
-- [X] Add removal of abandoned connections on the server side
-- [X] Update sequence diagram
-- [X] Update README.md with more details
-- [X] Finalize authentication and authorization mechanisms
-- [X] Add user controller for managing users
-- [X] Add OpenAPI documentation for the server API
-- [X] Add allowedTargets per user on the server side (`*:*`, `localhost:*`, `192.168.0.*:22`, etc.)
-- [X] Add username and password validation
-- [X] Add connection history on the server side
-- [X] Implement UI
-- [X] Add gathering transferred data size
-- [ ] Add more tests
-- [ ] Fix NTLM proxy
-- [ ] Add Kerberos proxy support
