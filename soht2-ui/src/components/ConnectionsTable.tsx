@@ -25,7 +25,7 @@ import {
   type Soht2Connection,
   type TableSorting,
 } from '../api/soht2Api';
-import { getDataGridStyle, formatBytes } from '../api/functions';
+import { getDataGridStyle, formatBytes, formatDateTime } from '../api/functions';
 import { ConnectionChangedEvent, dispatchAppErrorEvent } from '../api/appEvents';
 import { useEventListener, useInterval } from '../hooks';
 import HeaderMenuButton from '../controls/HeaderMenuButton';
@@ -198,7 +198,7 @@ export default function ConnectionsTable({
         type: 'number',
         headerName: 'Target Port',
         flex: 0.3,
-        minWidth: 120,
+        minWidth: 100,
         align: 'right',
         valueGetter: value => Number(value),
       },
@@ -206,10 +206,10 @@ export default function ConnectionsTable({
         field: 'openedAt',
         type: 'dateTime',
         headerName: 'Opened',
-        flex: 1,
-        minWidth: 180,
+        flex: 0.5,
+        minWidth: 150,
         valueGetter: value => new Date(value),
-        renderCell: params => (params.value ? new Date(params.value).toLocaleString() : ''),
+        renderCell: params => (params.value ? formatDateTime(params.value) : ''),
         filterOperators: getGridDateOperators(true).map(operator => ({
           ...operator,
           InputComponent: operator.InputComponent ? DateTimeGridFilter : undefined,

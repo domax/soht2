@@ -23,6 +23,7 @@ import {
 } from '../api/soht2Api';
 import {
   formatBytes,
+  formatDateTime,
   getDataGridStyle,
   getDateTimeFilter,
   getDateTimeFilterItem,
@@ -159,37 +160,60 @@ export default function HistoryTable({
         minWidth: 330,
         hideable: false,
         renderCell: params => <pre style={{ margin: 0 }}>{params.value ?? ''}</pre>,
+        filterOperators: stringOperators,
       },
-      { field: 'username', type: 'string', headerName: 'User', flex: 0.7, minWidth: 120 },
-      { field: 'clientHost', type: 'string', headerName: 'Client Host', flex: 0.7, minWidth: 120 },
-      { field: 'targetHost', type: 'string', headerName: 'Target Host', flex: 0.7, minWidth: 120 },
+      {
+        field: 'username',
+        type: 'string',
+        headerName: 'User',
+        flex: 0.7,
+        minWidth: 120,
+        filterOperators: stringOperators,
+      },
+      {
+        field: 'clientHost',
+        type: 'string',
+        headerName: 'Client Host',
+        flex: 0.7,
+        minWidth: 120,
+        filterOperators: stringOperators,
+      },
+      {
+        field: 'targetHost',
+        type: 'string',
+        headerName: 'Target Host',
+        flex: 0.7,
+        minWidth: 120,
+        filterOperators: stringOperators,
+      },
       {
         field: 'targetPort',
         type: 'number',
         headerName: 'Target Port',
         flex: 0.3,
-        minWidth: 120,
+        minWidth: 100,
         align: 'right',
         valueGetter: value => Number(value),
+        filterOperators: portOperators,
       },
       {
         field: 'openedAt',
         type: 'dateTime',
         headerName: 'Opened',
-        flex: 1,
-        minWidth: 180,
+        flex: 0.5,
+        minWidth: 150,
         valueGetter: value => new Date(value),
-        renderCell: params => (params.value ? new Date(params.value).toLocaleString() : ''),
+        renderCell: params => (params.value ? formatDateTime(params.value) : ''),
         filterOperators: dateTimeOperators,
       },
       {
         field: 'closedAt',
         type: 'dateTime',
         headerName: 'Closed',
-        flex: 1,
-        minWidth: 180,
+        flex: 0.5,
+        minWidth: 150,
         valueGetter: value => new Date(value),
-        renderCell: params => (params.value ? new Date(params.value).toLocaleString() : ''),
+        renderCell: params => (params.value ? formatDateTime(params.value) : ''),
         filterOperators: dateTimeOperators,
       },
       {
@@ -213,10 +237,7 @@ export default function HistoryTable({
         renderCell: params => formatBytes(params.value ?? 0),
       },
     ];
-    return cols
-      .filter(c => c.field !== 'username' || !regularUser)
-      .map(c => (c.type === 'string' ? { ...c, filterOperators: stringOperators } : c))
-      .map(c => (c.field === 'targetPort' ? { ...c, filterOperators: portOperators } : c));
+    return cols.filter(c => c.field !== 'username' || !regularUser);
   }, [regularUser]);
 
   return (

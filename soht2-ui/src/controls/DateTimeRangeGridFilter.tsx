@@ -43,7 +43,7 @@ export default function DateTimeRangeGridFilter(props: Readonly<GridFilterInputV
       <Box sx={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'end', gap: 1.5 }}>
         <DateTimePicker
           label="From"
-          format="MM/DD/YY hh:mm a"
+          format="MM/DD/YY hh:mm A"
           name="grid-filter-lower-date-time-picker"
           sx={sx}
           defaultValue={filterValue[0] ? dayjs(filterValue[0]) : undefined}
@@ -52,7 +52,7 @@ export default function DateTimeRangeGridFilter(props: Readonly<GridFilterInputV
         />
         <DateTimePicker
           label="To"
-          format="MM/DD/YY hh:mm a"
+          format="MM/DD/YY hh:mm A"
           name="grid-filter-upper-date-time-picker"
           sx={sx}
           defaultValue={filterValue[1] ? dayjs(filterValue[1]) : undefined}

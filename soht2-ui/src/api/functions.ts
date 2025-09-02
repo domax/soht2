@@ -17,6 +17,17 @@ function formatBytes(bytes: number, decimals: number = 2): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
+function formatDateTime(timestamp: Date | ISODateTime): string {
+  const d = timestamp instanceof Date ? timestamp : new Date(timestamp);
+  return d.toLocaleString(undefined, {
+    year: '2-digit',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+  });
+}
+
 function getDataGridStyle(theme: Theme): SxProps<Theme> {
   const { mode, grey } = theme.palette;
   return {
@@ -159,6 +170,7 @@ function getDateTimeFilterItem(
 
 export {
   formatBytes,
+  formatDateTime,
   getDataGridStyle,
   getDateTimeGridFilterStyle,
   getDateTimeOperators,

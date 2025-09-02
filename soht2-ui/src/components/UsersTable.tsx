@@ -7,6 +7,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import IconButton from '@mui/material/IconButton';
+import { useTheme } from '@mui/material/styles';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
@@ -21,7 +22,7 @@ import {
   type GridSortModel,
 } from '@mui/x-data-grid';
 import { type ApiError, type Soht2User, type TableSorting, UserApi } from '../api/soht2Api';
-import { getDataGridStyle } from '../api/functions';
+import { formatDateTime, getDataGridStyle } from '../api/functions';
 import { dispatchAppErrorEvent, UserChangedEvent } from '../api/appEvents';
 import { useEventListener } from '../hooks';
 import HeaderMenuButton from '../controls/HeaderMenuButton';
@@ -30,7 +31,6 @@ import EditUserDialog from './EditUserDialog';
 import DeleteUserDialog from './DeleteUserDialog';
 import DateTimeGridFilter from '../controls/DateTimeGridFilter';
 import { LoadingOverlay, NoRowsOverlay } from '../controls/dataGridOverlays';
-import { useTheme } from '@mui/material/styles';
 
 type UserSortColumn = 'username' | 'role' | 'createdAt';
 export type UsersSorting = TableSorting<UserSortColumn>;
@@ -160,10 +160,10 @@ export default function UsersTable({
         field: 'createdAt',
         type: 'dateTime',
         headerName: 'Created',
-        flex: 1,
-        minWidth: 180,
+        flex: 0.5,
+        minWidth: 150,
         valueGetter: value => new Date(value),
-        renderCell: params => (params.value ? new Date(params.value).toLocaleString() : ''),
+        renderCell: params => (params.value ? formatDateTime(params.value) : ''),
         filterOperators: getGridDateOperators(true).map(operator => ({
           ...operator,
           InputComponent: operator.InputComponent ? DateTimeGridFilter : undefined,
@@ -182,7 +182,7 @@ export default function UsersTable({
             <Box
               sx={{
                 display: 'flex',
-                flexWrap: 'wrap',
+                flexWrap: 'nowrap',
                 gap: 0.5,
                 alignItems: 'center',
                 paddingTop: 1.5,

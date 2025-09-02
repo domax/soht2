@@ -25,7 +25,7 @@ export default function DateTimeGridFilter(props: Readonly<GridFilterInputValueP
         <DateTimePicker
           label="Value"
           name="grid-filter-date-time-picker"
-          format="MM/DD/YY hh:mm a"
+          format="MM/DD/YY hh:mm A"
           sx={sx}
           defaultValue={item.value ? dayjs(item.value) : undefined}
           onChange={handleFilterChange}
