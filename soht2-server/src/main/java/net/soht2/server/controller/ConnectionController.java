@@ -46,6 +46,8 @@ public class ConnectionController {
 
   private static final String PATH_ID = "/{id}";
   private static final String TS = "(yyyy-MM-dd'T'HH:mm:ss)";
+  private static final String AST =
+      ". An asterisk (*) can be used as a wildcard on the start or/and the end of the string.";
 
   private final Soht2Service soht2Service;
   private final Soht2HistoryService soht2HistoryService;
@@ -170,16 +172,16 @@ public class ConnectionController {
   @GetMapping(path = "/history", produces = APPLICATION_JSON_VALUE)
   public HistoryPage searchHistory(
       // <editor-fold desc="un, id, ch, th, tp, oa, ob, ca, cb, sort, pg, sz>
-      @Parameter(description = "Get only history of specified substring in username")
+      @Parameter(description = "Get only history of specified substring in username" + AST)
           @RequestParam(name = "un", required = false)
           @Nullable String username,
-      @Parameter(description = "Get only history of specified substring in connection ID")
+      @Parameter(description = "Get only history of specified substring in connection ID" + AST)
           @RequestParam(name = "id", required = false)
           @Nullable String connectionId,
-      @Parameter(description = "Get only history of specified substring in client host")
+      @Parameter(description = "Get only history of specified substring in client host" + AST)
           @RequestParam(name = "ch", required = false)
           @Nullable String clientHost,
-      @Parameter(description = "Get only history of specified substring in target host")
+      @Parameter(description = "Get only history of specified substring in target host" + AST)
           @RequestParam(name = "th", required = false)
           @Nullable String targetHost,
       @Parameter(description = "Get only history of specified target ports")
