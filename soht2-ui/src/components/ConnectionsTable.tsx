@@ -69,19 +69,21 @@ export default function ConnectionsTable({
 }>) {
   const theme = useTheme();
 
-  const [connections, setConnections] = useState<Soht2Connection[] | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [connections, setConnections] = useState([] as Soht2Connection[]);
+  const [loading, setLoading] = useState(false);
   const [menuHeaderAnchor, setMenuHeaderAnchor] = useState<HTMLElement | null>(null);
   const [menuRowAnchor, setMenuRowAnchor] = useState<HTMLElement | null>(null);
   const [selectedConnection, setSelectedConnection] = useState<Soht2Connection | null>(null);
-  const [sorting, setSorting] = useState<ConnectionsSorting>(
+  const [sorting, setSorting] = useState(
     initSettings?.sorting ?? { column: null, direction: null }
   );
   const [visibility, setVisibility] = useState(initSettings?.visibility ?? {});
-  const [filters, setFilters] = useState<ConnectionFilter[]>(initSettings?.filters ?? []);
+  const [filters, setFilters] = useState(initSettings?.filters ?? []);
 
   const [autoRefresh, setAutoRefresh] = useState(initSettings?.autoRefresh ?? false);
   const [bypassCounter, setBypassCounter] = useState(0);
+
+  const [closeConnectionOpen, setCloseConnectionOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -135,7 +137,6 @@ export default function ConnectionsTable({
     setMenuRowAnchor(e.currentTarget);
   }, []);
   const handleMenuRowClose = useCallback(() => setMenuRowAnchor(null), []);
-  const [closeConnectionOpen, setCloseConnectionOpen] = useState(false);
   const handleCloseConnectionOpen = useCallback(() => {
     handleMenuRowClose();
     setCloseConnectionOpen(true);
@@ -176,7 +177,7 @@ export default function ConnectionsTable({
   }, []);
 
   const rows = useMemo(
-    () => (connections ?? []).map(c => ({ ...c, username: c.user?.username ?? '' })),
+    () => connections.map(c => ({ ...c, username: c.user?.username ?? '' })),
     [connections]
   );
 

@@ -52,8 +52,8 @@ export default function UsersTable({
 }: Readonly<{ initSettings?: UserSettings; onSettingsChange?: (s: UserSettings) => void }>) {
   const theme = useTheme();
 
-  const [users, setUsers] = useState<Soht2User[] | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [users, setUsers] = useState([] as Soht2User[]);
+  const [loading, setLoading] = useState(false);
   const [menuHeaderAnchor, setMenuHeaderAnchor] = useState<HTMLElement | null>(null);
   const [menuRowAnchor, setMenuRowAnchor] = useState<HTMLElement | null>(null);
   const [selectedUser, setSelectedUser] = useState<Soht2User | null>(null);
@@ -64,7 +64,7 @@ export default function UsersTable({
     initSettings?.sorting ?? { column: null, direction: null }
   );
   const [visibility, setVisibility] = useState(initSettings?.visibility ?? {});
-  const [filters, setFilters] = useState<UserFilter[]>(initSettings?.filters ?? []);
+  const [filters, setFilters] = useState(initSettings?.filters ?? []);
 
   const load = useCallback(async () => {
     try {
@@ -115,9 +115,9 @@ export default function UsersTable({
     if (onSettingsChange) onSettingsChange({ sorting, visibility, filters });
   }, [filters, onSettingsChange, sorting, visibility]);
 
-  const sortModel: GridSortModel = useMemo(() => {
+  const sortModel = useMemo(() => {
     if (!sorting.column || !sorting.direction) return [];
-    return [{ field: sorting.column, sort: sorting.direction }];
+    return [{ field: sorting.column, sort: sorting.direction }] as GridSortModel;
   }, [sorting]);
   const handleSortModelChange = useCallback((model: GridSortModel) => {
     if (!model || model.length === 0) {
@@ -144,7 +144,7 @@ export default function UsersTable({
     );
   }, []);
 
-  const rows = useMemo(() => (users ?? []).map(u => ({ ...u, id: u.username })), [users]);
+  const rows = useMemo(() => users.map(u => ({ ...u, id: u.username })), [users]);
 
   const columns: GridColDef[] = useMemo(
     () => [

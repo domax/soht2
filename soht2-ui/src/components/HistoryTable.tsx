@@ -94,20 +94,18 @@ export default function HistoryTable({
     const [c, d] = m[0].split(':');
     return [{ field: c as HistorySortColumn, sort: d.toLowerCase() as SortingDirLower }];
   });
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+  const [paginationModel, setPaginationModel] = useState({
     page: initSettings?.requestParams?.pg ?? 0,
     pageSize: initSettings?.requestParams?.sz ?? 50,
-  });
-  const [filterModel, setFilterModel] = useState<GridFilterModel>(() =>
+  } as GridPaginationModel);
+  const [filterModel, setFilterModel] = useState(() =>
     getGridFilterModel(initSettings?.requestParams)
   );
 
-  const [requestParams, setRequestParams] = useState<HistoryRequestParams>(
-    initSettings?.requestParams ?? {}
-  );
-  const [rows, setRows] = useState<Soht2Connection[]>([]);
+  const [requestParams, setRequestParams] = useState(initSettings?.requestParams ?? {});
+  const [rows, setRows] = useState([] as Soht2Connection[]);
   const [rowCount, setRowCount] = useState(0);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
 
   const load = useCallback(async (param: HistoryRequestParams) => {
     try {
