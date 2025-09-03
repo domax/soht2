@@ -38,12 +38,11 @@ function start() {
   # shellcheck disable=SC2086 # JAVA_OPTS contains spaces
   "${JAVA_CMD}" $JAVA_OPTS -jar "${APP_JAR}" >>"${LOG_FILE}" 2>&1 &
   sleep 1
-  if [[ -e "${PID_FILE}" ]]; then
-    echo "SUCCESS"
-  else
+  if [[ ! -e "${PID_FILE}" ]]; then
     echo "FAILURE"
     exit 2
   fi
+  echo "SUCCESS"
 }
 
 function stop() {
@@ -51,12 +50,11 @@ function stop() {
   echo -n "Stopping ${APP_NAME}... "
   kill "${APP_PID}" 2>/dev/null
   sleep 1
-  if [[ ! -e "${PID_FILE}" ]]; then
-    echo "SUCCESS"
-  else
+  if [[ -e "${PID_FILE}" ]]; then
     echo "FAILURE"
     exit 6
   fi
+  echo "SUCCESS"
 }
 
 function status() {
