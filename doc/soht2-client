@@ -39,9 +39,9 @@ function start() {
   "${JAVA_CMD}" $JAVA_OPTS -jar "${APP_JAR}" >>"${LOG_FILE}" 2>&1 &
   sleep 1
   if [[ -e "${PID_FILE}" ]]; then
-    echo "Success"
+    echo "SUCCESS"
   else
-    echo "Failure"
+    echo "FAILURE"
     exit 2
   fi
 }
@@ -52,9 +52,9 @@ function stop() {
   kill "${APP_PID}" 2>/dev/null
   sleep 1
   if [[ ! -e "${PID_FILE}" ]]; then
-    echo "Success"
+    echo "SUCCESS"
   else
-    echo "Failure"
+    echo "FAILURE"
     exit 6
   fi
 }
