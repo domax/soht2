@@ -58,7 +58,7 @@ public class Soht2ClientConfig {
   PollStrategy pollStrategy(Soht2ClientProperties properties) {
     val poll = properties.getPoll();
     return switch (poll.getStrategy()) {
-      case CONSTANT -> ConstantPollStrategy.builder().delay(poll.getInitialDelay()).build();
+      case CONSTANT -> ConstantPollStrategy.builder().delay(poll.getMaxDelay()).build();
       case LINEAR ->
           LinearPollStrategy.builder()
               .initialDelay(poll.getInitialDelay())

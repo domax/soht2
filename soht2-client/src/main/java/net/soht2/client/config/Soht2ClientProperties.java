@@ -100,11 +100,11 @@ public class Soht2ClientProperties implements InitializingBean {
     /** The strategy for polling the server for updates. */
     private PollStrategyType strategy = PollStrategyType.EXPONENT;
 
-    /** The initial delay before the first poll request. Used in all supported strategies. */
-    private Duration initialDelay = Duration.ofSeconds(1);
+    /** The initial delay before the first poll request. Used in LINEAR and EXPONENT strategies. */
+    private Duration initialDelay = Duration.ofMillis(100);
 
-    /** The maximum delay between poll requests. Used in LINEAR and EXPONENT strategies. */
-    private Duration maxDelay = Duration.ofSeconds(30);
+    /** The maximum delay between poll requests. Used in all supported strategies. */
+    private Duration maxDelay = Duration.ofSeconds(1);
 
     /** The factor by which the delay increases for EXPONENT strategy. */
     private int factor = 5;
@@ -148,7 +148,7 @@ public class Soht2ClientProperties implements InitializingBean {
   private Duration socketReadTimeout = Duration.ofMillis(100);
 
   /** The size of the read buffer for incoming data. */
-  private DataSize readBufferSize = DataSize.ofKilobytes(64);
+  private DataSize readBufferSize = DataSize.ofMegabytes(1);
 
   /** The list of host properties for connections to be established. */
   private Set<HostProperties> connections = new HashSet<>();

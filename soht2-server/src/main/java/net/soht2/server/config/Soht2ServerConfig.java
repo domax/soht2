@@ -46,7 +46,7 @@ public class Soht2ServerConfig implements InitializingBean {
   private String defaultAdminPassword;
 
   /** The size of the read buffer for incoming data. */
-  private DataSize readBufferSize = DataSize.ofKilobytes(64);
+  private DataSize readBufferSize = DataSize.ofMegabytes(1);
 
   /** The timeout for server socket read operations. */
   private Duration socketReadTimeout = Duration.ofMillis(100);
