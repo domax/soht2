@@ -16,6 +16,10 @@ build/
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
+.idea/codeInsightSettings.xml
+.idea/dictionaries/project.xml
+.idea/gradle.xml
+.idea/copilot.data.migration.*.xml
 
 ### Eclipse ###
 .apt_generated
@@ -51,9 +55,6 @@ HELP.md
 application-local.yaml
 /soht2-server/**/application-server.yaml
 /soht2-client/**/application-client.yaml
-/.idea/codeInsightSettings.xml
-/.idea/dictionaries/project.xml
-/.idea/gradle.xml
 /soht2-client/src/main/java/net/soht2/client/example/
 *.mv.db
 *.trace.db
