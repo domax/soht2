@@ -73,7 +73,7 @@ public class Soht2Service {
    */
   public void close(UUID id) {
     ofNullable(connections.get(id))
-        .map(peek(ci -> log.info("close: soht2={}", ci.soht2())))
+        .map(peek(sc -> log.info("close: soht2={}", sc.soht2())))
         .ifPresent(ServerConnection::close);
   }
 
@@ -88,7 +88,7 @@ public class Soht2Service {
   public Optional<Soht2Connection> get(UUID id, Authentication authentication) {
     log.info("get: id={}, authentication={}", id, authentication);
     return ofNullable(connections.get(id))
-        .map(c -> updateConnectionWithUser(c, authentication))
+        .map(sc -> updateConnectionWithUser(sc, authentication))
         .map(ServerConnection::soht2);
   }
 
@@ -144,17 +144,17 @@ public class Soht2Service {
         .filter(ServerConnection::isOpened, () -> gone("Connection " + id + " is closed"))
         .andThenTry(c -> c.lastActivity(LocalDateTime.now()))
         .mapTry(
-            connection -> {
+            sc -> {
               if (ofNullable(data).filter(v -> v.length > 0).isPresent()) {
                 val dataOut = compressorCache.apply(encoding).decompress(data);
-                connection.outputStream().write(dataOut);
-                connection.outputStream().flush();
-                connection.addBytesWritten(dataOut.length);
+                sc.outputStream().write(dataOut);
+                sc.outputStream().flush();
+                sc.addBytesWritten(dataOut.length);
               }
               val buffer = new byte[(int) soht2ServerConfig.getReadBufferSize().toBytes()];
-              val bufferLen = connection.inputStream().read(buffer);
+              val bufferLen = sc.inputStream().read(buffer);
               if (bufferLen <= 0) return EMPTY;
-              connection.addBytesRead(bufferLen);
+              sc.addBytesRead(bufferLen);
               return bufferLen >= buffer.length ? buffer : Arrays.copyOf(buffer, bufferLen);
             })
         .recover(SocketTimeoutException.class, e -> EMPTY)
@@ -181,15 +181,15 @@ public class Soht2Service {
     connections.values().stream()
         .filter(ServerConnection::isOpened)
         .peek(
-            c ->
+            sc ->
                 log.atDebug()
                     .setMessage("closeAbandonedConnections: id={}, age={}/{}")
-                    .addArgument(c.soht2()::id)
-                    .addArgument(c::activityAge)
-                    .addArgument(c::connectionAge)
+                    .addArgument(sc.soht2()::id)
+                    .addArgument(sc::activityAge)
+                    .addArgument(sc::connectionAge)
                     .log())
-        .filter(c -> c.activityAge().compareTo(ttl) >= 0)
-        .peek(c -> log.warn("closeAbandonedConnections: soht2={}", c.soht2()))
+        .filter(sc -> sc.activityAge().compareTo(ttl) >= 0)
+        .peek(sc -> log.warn("closeAbandonedConnections: soht2={}", sc.soht2()))
         .forEach(ServerConnection::close);
   }
 
