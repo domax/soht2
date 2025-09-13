@@ -148,25 +148,29 @@ public class Soht2HistoryService {
             .map(cu -> cu.isAdmin() ? ofNullable(userName).orElse("") : cu.name())
             .orElseThrow(() -> forbidden("Search requires authentication"));
 
+    val unLike = asLikeParam(un);
+    val connectionIdLike = asLikeParam(connectionId);
+    val clientHostLike = asLikeParam(clientHost);
+    val targetHostLike = asLikeParam(targetHost);
     val total =
         historyEntityRepository.countAll(
-            asLikeParam(un),
-            asLikeParam(connectionId),
-            asLikeParam(clientHost),
-            asLikeParam(targetHost),
+            unLike,
+            connectionIdLike,
+            clientHostLike,
+            targetHostLike,
             targetPorts,
             openedAfter,
             openedBefore,
             closedAfter,
             closedBefore);
     val data =
-        total > 0
+        total > 0 && (long) paging.pageNumber() * paging.pageSize() < total
             ? historyEntityRepository
                 .findAll(
-                    asLikeParam(un),
-                    asLikeParam(connectionId),
-                    asLikeParam(clientHost),
-                    asLikeParam(targetHost),
+                    unLike,
+                    connectionIdLike,
+                    clientHostLike,
+                    targetHostLike,
                     targetPorts,
                     openedAfter,
                     openedBefore,
