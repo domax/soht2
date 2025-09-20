@@ -126,13 +126,13 @@ export default function HistoryTable({
     const sort = si?.field && si?.sort ? [`${si.field}:${si.sort}`] : undefined;
     const pg = paginationModel.page;
     const sz = paginationModel.pageSize;
-    setRequestParams(p => ({ ...p, sort, pg, sz }));
+    setRequestParams(params => ({ ...params, sort, pg, sz }));
   }, [paginationModel.page, paginationModel.pageSize, sortModel]);
 
   const handleFilterModel = useCallback(() => {
-    setRequestParams(op => {
-      const np = { ...op, ...getHistoryFilters(filterModel) };
-      return JSON.stringify(op) === JSON.stringify(np) ? op : np;
+    setRequestParams(params => {
+      const np = { ...params, ...getHistoryFilters(filterModel) };
+      return JSON.stringify(params) === JSON.stringify(np) ? params : np;
     });
   }, [filterModel]);
   useDebounce(700, handleFilterModel, [handleFilterModel]);
@@ -157,7 +157,7 @@ export default function HistoryTable({
         flex: 1.5,
         minWidth: 330,
         hideable: false,
-        renderCell: params => <pre style={{ margin: 0 }}>{params.value ?? ''}</pre>,
+        renderCell: ({ value }) => <pre style={{ margin: 0 }}>{value ?? ''}</pre>,
         filterOperators: stringOperators,
       },
       {
@@ -201,7 +201,7 @@ export default function HistoryTable({
         flex: 0.5,
         minWidth: 150,
         valueGetter: value => new Date(value),
-        renderCell: params => (params.value ? formatDateTime(params.value) : ''),
+        renderCell: ({ value }) => (value ? formatDateTime(value) : ''),
         filterOperators: dateTimeOperators,
       },
       {
@@ -211,7 +211,7 @@ export default function HistoryTable({
         flex: 0.5,
         minWidth: 150,
         valueGetter: value => new Date(value),
-        renderCell: params => (params.value ? formatDateTime(params.value) : ''),
+        renderCell: ({ value }) => (value ? formatDateTime(value) : ''),
         filterOperators: dateTimeOperators,
       },
       {
@@ -222,7 +222,7 @@ export default function HistoryTable({
         flex: 0.5,
         minWidth: 120,
         valueGetter: value => Number(value),
-        renderCell: params => formatBytes(params.value ?? 0),
+        renderCell: ({ value }) => formatBytes(value ?? 0),
       },
       {
         field: 'bytesWritten',
@@ -232,11 +232,13 @@ export default function HistoryTable({
         flex: 0.5,
         minWidth: 120,
         valueGetter: value => Number(value),
-        renderCell: params => formatBytes(params.value ?? 0),
+        renderCell: ({ value }) => formatBytes(value ?? 0),
       },
     ];
     return cols.filter(c => c.field !== 'username' || !regularUser);
   }, [regularUser]);
+
+  const sx = useMemo(() => getDataGridStyle(theme), [theme]);
 
   return (
     <Paper sx={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -262,7 +264,7 @@ export default function HistoryTable({
           disableRowSelectionOnClick
           slots={{ noRowsOverlay: NoRowsOverlay, loadingOverlay: LoadingOverlay }}
           slotProps={{ noRowsOverlay: { message: 'No history records found.' } }}
-          sx={{ ...getDataGridStyle(theme) }}
+          sx={sx}
         />
       </Box>
     </Paper>

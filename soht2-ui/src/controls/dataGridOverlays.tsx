@@ -1,10 +1,10 @@
 /* SOHT2 © Licensed under MIT 2025. */
+import type { ReactNode } from 'react';
 import type { NoRowsOverlayPropsOverrides } from '@mui/x-data-grid';
 import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
-import type { ReactNode } from 'react';
 
 declare module '@mui/x-data-grid' {
   interface NoRowsOverlayPropsOverrides {
@@ -28,8 +28,7 @@ function OverlayBase({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-function NoRowsOverlay(props: Readonly<NoRowsOverlayPropsOverrides>) {
-  const { message } = props;
+function NoRowsOverlay({ message }: Readonly<NoRowsOverlayPropsOverrides>) {
   return (
     <OverlayBase>
       <Alert severity="info">{message ?? 'No records available to display.'}</Alert>

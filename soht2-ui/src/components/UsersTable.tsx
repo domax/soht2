@@ -52,7 +52,7 @@ export default function UsersTable({
 }: Readonly<{ initSettings?: UserSettings; onSettingsChange?: (s: UserSettings) => void }>) {
   const theme = useTheme();
 
-  const [users, setUsers] = useState([] as Soht2User[]);
+  const [users, setUsers] = useState<Soht2User[]>([]);
   const [loading, setLoading] = useState(false);
   const [menuHeaderAnchor, setMenuHeaderAnchor] = useState<HTMLElement | null>(null);
   const [menuRowAnchor, setMenuRowAnchor] = useState<HTMLElement | null>(null);
@@ -80,9 +80,10 @@ export default function UsersTable({
   useEffect(() => void load(), [load]);
   useEventListener(UserChangedEvent.TYPE, () => void load());
 
-  const handleMenuHeaderOpen = useCallback((e: MouseEvent<HTMLElement>) => {
-    setMenuHeaderAnchor(e.currentTarget);
-  }, []);
+  const handleMenuHeaderOpen = useCallback(
+    (e: MouseEvent<HTMLElement>) => setMenuHeaderAnchor(e.currentTarget),
+    []
+  );
   const handleMenuHeaderClose = useCallback(() => setMenuHeaderAnchor(null), []);
   const handleManualRefresh = useCallback(() => {
     handleMenuHeaderClose();
@@ -115,19 +116,18 @@ export default function UsersTable({
     if (onSettingsChange) onSettingsChange({ sorting, visibility, filters });
   }, [filters, onSettingsChange, sorting, visibility]);
 
-  const sortModel = useMemo(() => {
-    if (!sorting.column || !sorting.direction) return [];
-    return [{ field: sorting.column, sort: sorting.direction }] as GridSortModel;
-  }, [sorting]);
+  const sortModel = useMemo(
+    () =>
+      sorting.column && sorting.direction
+        ? ([{ field: sorting.column, sort: sorting.direction }] as GridSortModel)
+        : [],
+    [sorting]
+  );
   const handleSortModelChange = useCallback((model: GridSortModel) => {
-    if (!model || model.length === 0) {
-      setSorting({ column: null, direction: null });
-      return;
-    }
-    const m = model[0];
+    const { field, sort } = model?.length > 0 ? model[0] : { field: null, sort: null };
     setSorting({
-      column: m.field as UserSortColumn,
-      direction: (m.sort ?? null) as UsersSorting['direction'],
+      column: field as UserSortColumn,
+      direction: (sort ?? null) as UsersSorting['direction'],
     });
   }, []);
   const handleColumnVisibilityModelChange = useCallback(
@@ -136,10 +136,10 @@ export default function UsersTable({
   );
   const handleFilterModelChange = useCallback((m: GridFilterModel) => {
     setFilters(
-      (m?.items ?? []).map<UserFilter>(v => ({
-        field: v.field as UserSortColumn,
-        operator: v.operator,
-        value: v.value,
+      (m?.items ?? []).map<UserFilter>(({ field, operator, value }) => ({
+        field: field as UserSortColumn,
+        operator,
+        value,
       }))
     );
   }, []);
@@ -154,7 +154,7 @@ export default function UsersTable({
         headerName: 'Role',
         flex: 0.7,
         minWidth: 120,
-        renderCell: params => String(params.value ?? ''),
+        renderCell: ({ value }) => String(value ?? ''),
       },
       {
         field: 'createdAt',
@@ -163,7 +163,7 @@ export default function UsersTable({
         flex: 0.5,
         minWidth: 150,
         valueGetter: value => new Date(value),
-        renderCell: params => (params.value ? formatDateTime(params.value) : ''),
+        renderCell: ({ value }) => (value ? formatDateTime(value) : ''),
         filterOperators: getGridDateOperators(true).map(operator => ({
           ...operator,
           InputComponent: operator.InputComponent ? DateTimeGridFilter : undefined,
@@ -176,8 +176,8 @@ export default function UsersTable({
         minWidth: 220,
         sortable: false,
         filterable: false,
-        renderCell: params => {
-          const targets = (params.value as string[] | undefined) ?? [];
+        renderCell: ({ value }) => {
+          const targets = (value as string[] | undefined) ?? [];
           return (
             <Box
               sx={{
@@ -210,13 +210,13 @@ export default function UsersTable({
             handleMenuHeaderOpen={handleMenuHeaderOpen}
           />
         ),
-        renderCell: params => (
+        renderCell: ({ row }) => (
           <IconButton
             size="small"
-            aria-label={`actions-${(params.row as Soht2User).username}`}
+            aria-label={`actions-${(row as Soht2User).username}`}
             aria-controls={menuRowAnchor ? 'user-row-menu' : undefined}
             aria-haspopup="true"
-            onClick={e => handleMenuRowOpen(e, params.row as Soht2User)}>
+            onClick={e => handleMenuRowOpen(e, row as Soht2User)}>
             <MoreVertIcon />
           </IconButton>
         ),
@@ -224,6 +224,8 @@ export default function UsersTable({
     ],
     [handleMenuHeaderOpen, handleMenuRowOpen, menuHeaderAnchor, menuRowAnchor]
   );
+
+  const sx = useMemo(() => getDataGridStyle(theme), [theme]);
 
   return (
     <>
@@ -246,7 +248,7 @@ export default function UsersTable({
             paginationModel={{ page: 0, pageSize: rows.length }}
             slots={{ noRowsOverlay: NoRowsOverlay, loadingOverlay: LoadingOverlay }}
             slotProps={{ noRowsOverlay: { message: 'No user records available to display.' } }}
-            sx={{ ...getDataGridStyle(theme) }}
+            sx={sx}
           />
         </Box>
       </Paper>

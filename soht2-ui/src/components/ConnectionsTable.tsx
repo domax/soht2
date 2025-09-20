@@ -168,10 +168,10 @@ export default function ConnectionsTable({
   );
   const handleFilterModelChange = useCallback((m: GridFilterModel) => {
     setFilters(
-      (m?.items ?? []).map<ConnectionFilter>(v => ({
-        field: v.field as ConnectionSortColumn,
-        operator: v.operator,
-        value: v.value,
+      (m?.items ?? []).map<ConnectionFilter>(({ field, operator, value }) => ({
+        field: field as ConnectionSortColumn,
+        operator,
+        value,
       }))
     );
   }, []);
@@ -189,7 +189,7 @@ export default function ConnectionsTable({
         flex: 1.5,
         minWidth: 330,
         hideable: false,
-        renderCell: params => <pre style={{ margin: 0 }}>{params.value ?? ''}</pre>,
+        renderCell: ({ value }) => <pre style={{ margin: 0 }}>{value ?? ''}</pre>,
       },
       { field: 'username', headerName: 'User', flex: 0.7, minWidth: 120 },
       { field: 'clientHost', headerName: 'Client Host', flex: 0.7, minWidth: 120 },
@@ -210,7 +210,7 @@ export default function ConnectionsTable({
         flex: 0.5,
         minWidth: 150,
         valueGetter: value => new Date(value),
-        renderCell: params => (params.value ? formatDateTime(params.value) : ''),
+        renderCell: ({ value }) => (value ? formatDateTime(value) : ''),
         filterOperators: getGridDateOperators(true).map(operator => ({
           ...operator,
           InputComponent: operator.InputComponent ? DateTimeGridFilter : undefined,
@@ -223,7 +223,7 @@ export default function ConnectionsTable({
         flex: 0.5,
         minWidth: 120,
         valueGetter: value => Number(value),
-        renderCell: params => formatBytes(params.value ?? 0),
+        renderCell: ({ value }) => formatBytes(value ?? 0),
       },
       {
         field: 'bytesWritten',
@@ -232,7 +232,7 @@ export default function ConnectionsTable({
         flex: 0.5,
         minWidth: 120,
         valueGetter: value => Number(value),
-        renderCell: params => formatBytes(params.value ?? 0),
+        renderCell: ({ value }) => formatBytes(value ?? 0),
       },
       {
         field: '__rowActions',
@@ -250,13 +250,13 @@ export default function ConnectionsTable({
             handleMenuHeaderOpen={handleMenuHeaderOpen}
           />
         ),
-        renderCell: params => (
+        renderCell: ({ row }) => (
           <IconButton
             size="small"
-            aria-label={`actions-${(params.row as Soht2Connection).id}`}
+            aria-label={`actions-${(row as Soht2Connection).id}`}
             aria-controls={menuRowAnchor ? 'user-row-menu' : undefined}
             aria-haspopup="true"
-            onClick={e => handleMenuRowOpen(e, params.row as Soht2Connection)}>
+            onClick={e => handleMenuRowOpen(e, row as Soht2Connection)}>
             <MoreVertIcon />
           </IconButton>
         ),
@@ -264,6 +264,8 @@ export default function ConnectionsTable({
     ],
     [handleMenuHeaderOpen, handleMenuRowOpen, menuHeaderAnchor, menuRowAnchor]
   );
+
+  const sx = useMemo(() => getDataGridStyle(theme), [theme]);
 
   return (
     <>
@@ -292,7 +294,7 @@ export default function ConnectionsTable({
             slotProps={{
               noRowsOverlay: { message: 'No active connections available to display.' },
             }}
-            sx={{ ...getDataGridStyle(theme) }}
+            sx={sx}
           />
         </Box>
       </Paper>

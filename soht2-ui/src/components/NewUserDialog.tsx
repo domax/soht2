@@ -43,12 +43,7 @@ export default function NewUserDialog({
     if (!form.username || !form.password) return;
     setSubmitting(true);
     try {
-      await UserApi.createUser({
-        username: form.username,
-        password: form.password,
-        role: form.role,
-        allowedTargets: form.allowedTargets,
-      });
+      await UserApi.createUser(form);
       dispatchUserChangedEvent('create', form.username);
       onClose();
     } catch (e) {
@@ -56,7 +51,7 @@ export default function NewUserDialog({
     } finally {
       setSubmitting(false);
     }
-  }, [form.username, form.password, form.role, form.allowedTargets, onClose]);
+  }, [form, onClose]);
 
   const handleChangeUsername = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => setForm(prev => ({ ...prev, username: e.target.value })),

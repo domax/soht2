@@ -1,17 +1,19 @@
 /* SOHT2 © Licensed under MIT 2025. */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { type GridFilterInputValueProps } from '@mui/x-data-grid';
+import type { GridFilterInputValueProps } from '@mui/x-data-grid';
 import Box from '@mui/material/Box';
+import dayjs from 'dayjs';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { LocalizationProvider } from '@mui/x-date-pickers';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import type { PickerValue } from '@mui/x-date-pickers/internals';
-import dayjs from 'dayjs';
 import { getDateTimeGridFilterStyle } from '../api/functions';
 
-export default function DateTimeRangeGridFilter(props: Readonly<GridFilterInputValueProps>) {
-  const { item, applyValue, focusElementRef = null } = props;
-
+export default function DateTimeRangeGridFilter({
+  item,
+  applyValue,
+  focusElementRef = null,
+}: Readonly<GridFilterInputValueProps>) {
   const [filterValue, setFilterValue] = useState<[Date | undefined, Date | undefined]>(
     item.value ?? []
   );

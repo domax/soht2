@@ -45,16 +45,14 @@ export default function MultiInputField<T>({
       setValueError('Value is already added.');
       return;
     }
-    const newValues = [...values, value];
-    if (onChange) onChange(newValues);
+    if (onChange) onChange([...values, value]);
     setValueInput('');
     setValueError(null);
   }, [valueInput, valueInputPredicate, stringToValue, values, onChange, valueErrorHint]);
 
   const handleRemoveValue = useCallback(
     (t: T) => {
-      const newValues = values.filter(x => x !== t);
-      if (onChange) onChange(newValues);
+      if (onChange) onChange(values.filter(x => x !== t));
     },
     [onChange, values]
   );
