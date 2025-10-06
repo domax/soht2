@@ -68,7 +68,7 @@ export default function DeleteUserDialog({
             label="Remove history"
           />
         </Box>
-        {(user?.role || '').toUpperCase() === 'ADMIN' && (
+        {(user?.role ?? '').toUpperCase() === 'ADMIN' && (
           <Box>
             <FormControlLabel
               control={<Checkbox checked={deleteForce} onChange={handleChangeForce} />}

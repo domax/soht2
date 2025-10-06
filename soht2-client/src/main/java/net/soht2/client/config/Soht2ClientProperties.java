@@ -8,6 +8,7 @@ import java.util.Set;
 import lombok.Data;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import net.soht2.common.compress.CompressionType;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.Assert;
@@ -51,21 +52,6 @@ public class Soht2ClientProperties implements InitializingBean {
     LINEAR,
     /** Polling strategy that increases the delay exponentially with each request. */
     EXPONENT
-  }
-
-  /**
-   * Defines the type of compression applied to requests.
-   *
-   * <p>This enum specifies the different types of compression that can be applied to requests sent
-   * to the SOHT2 server.
-   */
-  public enum CompressionType {
-    /** No compression applied to requests. */
-    NONE,
-    /** GZIP compression applied to requests. */
-    GZIP,
-    /** DEFLATE compression applied to requests. */
-    DEFLATE
   }
 
   /**

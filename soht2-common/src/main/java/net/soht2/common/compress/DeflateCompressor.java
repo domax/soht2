@@ -13,7 +13,7 @@ public class DeflateCompressor extends BaseIOStreamCompressor {
 
   @Override
   public String getAcceptEncoding() {
-    return "deflate";
+    return CompressionType.DEFLATE.name().toLowerCase();
   }
 
   @Override

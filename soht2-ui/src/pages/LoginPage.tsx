@@ -23,7 +23,7 @@ export default function LoginPage({ onLogin }: Readonly<{ onLogin: (user: Soht2U
       httpClient.setBasicAuth(username, password);
       const user = await UserApi.getSelf();
       onLogin(user);
-      navigate((user.role || '').toUpperCase() === 'ADMIN' ? '/admin' : '/user', { replace: true });
+      navigate((user.role ?? '').toUpperCase() === 'ADMIN' ? '/admin' : '/user', { replace: true });
     } catch (e) {
       httpClient.clearAuth();
       dispatchAppErrorEvent(e as ApiError);

@@ -23,7 +23,7 @@ export default function EditUserDialog({
   onClose,
 }: Readonly<{ open: boolean; user: Soht2User | null; onClose: () => void }>) {
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>(user?.role || 'USER');
+  const [role, setRole] = useState<UserRole>(user?.role ?? 'USER');
   const [allowedTargets, setAllowedTargets] = useState<string[]>(user?.allowedTargets ?? []);
   const [submitting, setSubmitting] = useState(false);
 
@@ -31,7 +31,7 @@ export default function EditUserDialog({
     // Reset when user changes/open toggles
     if (open) {
       setPassword('');
-      setRole(user?.role || 'USER');
+      setRole(user?.role ?? 'USER');
       setAllowedTargets(user?.allowedTargets ?? []);
     }
   }, [open, user?.allowedTargets, user?.role]);
@@ -59,10 +59,9 @@ export default function EditUserDialog({
     }
   }, [user, password, role, allowedTargets, onClose]);
 
-  const handleClose = useCallback(
-    () => (!submitting ? onClose() : undefined),
-    [onClose, submitting]
-  );
+  const handleClose = useCallback(() => {
+    if (!submitting) onClose();
+  }, [onClose, submitting]);
 
   const handleChangeRole = useCallback(
     (e: SelectChangeEvent<UserRole>) => setRole(e.target.value as UserRole),
@@ -91,7 +90,7 @@ export default function EditUserDialog({
             <Select
               labelId="role-label-edit"
               label="Role"
-              value={role || 'USER'}
+              value={role ?? 'USER'}
               onChange={handleChangeRole}>
               <MenuItem value="USER">USER</MenuItem>
               <MenuItem value="ADMIN">ADMIN</MenuItem>

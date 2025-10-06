@@ -12,7 +12,7 @@ const LazyUserPage = lazy(() => import('./pages/UserPage'));
 
 export default function App() {
   const [user, setUser] = useState<Soht2User | null>(null);
-  const isAdmin = useMemo(() => (user?.role || '').toUpperCase() === 'ADMIN', [user]);
+  const isAdmin = useMemo(() => (user?.role ?? '').toUpperCase() === 'ADMIN', [user]);
 
   const handleLogin = useCallback((u: Soht2User) => setUser(u), []);
 

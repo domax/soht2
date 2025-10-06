@@ -7,7 +7,7 @@ export type ThemeMode = 'light' | 'dark';
 const STORAGE_KEY = 'soht2-ui.theme';
 
 function getInitialMode(): ThemeMode {
-  const saved = (localStorage.getItem(STORAGE_KEY) || '').toLowerCase();
+  const saved = (localStorage.getItem(STORAGE_KEY) ?? '').toLowerCase();
   if (saved === 'light' || saved === 'dark') return saved;
   const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
   return prefersDark ? 'dark' : 'light';

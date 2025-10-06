@@ -137,7 +137,7 @@ public class Soht2Client {
 
   private HttpEntity<byte[]> requestExchangeEntity(byte[] body) {
     val compression = soht2ClientProperties.getCompression();
-    val compressor = compressorCache.apply(compression.getType().name().toLowerCase());
+    val compressor = compressorCache.apply(compression.getType().name());
     val headers = new HttpHeaders();
     headers.set(ACCEPT_ENCODING, compressor.getAcceptEncoding());
     if (body.length >= compression.getMinRequestSize().toBytes()) {

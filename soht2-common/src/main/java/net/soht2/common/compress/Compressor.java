@@ -4,6 +4,7 @@ package net.soht2.common.compress;
 import static java.util.Optional.ofNullable;
 
 import io.vavr.Function1;
+import io.vavr.control.Try;
 
 /**
  * Compressor interface defines methods for compressing and decompressing byte arrays.
@@ -18,9 +19,12 @@ public interface Compressor {
   Function1<String, Compressor> compressorCache =
       Function1.<String, Compressor>of(
               encoding ->
-                  switch (ofNullable(encoding).map(String::toLowerCase).orElse("")) {
-                    case "gzip" -> new GZIPCompressor();
-                    case "deflate" -> new DeflateCompressor();
+                  switch (ofNullable(encoding)
+                      .map(String::toUpperCase)
+                      .map(v -> Try.of(() -> CompressionType.valueOf(v)).getOrNull())
+                      .orElse(CompressionType.NONE)) {
+                    case GZIP -> new GZIPCompressor();
+                    case DEFLATE -> new DeflateCompressor();
                     default -> new IdentityCompressor();
                   })
           .memoized();

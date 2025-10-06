@@ -13,7 +13,7 @@ public class GZIPCompressor extends BaseIOStreamCompressor {
 
   @Override
   public String getAcceptEncoding() {
-    return "gzip";
+    return CompressionType.GZIP.name().toLowerCase();
   }
 
   @Override

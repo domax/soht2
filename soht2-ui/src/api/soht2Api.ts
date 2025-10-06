@@ -139,7 +139,7 @@ class HttpClient {
   }
 
   private makeUrl(path: string, query?: Query): string /* NOSONAR (typescript:S3776) */ {
-    const url = new URL((this.baseUrl || '') + path, window.location.origin);
+    const url = new URL((this.baseUrl ?? '') + path, window.location.origin);
     if (query) {
       for (const [k, v] of Object.entries(query)) {
         if (Array.isArray(v)) {

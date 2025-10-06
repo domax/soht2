@@ -58,8 +58,9 @@ class CompressorTest {
 
   static Stream<Arguments> compressor_OK_Args() {
     return Stream.of(
-        Arguments.of(Compressor.compressorCache.apply("gzip")),
-        Arguments.of(Compressor.compressorCache.apply("deflate")),
-        Arguments.of(Compressor.compressorCache.apply("identity")));
+        Arguments.of(Compressor.compressorCache.apply("GZip")),
+        Arguments.of(Compressor.compressorCache.apply("Deflate")),
+        Arguments.of(Compressor.compressorCache.apply("Identity")),
+        Arguments.of(Compressor.compressorCache.apply("None")));
   }
 }
