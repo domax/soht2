@@ -4,4 +4,4 @@ import useEventListener from './useEventListener';
 import useDebounce from './useDebounce';
 import useTimeout from './useTimeout';
 
-export { useInterval, useEventListener, useDebounce, useTimeout };
+export { useInterval, useEventListener, useDebounce, useTimeout }; // NOSONAR typescript:S7763

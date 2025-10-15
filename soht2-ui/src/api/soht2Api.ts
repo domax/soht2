@@ -3,7 +3,7 @@ export type UUID = string; // NOSONAR typescript:S6564
 export type ISODateTime = string; // NOSONAR typescript:S6564
 export type UserRole = 'USER' | 'ADMIN';
 
-export type WindowProps = typeof window & { __CONTEXT_PATH__: string; __SWAGGER_URL__: string };
+export type WindowProps = typeof globalThis & { __CONTEXT_PATH__: string; __SWAGGER_URL__: string };
 
 // ===== Common DTOs =====
 export interface Soht2User {
@@ -131,15 +131,15 @@ class HttpClient {
     this.authHeader = null;
   }
 
-  private headers(contentType?: string, extra?: HeadersInit): HeadersInit {
+  private headers(contentType?: string, extra: HeadersInit = {}): HeadersInit {
     const headers: Record<string, string> = {};
     if (contentType) headers['Content-Type'] = contentType;
     if (this.authHeader) headers['Authorization'] = this.authHeader;
-    return { ...headers, ...(extra ?? {}) };
+    return { ...headers, ...extra };
   }
 
   private makeUrl(path: string, query?: Query): string /* NOSONAR (typescript:S3776) */ {
-    const url = new URL((this.baseUrl ?? '') + path, window.location.origin);
+    const url = new URL((this.baseUrl ?? '') + path, globalThis.location.origin);
     if (query) {
       for (const [k, v] of Object.entries(query)) {
         if (Array.isArray(v)) {
@@ -151,7 +151,7 @@ class HttpClient {
         }
       }
     }
-    return url.toString().replace(window.location.origin, '');
+    return url.toString().replace(globalThis.location.origin, '');
   }
 
   async getJson<T>(path: string, query?: Query): Promise<T> {
@@ -164,7 +164,7 @@ class HttpClient {
     const res = await fetch(this.makeUrl(path, query), {
       method: 'POST',
       headers: this.headers('application/json'),
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
     if (!res.ok) throw await this.toError(res);
     return (await res.json()) as T;
@@ -174,7 +174,7 @@ class HttpClient {
     const res = await fetch(this.makeUrl(path, query), {
       method: 'PUT',
       headers: this.headers('application/json'),
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
     if (!res.ok) throw await this.toError(res);
     return (await res.json()) as T;
@@ -202,7 +202,7 @@ class HttpClient {
 // Export a singleton client with defaults; consumers may create their own.
 const apiOrigin = import.meta.env.VITE_APP_API_ORIGIN;
 export const httpClient = new HttpClient({
-  baseUrl: `${apiOrigin.length > 0 ? apiOrigin : (window as WindowProps).__CONTEXT_PATH__}`,
+  baseUrl: `${apiOrigin.length > 0 ? apiOrigin : (globalThis as WindowProps).__CONTEXT_PATH__}`,
 });
 
 // ===== UserController API =====

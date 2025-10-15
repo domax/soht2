@@ -12,13 +12,14 @@ const LazyUserPage = lazy(() => import('./pages/UserPage'));
 
 export default function App() {
   const [user, setUser] = useState<Soht2User | null>(null);
+  const basename = useMemo(() => (globalThis as WindowProps).__CONTEXT_PATH__ ?? '/', []);
   const isAdmin = useMemo(() => (user?.role ?? '').toUpperCase() === 'ADMIN', [user]);
 
   const handleLogin = useCallback((u: Soht2User) => setUser(u), []);
 
   return (
     <ThemeModeProvider>
-      <BrowserRouter basename={(window as WindowProps).__CONTEXT_PATH__ ?? '/'}>
+      <BrowserRouter basename={basename}>
         <Routes>
           <Route
             path="/"

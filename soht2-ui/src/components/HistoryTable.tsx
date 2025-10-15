@@ -191,7 +191,7 @@ export default function HistoryTable({
         flex: 0.3,
         minWidth: 100,
         align: 'right',
-        valueGetter: value => Number(value),
+        valueGetter: Number,
         filterOperators: portOperators,
       },
       {
@@ -221,7 +221,7 @@ export default function HistoryTable({
         filterable: false,
         flex: 0.5,
         minWidth: 120,
-        valueGetter: value => Number(value),
+        valueGetter: Number,
         renderCell: ({ value }) => formatBytes(value ?? 0),
       },
       {
@@ -231,7 +231,7 @@ export default function HistoryTable({
         filterable: false,
         flex: 0.5,
         minWidth: 120,
-        valueGetter: value => Number(value),
+        valueGetter: Number,
         renderCell: ({ value }) => formatBytes(value ?? 0),
       },
     ];

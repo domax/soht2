@@ -89,7 +89,7 @@ export default function MultiInputField<T>({
         slotProps={{
           input: {
             readOnly: readonly,
-            endAdornment: !readonly ? (
+            endAdornment: readonly ? undefined : (
               <InputAdornment position="end">
                 <IconButton
                   aria-label={'Add value'}
@@ -99,7 +99,7 @@ export default function MultiInputField<T>({
                   <AddCircleIcon />
                 </IconButton>
               </InputAdornment>
-            ) : undefined,
+            ),
           },
         }}
       />
@@ -111,7 +111,7 @@ export default function MultiInputField<T>({
               <Chip
                 key={s}
                 label={s}
-                onDelete={!readonly ? () => handleRemoveValue(v) : undefined}
+                onDelete={readonly ? undefined : () => handleRemoveValue(v)}
               />
             );
           })}

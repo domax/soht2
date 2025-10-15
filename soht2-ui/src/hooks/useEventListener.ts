@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 export default function useEventListener<E extends Event>(
   eventType: string,
   callback: (e: E) => void,
-  element: EventTarget = window
+  element: EventTarget = globalThis
 ): void {
   const callbackRef = useRef(callback as EventListener);
 

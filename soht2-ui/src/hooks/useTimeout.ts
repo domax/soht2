@@ -9,7 +9,7 @@ export default function useTimeout(
 
   const cancel = useCallback(() => {
     if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
+      globalThis.clearTimeout(timeoutRef.current);
       timeoutRef.current = undefined;
     }
   }, []);
@@ -21,7 +21,7 @@ export default function useTimeout(
 
   const set = useCallback(() => {
     cancel();
-    timeoutRef.current = window.setTimeout(cb, delay);
+    timeoutRef.current = globalThis.setTimeout(cb, delay);
   }, [cb, cancel, delay]);
 
   return [set, cancel];

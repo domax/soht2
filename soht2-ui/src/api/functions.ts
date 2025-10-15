@@ -10,11 +10,11 @@ function formatBytes(bytes: number, decimals: number = 2): string {
   if (!+bytes) return '0 Bytes';
 
   const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
+  const dm = Math.max(decimals, 0);
   const sizes = ['Bytes', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
 
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+  return `${Number.parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
 function formatDateTime(timestamp: Date | ISODateTime): string {
@@ -139,7 +139,7 @@ function getStringFilter(i?: GridFilterItem): string | undefined {
 
 function getNumberArrayFilter(i?: GridFilterItem): number[] | undefined {
   if (!i?.value) return undefined;
-  return Array.isArray(i.value) ? i.value.map(v => Number(v)) : [Number(i.value)];
+  return Array.isArray(i.value) ? i.value.map(Number) : [Number(i.value)];
 }
 
 function getStringFilterItem(field: string, v?: string): GridFilterItem | undefined {

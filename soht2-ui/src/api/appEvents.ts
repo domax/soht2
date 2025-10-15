@@ -8,7 +8,7 @@ export class AppErrorEvent extends CustomEvent<ApiError> {
     super(AppErrorEvent.TYPE, { detail: error });
   }
 }
-export function dispatchAppErrorEvent(error: ApiError, element: EventTarget = window) {
+export function dispatchAppErrorEvent(error: ApiError, element: EventTarget = globalThis) {
   element.dispatchEvent(new AppErrorEvent(error));
 }
 
@@ -23,7 +23,7 @@ export class UserChangedEvent extends CustomEvent<{ action: UserChangedAction; u
 export function dispatchUserChangedEvent(
   action: UserChangedAction,
   username: string,
-  element: EventTarget = window
+  element: EventTarget = globalThis
 ) {
   element.dispatchEvent(new UserChangedEvent(action, username));
 }
@@ -42,7 +42,7 @@ export class ConnectionChangedEvent extends CustomEvent<{
 export function dispatchConnectionChangedEvent(
   action: ConnectionChangedAction,
   connectionId: UUID,
-  element: EventTarget = window
+  element: EventTarget = globalThis
 ) {
   element.dispatchEvent(new ConnectionChangedEvent(action, connectionId));
 }

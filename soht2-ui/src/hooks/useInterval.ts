@@ -11,14 +11,14 @@ export default function useInterval(
 
   const cancel = useCallback(() => {
     if (intervalRef.current) {
-      window.clearInterval(intervalRef.current);
+      globalThis.clearInterval(intervalRef.current);
       intervalRef.current = undefined;
     }
   }, []);
 
   const set = useCallback(() => {
     cancel();
-    intervalRef.current = window.setInterval(cb, delay);
+    intervalRef.current = globalThis.setInterval(cb, delay);
   }, [cb, cancel, delay]);
 
   return [set, cancel];

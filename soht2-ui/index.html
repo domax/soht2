@@ -23,8 +23,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SOHT2 Server</title>
   <script th:inline="javascript">
-    window.__CONTEXT_PATH__ = /*[[${contextPath}]]*/ '/';
-    window.__SWAGGER_URL__ = /*[[${swaggerUrl}]]*/ '';
+    globalThis.__CONTEXT_PATH__ = /*[[${contextPath}]]*/ '/';
+    globalThis.__SWAGGER_URL__ = /*[[${swaggerUrl}]]*/ '';
   </script>
 </head>
 <body>

@@ -22,7 +22,7 @@ import { httpClient, type WindowProps } from '../api/soht2Api';
 import ChangePasswordDialog from './ChangePasswordDialog';
 import ErrorAlert from './ErrorAlert';
 
-const swaggerUrl = (window as WindowProps).__SWAGGER_URL__ ?? null;
+const swaggerUrl = (globalThis as WindowProps).__SWAGGER_URL__ ?? null;
 
 export default function Layout({ children }: Readonly<{ children: ReactNode }>) {
   const { mode, toggle } = useThemeMode();
