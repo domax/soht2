@@ -24,7 +24,7 @@ import org.springframework.util.unit.DataSize;
  */
 // <editor-fold desc="OpenAPI Annotations">
 @OpenAPIDefinition(
-    info = @Info(title = "SOHT2 Server API", version = "1.0.2"),
+    info = @Info(title = "SOHT2 Server API", version = "1.0.3"),
     servers = {
       @Server(url = "${soht2.server.open-api-server-url}", description = "SOHT2 OpenAPI Server")
     })
