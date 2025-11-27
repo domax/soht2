@@ -1,6 +1,7 @@
 @startuml
 'https://plantuml.com/sequence-diagram
 title Sequence Diagram for Client-Server SOHT2 Connection
+hide footbox
 
 'autonumber
 activate "SOHT2 Client"

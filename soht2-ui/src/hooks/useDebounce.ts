@@ -9,7 +9,7 @@ export default function useDebounce(
   callback: () => void,
   deps: DependencyList
 ): () => void {
-  const [set, clear] = useTimeout(delay, () => callback());
+  const [set, clear] = useTimeout(delay, callback);
   useEffect(clear, []);
   useEffect(() => {
     set();

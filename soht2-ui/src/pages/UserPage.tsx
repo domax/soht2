@@ -8,7 +8,7 @@ import { httpClient, type Soht2User } from '../api/soht2Api';
 import Layout from '../components/Layout';
 import TabPanel from '../components/TabPanel';
 import ConnectionsTable, { type ConnectionSettings } from '../components/ConnectionsTable';
-import HistoryTable, { type HistorySettings } from '../components/HistoryTable';
+import HistoryTable, { DEF_PG_SZ, type HistorySettings } from '../components/HistoryTable';
 
 export default function UserPage({ user }: Readonly<{ user?: Soht2User | null }>) {
   const prefix = 'user-';
@@ -24,7 +24,7 @@ export default function UserPage({ user }: Readonly<{ user?: Soht2User | null }>
   });
 
   const [historySettings, setHistorySettings] = useState<HistorySettings>({
-    requestParams: { sort: ['openedAt:desc'] },
+    requestParams: { sort: ['openedAt:desc'], sz: DEF_PG_SZ, pg: 0 },
     visibility: {},
   });
 

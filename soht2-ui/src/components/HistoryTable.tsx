@@ -40,6 +40,8 @@ import { LoadingOverlay, NoRowsOverlay } from '../controls/dataGridOverlays';
 type ConnectionVisibilityColumn = Exclude<HistorySortColumn, 'connectionId'>;
 export type HistoryVisibility = { [K in ConnectionVisibilityColumn]?: boolean };
 
+export const DEF_PG_SZ = 50;
+
 export type HistorySettings = {
   visibility: HistoryVisibility;
   requestParams: HistoryRequestParams;
@@ -96,7 +98,7 @@ export default function HistoryTable({
   });
   const [paginationModel, setPaginationModel] = useState({
     page: initSettings?.requestParams?.pg ?? 0,
-    pageSize: initSettings?.requestParams?.sz ?? 50,
+    pageSize: initSettings?.requestParams?.sz ?? DEF_PG_SZ,
   } as GridPaginationModel);
   const [filterModel, setFilterModel] = useState(() =>
     getGridFilterModel(initSettings?.requestParams)
@@ -256,7 +258,7 @@ export default function HistoryTable({
           filterModel={filterModel}
           paginationModel={paginationModel}
           columnVisibilityModel={visibility}
-          pageSizeOptions={[20, 50, 100]}
+          pageSizeOptions={[20, DEF_PG_SZ, 100]}
           onSortModelChange={setSortModel}
           onColumnVisibilityModelChange={setVisibility}
           onFilterModelChange={setFilterModel}
