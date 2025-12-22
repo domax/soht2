@@ -5,7 +5,7 @@ plugins {
   id 'idea'
   id 'com.diffplug.spotless' version "7.0.3"
   id 'io.spring.dependency-management' version '1.1.7'
-  id 'org.springframework.boot' version '3.5.4'
+  id 'org.springframework.boot' version '3.5.9'
   id 'maven-publish'
 }
 
@@ -34,7 +34,7 @@ configurations {
 dependencies {
   implementation project(':soht2-common')
   implementation 'org.springframework.boot:spring-boot-starter-web'
-  implementation 'io.vavr:vavr:0.10.7'
+  implementation 'io.vavr:vavr:0.11.0'
   implementation 'org.apache.httpcomponents.client5:httpclient5'
   compileOnly 'org.projectlombok:lombok'
   annotationProcessor 'org.projectlombok:lombok'

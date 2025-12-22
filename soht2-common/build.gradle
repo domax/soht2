@@ -31,14 +31,14 @@ configurations {
 
 dependencyManagement {
   imports {
-    mavenBom("org.springframework.boot:spring-boot-dependencies:3.5.4")
+    mavenBom("org.springframework.boot:spring-boot-dependencies:3.5.9")
   }
 }
 
 dependencies {
   dependencies {
-    implementation 'io.vavr:vavr:0.10.7'
-    implementation 'com.fasterxml.uuid:java-uuid-generator:5.1.0'
+    implementation 'io.vavr:vavr:0.11.0'
+    implementation 'com.fasterxml.uuid:java-uuid-generator:5.2.0'
     compileOnly 'org.springframework:spring-core'
     compileOnly 'org.projectlombok:lombok'
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
