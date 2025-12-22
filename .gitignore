@@ -20,6 +20,7 @@ out/
 .idea/dictionaries/project.xml
 .idea/gradle.xml
 .idea/copilot.data.migration.*.xml
+.idea/queries/
 
 ### Eclipse ###
 .apt_generated
