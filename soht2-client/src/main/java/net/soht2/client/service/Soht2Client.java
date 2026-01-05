@@ -95,15 +95,18 @@ public class Soht2Client {
    * @param data the data to send to the server
    * @return a {@link Try} containing the response bytes if successful, or an error if it fails
    */
+  @SuppressWarnings("LoggingSimilarMessage")
   public Try<byte[]> exchange(UUID connectionId, byte[] data) {
-    if (log.isTraceEnabled())
-      Optional.of(data)
-          .filter(v -> v.length > 0)
-          .ifPresent(v -> log.trace("exchange: id={}, in.length={}", connectionId, v.length));
+    if (log.isTraceEnabled() && data.length > 0)
+      log.trace("exchange: id={}, in.length={}", connectionId, data.length);
     return Try.of(() -> requestExchangeEntity(data))
         .peek(
             entity ->
-                log.trace("exchange: id={}, request.headers={}", connectionId, entity.getHeaders()))
+                log.atTrace()
+                    .setMessage("exchange: id={}, request.headers={}")
+                    .addArgument(connectionId)
+                    .addArgument(entity::getHeaders)
+                    .log())
         .mapTry(
             entity ->
                 restClient
@@ -115,14 +118,16 @@ public class Soht2Client {
                     .toEntity(PTR_BYTES))
         .peek(
             entity ->
-                log.trace(
-                    "exchange: id={}, response.headers={}", connectionId, entity.getHeaders()))
+                log.atTrace()
+                    .setMessage("exchange: id={}, response.headers={}")
+                    .addArgument(connectionId)
+                    .addArgument(entity::getHeaders)
+                    .log())
         .mapTry(this::responseExchangeEntity)
         .onSuccess(
             bytes ->
                 Optional.of(bytes)
                     .filter(v -> v.length > 0)
-                    .filter(v -> log.isTraceEnabled())
                     .ifPresent(
                         v -> log.trace("exchange: id={}, out.length={}", connectionId, v.length)))
         .onFailure(
@@ -131,7 +136,6 @@ public class Soht2Client {
                     .setMessage("exchange: id={}, {}")
                     .addArgument(connectionId)
                     .addArgument(e::toString)
-                    // .setCause(e)
                     .log());
   }
 
