@@ -151,3 +151,8 @@ Tips & Tricks
 * [SOHT2 Server](doc/tips-server.md)
 * [SOHT2 Client](doc/tips-client.md)
 
+Support
+-------
+
+If you want to support me: <br>
+<a href="https://www.paypal.me/domax/3" target=_blank><img src="./doc/buy_me_a_coffee.png" alt="Buy me a coffee"></a>
