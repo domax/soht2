@@ -10,6 +10,10 @@ SOHT2 - Socket Over HTTP Tunnel 2
 [![CodeQL](https://github.com/domax/soht2/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/domax/soht2/actions/workflows/github-code-scanning/codeql)
 [![Gradle Package](https://github.com/domax/soht2/actions/workflows/gradle-publish.yml/badge.svg)](https://github.com/domax/soht2/actions/workflows/gradle-publish.yml)
 
+[![Buy me a coffee](https://img.buymeacoffee.com/button-api/?text=Buy+me+a+coffee&emoji=&slug=domax&button_colour=F9A154&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=FFFFFF)](https://www.buymeacoffee.com/domax)
+
+---
+
 SOHT2 is a Java-based API that provides a secure and efficient way to tunnel socket connections over
 HTTP. It is designed to work seamlessly with various applications that require socket communication,
 such as web services, IoT devices, and more.
@@ -150,9 +154,3 @@ Tips & Tricks
 
 * [SOHT2 Server](doc/tips-server.md)
 * [SOHT2 Client](doc/tips-client.md)
-
-Support
--------
-
-If you want to support me: <br>
-[![Buy me a coffee](./doc/buy_me_a_coffee.png)](https://www.paypal.me/domax/3)
