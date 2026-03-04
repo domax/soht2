@@ -35,7 +35,7 @@ dependencies {
   implementation project(':soht2-common')
   implementation 'org.springframework.boot:spring-boot-starter-web'
   implementation 'io.vavr:vavr:0.11.0'
-  implementation 'org.apache.httpcomponents.client5:httpclient5'
+  implementation 'org.apache.httpcomponents:httpclient:4.5.14'
   compileOnly 'org.projectlombok:lombok'
   annotationProcessor 'org.projectlombok:lombok'
   developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -93,6 +93,14 @@ publishing {
       //from components.java
       //noinspection GroovyAssignabilityCheck
       artifact bootJar
+    }
+  }
+}
+
+gradle.projectsEvaluated {
+  tasks.withType(JavaCompile).tap {
+    configureEach {
+      options.compilerArgs << "-Xlint:deprecation"
     }
   }
 }

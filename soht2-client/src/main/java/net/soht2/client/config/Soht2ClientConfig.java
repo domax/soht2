@@ -25,6 +25,14 @@ import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
+/**
+ * Configuration class for the SOHT2 client.
+ *
+ * <p>This class is responsible for configuring and instantiating beans required for the SOHT2
+ * client. It includes the setup for the REST client and defines the polling strategy based on
+ * application properties. The configuration depends on {@link Soht2ClientProperties} for
+ * client-specific settings.
+ */
 @Slf4j
 @Data
 @Configuration
@@ -36,8 +44,6 @@ public class Soht2ClientConfig {
       Soht2ClientProperties properties,
       RestClient.Builder restClientBuilder,
       @Autowired(required = false) ClientHttpRequestFactory clientHttpRequestFactory) {
-    log.info("restClient: clientHttpRequestFactory={}", clientHttpRequestFactory);
-
     ofNullable(clientHttpRequestFactory).ifPresent(restClientBuilder::requestFactory);
     restClientBuilder
         .baseUrl(properties.getUrl().toString())

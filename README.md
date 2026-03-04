@@ -101,7 +101,9 @@ Both the client and server components can be run using Java, so on both sides yo
 1. Get the latest release, e.g. `soht2-client-X.X.X.jar`
    from [packages](https://github.com/domax/soht2/packages).
 2. Create/Edit the `application-client.yaml` file to configure the client settings, and
-   place it in the same directory as the JAR file. Here is an example configuration:
+   place it in the same directory as the JAR file. Here is an example configuration
+   _(precise values in this example represent the default values for the client, so you can omit
+   them if they work for you)_:
     ```yaml
     soht2.client:
       url: https://${SOHT2_SERVER}/api/connection # URL of the SOHT2 server API endpoint
@@ -110,9 +112,9 @@ Both the client and server components can be run using Java, so on both sides yo
       username: "${SOHT2_USR}"        # Username for authentication on SOHT2 server
       password: "${SOHT2_PWD}"        # Password for authentication on SOHT2 server
       connections:                    # List of connections to establish - at least 1 item required
-        - local-port: 2022            # Local port to listen on
-          remote-host: ${REMOTE_HOST} # Remote host to connect to
-          remote-port: 22             # Port on a remote host to connect to
+      - local-port: ${LOCAL_PORT}     # Local port to listen on
+        remote-host: ${REMOTE_HOST}   # Remote host to connect to
+        remote-port: ${REMOTE_PORT}   # Port on a remote host to connect to
       compression:                    # Compression settings for the connections
         type: none                    # Compression type for the connections (none, gzip, deflate)
         min-request-size: 2KB         # Minimum request size to apply compression
@@ -121,12 +123,13 @@ Both the client and server components can be run using Java, so on both sides yo
         initial-delay: PT0.1S         # Initial delay before the first poll retry
         max-delay: PT1S               # Maximum delay between retries
         factor: 5                     # Factor for exponential backoff
-      proxy:                          # HTTP or NTLM proxy configuration
+      proxy:                          # HTTP proxy configuration
         host: ${PROXY_HOST}           # If defined, the client sets up an HTTP proxy to this host
-        port: ${PROXY_PORT}           # Port of the HTTP proxy host
-        username: "${PROXY_USR}"      # Optional, only for authenticated HTTP or NTLM proxy
-        password: "${PROXY_PWD}"      # Optional, only for authenticated HTTP or NTLM proxy
-        domain: "MYORG"               # Optional, only for NTLM proxy
+        port: 3128                    # Port of the HTTP proxy host
+        auth: basic                   # Proxy authentication type (basic, ntlm)
+        username: "${PROXY_USR}"      # Optional, only for BASIC or NTLM proxy authentication
+        password: "${PROXY_PWD}"      # Optional, only for BASIC or NTLM proxy authentication
+        domain: ${PROXY_DOMAIN}       # Optional, only if NTLM proxy requires domain name
       disable-ssl-verification: false # Disable SSL verification for the connections
     ```
    You have to define `soht2.client.url` and at least one connection in the
@@ -145,9 +148,9 @@ Both the client and server components can be run using Java, so on both sides yo
     java -DsocksProxyHost=localhost -DsocksProxyPort=1080 -jar soht2-client-X.X.X.jar
     ```
 4. If you don't have errors, you should be able to connect to the remote host through the tunnel.
-   You can test it by running `telnet localhost 2022` (or whatever local port you defined in the
-   configuration) and then trying to connect to the remote host, e.g. `ssh -p 2022 user@localhost`
-   for this example configuration.
+   You can test it by running `telnet localhost ${LOCAL_PORT}` (or whatever local port you defined
+   in the configuration) and then trying to connect to the remote host, e.g. in case of SSH:
+   `ssh -p ${LOCAL_PORT} user@localhost`.
 
 Tips & Tricks
 -------------
