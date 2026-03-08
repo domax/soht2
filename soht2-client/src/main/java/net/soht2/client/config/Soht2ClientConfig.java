@@ -8,6 +8,9 @@ import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE;
 
 import java.util.Base64;
 import java.util.Optional;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Stream;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +21,7 @@ import net.soht2.client.service.LinearPollStrategy;
 import net.soht2.client.service.PollStrategy;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -77,5 +81,18 @@ public class Soht2ClientConfig {
               .factor(poll.getFactor())
               .build();
     };
+  }
+
+  @Bean
+  Executor threadExecutor(
+      @Value("${spring.threads.virtual.enabled:false}") boolean isVirtualThreadsEnabled) {
+    log.info("threadExecutor: isVirtualThreadsEnabled={}", isVirtualThreadsEnabled);
+
+    if (isVirtualThreadsEnabled)
+      return new TimeoutAwareExecutorService(Executors.newVirtualThreadPerTaskExecutor());
+
+    return ForkJoinPool.getCommonPoolParallelism() > 1
+        ? ForkJoinPool.commonPool()
+        : Executors.newThreadPerTaskExecutor(Executors.defaultThreadFactory());
   }
 }

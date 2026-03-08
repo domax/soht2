@@ -2,6 +2,7 @@
 package net.soht2.client.service;
 
 import static java.util.Optional.ofNullable;
+import static java.util.concurrent.CompletableFuture.runAsync;
 
 import io.vavr.control.Try;
 import java.io.InputStream;
@@ -12,6 +13,7 @@ import java.net.SocketTimeoutException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -38,6 +40,7 @@ public class ConnectionService {
   private final Soht2ClientProperties soht2ClientProperties;
   private final Soht2Client soht2Client;
   private final PollStrategy pollStrategy;
+  private final Executor threadExecutor;
 
   private final AtomicBoolean isRunning = new AtomicBoolean();
   private final Map<UUID, SessionState> sessions = new ConcurrentHashMap<>();
@@ -62,7 +65,7 @@ public class ConnectionService {
     isRunning.set(true);
     return CompletableFuture.allOf(
             soht2ClientProperties.getConnections().stream()
-                .map(host -> CompletableFuture.runAsync(() -> connect(host, socketOpenedCallback)))
+                .map(host -> runAsync(() -> connect(host, socketOpenedCallback), threadExecutor))
                 .toArray(CompletableFuture[]::new))
         .thenRun(
             () -> {
@@ -118,14 +121,17 @@ public class ConnectionService {
         sessions.put(state.connection.id(), state);
         log.debug("connect: connection={}", state.connection);
 
-        CompletableFuture.runAsync(() -> exchange(state))
+        runAsync(() -> exchange(state), threadExecutor)
             .thenRun(
                 () -> {
                   Try.run(state.in::close);
                   Try.run(state.out::close);
                 });
       } catch (Exception e) {
-        log.atError().setMessage("connect: {}").addArgument(e::toString).setCause(e).log();
+        if (e instanceof SocketException && "Closed by interrupt".equals(e.getMessage())) {
+          log.warn("connect: interrupted");
+          isRunning.set(false);
+        } else log.atError().setMessage("connect: {}").addArgument(e::toString).setCause(e).log();
       }
     }
   }

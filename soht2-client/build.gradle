@@ -48,6 +48,14 @@ dependencies {
 
 test {
   useJUnitPlatform()
+
+  // Kill test JVM if it hangs > 30 seconds after tests finish
+  jvmArgs '-Dtest.timeout=30'  // custom if you have timeout logic
+
+  // Show thread pinning
+  jvmArgs '-Djdk.tracePinnedThreads=full'
+
+  // Enable Mockito's inline mock maker for better code coverage of final classes/methods
   jvmArgs "-javaagent:${configurations.testRuntimeClasspath.find { it.name.contains('mockito-core') }}", '-Xshare:off'
   finalizedBy jacocoTestReport
 }
