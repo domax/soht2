@@ -142,6 +142,7 @@ public class Soht2Service {
     return Try.of(() -> connections.get(id))
         .filter(Objects::nonNull, () -> gone("Connection " + id + " not found"))
         .filter(ServerConnection::isOpened, () -> gone("Connection " + id + " is closed"))
+        .andThenTry(sc -> sc.lock().lock())
         .andThenTry(c -> c.lastActivity(LocalDateTime.now()))
         .mapTry(
             sc -> {
@@ -157,6 +158,7 @@ public class Soht2Service {
               sc.addBytesRead(bufferLen);
               return bufferLen >= buffer.length ? buffer : Arrays.copyOf(buffer, bufferLen);
             })
+        .andFinally(() -> Try.run(connections.get(id).lock()::unlock))
         .recover(SocketTimeoutException.class, e -> EMPTY)
         .onFailure(e -> log.error("exchange: id={} - {}", id, e.toString()))
         .recover(SocketException.class, e -> EMPTY)

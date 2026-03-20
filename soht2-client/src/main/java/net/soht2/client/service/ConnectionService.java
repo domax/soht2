@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,7 @@ public class ConnectionService {
 
   private final AtomicBoolean isRunning = new AtomicBoolean();
   private final Map<UUID, SessionState> sessions = new ConcurrentHashMap<>();
+  private final Map<Integer, ReentrantLock> locks = new ConcurrentHashMap<>();
 
   /**
    * Starts connections to the specified hosts defined in the client properties.
@@ -111,6 +113,7 @@ public class ConnectionService {
         socket.setKeepAlive(true);
         log.debug("connect: socket={}", socket);
 
+        locks.put(host.getLocalPort(), new ReentrantLock());
         val state =
             SessionState.builder()
                 .host(host)
@@ -134,6 +137,7 @@ public class ConnectionService {
         } else log.atError().setMessage("connect: {}").addArgument(e::toString).setCause(e).log();
       }
     }
+    locks.remove(host.getLocalPort());
   }
 
   /**
@@ -151,6 +155,9 @@ public class ConnectionService {
     while (sessions.containsKey(connectionId)) {
       readSize.set(0);
       writeSize.set(0);
+
+      val lock = locks.get(state.host.getLocalPort());
+      lock.lock();
       Try.of(() -> state.in.read(buffer))
           .filter(bufferLen -> bufferLen >= 0, () -> new SocketException("Connection reset"))
           .recover(SocketTimeoutException.class, 0)
@@ -167,6 +174,7 @@ public class ConnectionService {
                       .map(b -> Try.run(() -> state.out.write(b)).andThenTry(state.out::flush))
                       .orElse(Try.success(null))
                       .andThenTry(v -> writeSize.set(bytes.length)))
+          .andFinallyTry(lock::unlock)
           .andThenTry(() -> delay(state, readSize.get() == 0 && writeSize.get() == 0))
           .recoverWith(
               SocketException.class,

@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -39,6 +40,7 @@ public class ServerConnection implements Closeable {
   InputStream inputStream;
   OutputStream outputStream;
   Consumer<ServerConnection> postCloseAction;
+  ReentrantLock lock = new ReentrantLock();
 
   @Getter(AccessLevel.NONE)
   AtomicReference<LocalDateTime> lastActivity = new AtomicReference<>(LocalDateTime.now());
@@ -57,17 +59,17 @@ public class ServerConnection implements Closeable {
       Soht2Connection soht2, int socketTimeout, Consumer<ServerConnection> postCloseAction) {
     log.debug("new: connection={}", soht2);
     this.soht2.set(soht2);
-    this.socket =
+    socket =
         Try.of(() -> InetAddress.getByName(soht2.targetHost()))
             .mapTry(inet -> new Socket(inet, soht2.targetPort()))
             .andThenTry(s -> s.setSoTimeout(socketTimeout))
             .andThenTry(s -> s.setKeepAlive(true))
             .get();
     log.debug("new: socket={}", socket);
-    this.inputStream = Try.of(socket::getInputStream).get();
-    this.outputStream = Try.of(socket::getOutputStream).get();
+    inputStream = Try.of(socket::getInputStream).get();
+    outputStream = Try.of(socket::getOutputStream).get();
     this.postCloseAction = postCloseAction;
-    this.isOpened.set(true);
+    isOpened.set(true);
   }
 
   public Soht2Connection soht2() {
@@ -144,10 +146,11 @@ public class ServerConnection implements Closeable {
   @Override
   public void close() {
     log.debug("close: connection={}", soht2.get());
-    this.isOpened.set(false);
+    isOpened.set(false);
     Try.run(inputStream::close);
     Try.run(outputStream::close);
     Try.run(socket::close);
+    Try.run(lock::unlock);
     if (postCloseAction != null) postCloseAction.accept(this);
   }
 }
