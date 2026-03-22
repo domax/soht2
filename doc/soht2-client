@@ -6,6 +6,12 @@ APP_JAR="${APP_HOME}/soht2-client.jar"
 PID_FILE="${APP_HOME}/soht2-client.pid"
 LOG_FILE="${APP_HOME}/soht2-client.log"
 
+if [[ "$OSTYPE" =~ ^cygwin|msys|mingw ]]; then
+  APP_JAR="$(cygpath -w "$APP_JAR")"
+  PID_FILE="$(cygpath -w "$PID_FILE")"
+  LOG_FILE="$(cygpath -w "$LOG_FILE")"
+fi
+
 function checkJava() {
   JAVA_HOME="${JAVA_HOME:-$(which java | sed -rn 's|^(.+)/bin/java$|\1|p')}"
   JAVA_CMD="${JAVA_HOME}/bin/java"
@@ -25,8 +31,13 @@ function start() {
   if [[ -e "${PID_FILE}" ]]; then
     APP_PID="$(cat "${PID_FILE}")"
     if [[ -n "${APP_PID}" ]]; then
-      ps -p "${APP_PID}" >/dev/null
-      if [[ $? ]]; then
+      if [[ "$OSTYPE" =~ ^cygwin|msys|mingw ]]; then
+        PS_CMD="ps | awk '{print \$4}' | grep -q ${APP_PID}"
+      else
+        PS_CMD="ps -p ${APP_PID} >/dev/null"
+      fi
+      # shellcheck disable=SC2086
+      if eval $PS_CMD; then
         echo >&2 "${APP_NAME} is already running with PID ${APP_PID}"
         exit 1
       fi
@@ -37,24 +48,43 @@ function start() {
   cd "${APP_HOME}" || exit 2
   # shellcheck disable=SC2086 # JAVA_OPTS contains spaces
   "${JAVA_CMD}" $JAVA_OPTS -jar "${APP_JAR}" >>"${LOG_FILE}" 2>&1 &
-  sleep 1
-  if [[ ! -e "${PID_FILE}" ]]; then
-    echo "FAILURE"
-    exit 2
-  fi
-  echo "SUCCESS"
+  # shellcheck disable=SC2034
+  for i in {1..10}; do
+    sleep 1
+    if [[ -e "${PID_FILE}" ]]; then
+      echo "SUCCESS"
+      exit 0
+    fi
+  done
+  echo "FAILURE"
+  exit 2
 }
 
 function stop() {
   status
   echo -n "Stopping ${APP_NAME}... "
-  kill "${APP_PID}" 2>/dev/null
-  sleep 1
-  if [[ -e "${PID_FILE}" ]]; then
+  if [[ "$OSTYPE" =~ ^cygwin|msys|mingw ]]; then
+    KILL_CMD="/bin/kill -W ${APP_PID} 2>/dev/null"
+  else
+    KILL_CMD="kill ${APP_PID} 2>/dev/null"
+  fi
+  # shellcheck disable=SC2086
+  if ! eval $KILL_CMD; then
     echo "FAILURE"
     exit 6
   fi
-  echo "SUCCESS"
+  # shellcheck disable=SC2034
+  for i in {1..10}; do
+    sleep 1
+    if [[ ! -e "${PID_FILE}" ]]; then
+      [[ -e "${LOG_FILE}" ]] && mv "${LOG_FILE}" "${LOG_FILE}.$(date +%Y%m%d%H%M%S)" >/dev/null 2>&1
+      echo "SUCCESS"
+      exit 0
+    fi
+  done
+  rm "${PID_FILE}"
+  echo "FAILURE"
+  exit 6
 }
 
 function status() {
@@ -67,11 +97,27 @@ function status() {
     echo >&2 "${APP_NAME}'s PID file exists but empty"
     exit 4
   fi
-  ps -p "${APP_PID}" >/dev/null
-  if [[ ! $? ]]; then
+  if [[ "$OSTYPE" =~ ^cygwin|msys|mingw ]]; then
+    PS_CMD="ps | awk '{print \$4}' | grep -q ${APP_PID}"
+  else
+    PS_CMD="ps -p ${APP_PID} >/dev/null"
+  fi
+  # shellcheck disable=SC2086
+  if ! eval $PS_CMD; then
     echo >&2 "${APP_NAME} is not running but PID file exists"
     exit 5
   fi
+}
+
+function log() {
+  # shellcheck disable=SC2012
+  LAST_LOG="$(ls -1t "${LOG_FILE}"* 2>/dev/null | head -1)"
+  if [[ -z "$LAST_LOG" ]]; then
+    echo "No log files found."
+    exit 9
+  fi
+  echo "Displaying the last log file: ${LAST_LOG}"
+  less "${LAST_LOG}"
 }
 
 case "${1}" in
@@ -91,8 +137,11 @@ status)
   status
   echo "${APP_NAME} is running with PID ${APP_PID}"
   ;;
+log)
+  log
+  ;;
 *)
-  echo "Usage: ${0} {start|stop|restart|status}"
+  echo "Usage: ${0} {start|stop|restart|status|log}"
   echo "Exit codes:"
   echo "  0 - Success"
   echo "  1 - Already running"
@@ -103,5 +152,6 @@ status)
   echo "  6 - Stop failure"
   echo "  7 - Java not installed or not found in PATH"
   echo "  8 - Java version is less than 21"
+  echo "  9 - Log file not found"
   ;;
 esac
