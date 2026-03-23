@@ -1,8 +1,7 @@
 /* SOHT2 © Licensed under MIT 2026. */
 package net.soht2.client.service;
 
-import static org.apache.http.HttpHeaders.CONTENT_ENCODING;
-import static org.apache.http.HttpHeaders.CONTENT_TYPE;
+import static org.springframework.http.HttpHeaders.*;
 
 import io.vavr.control.Try;
 import java.io.IOException;
@@ -103,11 +102,11 @@ public class HCClientHttpRequest extends AbstractClientHttpRequest
   static void addHeaders(HttpUriRequest httpRequest, HttpHeaders headers) {
     headers.forEach(
         (headerName, headerValues) -> {
-          if (HttpHeaders.COOKIE.equalsIgnoreCase(headerName)) { // RFC 6265
+          if (COOKIE.equalsIgnoreCase(headerName)) { // RFC 6265
             String headerValue = StringUtils.collectionToDelimitedString(headerValues, "; ");
             httpRequest.addHeader(headerName, headerValue);
-          } else if (!HttpHeaders.CONTENT_LENGTH.equalsIgnoreCase(headerName)
-              && !HttpHeaders.TRANSFER_ENCODING.equalsIgnoreCase(headerName)) {
+          } else if (!CONTENT_LENGTH.equalsIgnoreCase(headerName)
+              && !TRANSFER_ENCODING.equalsIgnoreCase(headerName)) {
             for (String headerValue : headerValues) {
               httpRequest.addHeader(headerName, headerValue);
             }

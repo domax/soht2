@@ -111,7 +111,7 @@ function status() {
 
 function log() {
   # shellcheck disable=SC2012
-  LAST_LOG="$(ls -1t "${LOG_FILE}"* 2>/dev/null | head -1)"
+  LAST_LOG="$(ls -1t "${LOG_FILE}" 2>/dev/null | head -1)"
   if [[ -z "$LAST_LOG" ]]; then
     echo "No log files found."
     exit 9
