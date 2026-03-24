@@ -1,24 +1,26 @@
 #!/bin/bash
 
-APP_HOME="$(dirname "$(readlink -f "$0")")"
 APP_NAME="SOHT2 Client"
-APP_JAR="${APP_HOME}/soht2-client.jar"
-PID_FILE="${APP_HOME}/soht2-client.pid"
-LOG_FILE="${APP_HOME}/soht2-client.log"
+APP_FILE="$(basename "$0")"
+LOG_NAME="${APP_FILE}.log"
+APP_HOME="$(dirname "$(readlink -f "$0")")"
 
 if [[ "$OSTYPE" =~ ^cygwin|msys|mingw ]]; then
-  APP_JAR="$(cygpath -w "$APP_JAR")"
-  PID_FILE="$(cygpath -w "$PID_FILE")"
-  LOG_FILE="$(cygpath -w "$LOG_FILE")"
+  APP_HOME="$(cygpath -w "$APP_HOME")"
 fi
 
-function checkJava() {
+APP_JAR="${APP_HOME}/${APP_FILE}.jar"
+PID_FILE="${APP_HOME}/${APP_FILE}.pid"
+LOG_FILE="${APP_HOME}/${LOG_NAME}"
+
+function check_java() {
   JAVA_HOME="${JAVA_HOME:-$(which java | sed -rn 's|^(.+)/bin/java$|\1|p')}"
   JAVA_CMD="${JAVA_HOME}/bin/java"
   if [[ ! -x "${JAVA_CMD}" ]]; then
     echo >&2 "Java is not installed or not found in PATH."
     exit 7
   fi
+  local JAVA_VER
   JAVA_VER=$("${JAVA_CMD}" -version 2>&1 | grep version | cut -d\" -f2 | cut -d. -f1)
   if [[ "${JAVA_VER}" -lt 21 ]]; then
     echo >&2 "Java version is ${JAVA_VER}, which is less than 21."
@@ -27,29 +29,35 @@ function checkJava() {
   JAVA_OPTS="${JAVA_OPTS:--Xmx256m -server -Djava.awt.headless=true} -Dspring.pid.file=${PID_FILE}"
 }
 
-function start() {
-  if [[ -e "${PID_FILE}" ]]; then
-    APP_PID="$(cat "${PID_FILE}")"
-    if [[ -n "${APP_PID}" ]]; then
-      if [[ "$OSTYPE" =~ ^cygwin|msys|mingw ]]; then
-        PS_CMD="ps | awk '{print \$4}' | grep -q ${APP_PID}"
-      else
-        PS_CMD="ps -p ${APP_PID} >/dev/null"
-      fi
-      # shellcheck disable=SC2086
-      if eval $PS_CMD; then
-        echo >&2 "${APP_NAME} is already running with PID ${APP_PID}"
-        exit 1
-      fi
-    fi
+function app_pid() {
+  [[ ! -e "${PID_FILE}" ]] && return 3
+  APP_PID="$(cat "${PID_FILE}" 2>/dev/null)"
+  [[ -z "${APP_PID}" ]] && return 4
+  local PS_CMD
+  if [[ "$OSTYPE" =~ ^cygwin|msys|mingw ]]; then
+    PS_CMD="ps | awk '{print \$4}' | grep -q ${APP_PID}"
+  else
+    PS_CMD="ps -p ${APP_PID} >/dev/null"
   fi
-  checkJava
+  # shellcheck disable=SC2086 # PS_CMD contains multiple arguments
+  if ! eval $PS_CMD; then
+    unset APP_PID
+    return 5
+  fi
+  return 0
+}
+
+function start() {
+  if app_pid; then
+    echo >&2 "${APP_NAME} is already running with PID ${APP_PID}"
+    exit 1
+  fi
+  check_java
   echo -n "Starting ${APP_NAME}... "
   cd "${APP_HOME}" || exit 2
-  # shellcheck disable=SC2086 # JAVA_OPTS contains spaces
+  # shellcheck disable=SC2086 # JAVA_OPTS contains multiple items
   "${JAVA_CMD}" $JAVA_OPTS -jar "${APP_JAR}" >>"${LOG_FILE}" 2>&1 &
-  # shellcheck disable=SC2034
-  for i in {1..10}; do
+  for _ in {1..10}; do
     sleep 1
     if [[ -e "${PID_FILE}" ]]; then
       echo "SUCCESS"
@@ -63,55 +71,53 @@ function start() {
 function stop() {
   status
   echo -n "Stopping ${APP_NAME}... "
+  local KILL_CMD
   if [[ "$OSTYPE" =~ ^cygwin|msys|mingw ]]; then
-    KILL_CMD="/bin/kill -W ${APP_PID} 2>/dev/null"
+    KILL_CMD="/bin/kill -W"
   else
-    KILL_CMD="kill ${APP_PID} 2>/dev/null"
+    KILL_CMD="kill"
   fi
-  # shellcheck disable=SC2086
-  if ! eval $KILL_CMD; then
+  # shellcheck disable=SC2086 # KILL_CMD may contain multiple arguments
+  if ! eval ${KILL_CMD} ${APP_PID} 2>/dev/null; then
     echo "FAILURE"
     exit 6
   fi
-  # shellcheck disable=SC2034
-  for i in {1..10}; do
+  for _ in {1..10}; do
     sleep 1
-    if [[ ! -e "${PID_FILE}" ]]; then
+    if ! app_pid; then
+      rm "${PID_FILE}" 2>/dev/null
       [[ -e "${LOG_FILE}" ]] && mv "${LOG_FILE}" "${LOG_FILE}.$(date +%Y%m%d%H%M%S)" >/dev/null 2>&1
       echo "SUCCESS"
       exit 0
     fi
   done
-  rm "${PID_FILE}"
   echo "FAILURE"
   exit 6
 }
 
 function status() {
-  if [[ ! -e "${PID_FILE}" ]]; then
+  app_pid
+  local STATUS=$?
+  case $STATUS in
+  0) return 0 ;;
+  3) 
     echo >&2 "${APP_NAME}'s PID file doesn't exist"
     exit 3
-  fi
-  APP_PID="$(cat "${PID_FILE}")"
-  if [[ -z "${APP_PID}" ]]; then
+    ;;
+  4) 
     echo >&2 "${APP_NAME}'s PID file exists but empty"
     exit 4
-  fi
-  if [[ "$OSTYPE" =~ ^cygwin|msys|mingw ]]; then
-    PS_CMD="ps | awk '{print \$4}' | grep -q ${APP_PID}"
-  else
-    PS_CMD="ps -p ${APP_PID} >/dev/null"
-  fi
-  # shellcheck disable=SC2086
-  if ! eval $PS_CMD; then
-    echo >&2 "${APP_NAME} is not running but PID file exists"
+    ;;
+  *) 
+    echo >&2 "${APP_NAME}'s is not running but PID file exists"
     exit 5
-  fi
+    ;;
+  esac
 }
 
 function log() {
-  # shellcheck disable=SC2012
-  LAST_LOG="$(ls -1t "${LOG_FILE}" 2>/dev/null | head -1)"
+  local LAST_LOG
+  LAST_LOG="$(find "${APP_HOME}" -type f -name "${LOG_NAME}*" -print0 | xargs -0 ls -1t | head -1)"
   if [[ -z "$LAST_LOG" ]]; then
     echo "No log files found."
     exit 9
