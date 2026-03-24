@@ -1,18 +1,29 @@
 #!/bin/bash
-# SOHT2 Client Control Script
+# SOHT2 © Licensed under MIT 2025.
+# Client Control Script
 # ------------------------------------------------------
 
+# Application configuration
 APP_NAME="SOHT2 Client"
 APP_FILE="$(basename "$0")"
 APP_HOME="$(dirname "$(readlink -f "$0")")"
-
 if [[ "$OSTYPE" =~ ^cygwin|msys|mingw ]]; then
   APP_HOME="$(cygpath -w "$APP_HOME")"
 fi
-
 APP_JAR="${APP_HOME}/${APP_FILE}.jar"
 PID_FILE="${APP_HOME}/${APP_FILE}.pid"
 LOG_FILE="${APP_HOME}/${APP_FILE}.log"
+
+# Exit codes
+ERR_RUNNING=1
+ERR_START=2
+ERR_NO_PID=3
+ERR_EMPTY_PID=4
+ERR_WRONG_PID=5
+ERR_STOP=6
+ERR_NO_JAVA=7
+ERR_JAVA_VER=8
+ERR_NO_LOG=9
 
 # ------------------------------------------------------
 # Check if the Java runtime is available and meets the minimum version requirement
@@ -21,13 +32,13 @@ function check_java() {
   JAVA_CMD="${JAVA_HOME}/bin/java"
   if [[ ! -x "${JAVA_CMD}" ]]; then
     echo >&2 "Java is not installed or not found in PATH."
-    exit 7
+    exit $ERR_NO_JAVA
   fi
   local JAVA_VER
   JAVA_VER=$("${JAVA_CMD}" -version 2>&1 | grep version | cut -d\" -f2 | cut -d. -f1)
   if [[ "${JAVA_VER}" -lt 21 ]]; then
     echo >&2 "Java version is ${JAVA_VER}, which is less than 21."
-    exit 8
+    exit $ERR_JAVA_VER
   fi
   JAVA_OPTS="${JAVA_OPTS:--Xmx256m -server -Djava.awt.headless=true} -Dspring.pid.file=${PID_FILE}"
 }
@@ -35,9 +46,9 @@ function check_java() {
 # ------------------------------------------------------
 # Check if the application is running and set APP_PID if it is
 function app_pid() {
-  [[ ! -e "${PID_FILE}" ]] && return 3
+  [[ ! -e "${PID_FILE}" ]] && return $ERR_NO_PID
   APP_PID="$(cat "${PID_FILE}" 2>/dev/null)"
-  [[ -z "${APP_PID}" ]] && return 4
+  [[ -z "${APP_PID}" ]] && return $ERR_EMPTY_PID
   local PS_CMD
   if [[ "$OSTYPE" =~ ^cygwin|msys|mingw ]]; then
     PS_CMD="ps | awk '{print \$4}' | grep -q ${APP_PID}"
@@ -47,7 +58,7 @@ function app_pid() {
   # shellcheck disable=SC2086 # PS_CMD contains multiple arguments
   if ! eval $PS_CMD; then
     unset APP_PID
-    return 5
+    return $ERR_WRONG_PID
   fi
   return 0
 }
@@ -57,11 +68,11 @@ function app_pid() {
 function start() {
   if app_pid; then
     echo >&2 "${APP_NAME} is already running with PID ${APP_PID}"
-    exit 1
+    exit $ERR_RUNNING
   fi
   check_java
   echo -n "Starting ${APP_NAME}... "
-  cd "${APP_HOME}" || exit 2
+  cd "${APP_HOME}" || exit $ERR_START
   # shellcheck disable=SC2086 # JAVA_OPTS contains multiple items
   "${JAVA_CMD}" $JAVA_OPTS -jar "${APP_JAR}" >>"${LOG_FILE}" 2>&1 &
   for _ in {1..10}; do
@@ -72,7 +83,7 @@ function start() {
     fi
   done
   echo "FAILURE"
-  exit 2
+  exit $ERR_START
 }
 
 # ------------------------------------------------------
@@ -89,7 +100,7 @@ function stop() {
   # shellcheck disable=SC2086 # KILL_CMD may contain multiple arguments
   if ! eval ${KILL_CMD} ${APP_PID} 2>/dev/null; then
     echo "FAILURE"
-    exit 6
+    exit $ERR_STOP
   fi
   for _ in {1..10}; do
     sleep 1
@@ -103,7 +114,7 @@ function stop() {
     fi
   done
   echo "FAILURE"
-  exit 6
+  exit $ERR_STOP
 }
 
 # ------------------------------------------------------
@@ -113,9 +124,9 @@ function status() {
   local STATUS=$?
   case $STATUS in
   0) return 0 ;;
-  3) echo >&2 "${APP_NAME}'s PID file doesn't exist" ;;
-  4) echo >&2 "${APP_NAME}'s PID file exists but empty" ;;
-  5) echo >&2 "${APP_NAME}'s is not running but PID file exists" ;;
+  "$ERR_NO_PID") echo >&2 "${APP_NAME}'s PID file doesn't exist" ;;
+  "$ERR_EMPTY_PID") echo >&2 "${APP_NAME}'s PID file exists but empty" ;;
+  "$ERR_WRONG_PID") echo >&2 "${APP_NAME}'s is not running but PID file exists" ;;
   *) echo >&2 "${APP_NAME}'s status code is ${STATUS}" ;;
   esac
   exit $STATUS
@@ -128,7 +139,7 @@ function log() {
   LAST_LOG="$(find "$APP_HOME" -type f -name "${APP_FILE}*.log" -print0 | xargs -0 ls -1t | head -1)"
   if [[ -z "$LAST_LOG" ]]; then
     echo >&2 "No log files found."
-    exit 9
+    exit $ERR_NO_LOG
   fi
   echo "Displaying the last log file: ${LAST_LOG}"
   less "${LAST_LOG}"
@@ -137,37 +148,20 @@ function log() {
 # ------------------------------------------------------
 # Main script logic
 case "${1}" in
-start)
-  start
-  ;;
-stop)
-  stop
-  ;;
+start) start ;;
+stop) stop ;;
+log) log ;;
 restart)
   # shellcheck disable=SC2005 # Using command substitution to avoid exiting the script
   echo "$(stop)"
-  sleep 1
   start
   ;;
 status)
   status
   echo "${APP_NAME} is running with PID ${APP_PID}"
   ;;
-log)
-  log
-  ;;
 *)
+  echo "${APP_NAME} Control Script © Licensed under MIT 2026"
   echo "Usage: ${0} {start|stop|restart|status|log}"
-  echo "Exit codes:"
-  echo "  0 - Success"
-  echo "  1 - Already running"
-  echo "  2 - Start failure"
-  echo "  3 - PID file doesn't exist"
-  echo "  4 - PID file exists but empty"
-  echo "  5 - Not running but PID file exists"
-  echo "  6 - Stop failure"
-  echo "  7 - Java not installed or not found in PATH"
-  echo "  8 - Java version is less than 21"
-  echo "  9 - Log file not found"
   ;;
 esac
