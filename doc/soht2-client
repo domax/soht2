@@ -55,8 +55,7 @@ function app_pid() {
   else
     PS_CMD="ps -p ${APP_PID} >/dev/null"
   fi
-  # shellcheck disable=SC2086 # PS_CMD contains multiple arguments
-  if ! eval $PS_CMD; then
+  if ! eval "${PS_CMD}"; then
     unset APP_PID
     return $ERR_WRONG_PID
   fi
@@ -73,8 +72,7 @@ function start() {
   check_java
   echo -n "Starting ${APP_NAME}... "
   cd "${APP_HOME}" || exit $ERR_START
-  # shellcheck disable=SC2086 # JAVA_OPTS contains multiple items
-  "${JAVA_CMD}" $JAVA_OPTS -jar "${APP_JAR}" >>"${LOG_FILE}" 2>&1 &
+  eval "${JAVA_CMD} ${JAVA_OPTS}" -jar "${APP_JAR}" >>"${LOG_FILE}" 2>&1 &
   for _ in {1..10}; do
     sleep 1
     if app_pid; then
@@ -97,8 +95,7 @@ function stop() {
   else
     KILL_CMD="kill"
   fi
-  # shellcheck disable=SC2086 # KILL_CMD may contain multiple arguments
-  if ! eval ${KILL_CMD} ${APP_PID} 2>/dev/null; then
+  if ! eval "${KILL_CMD} ${APP_PID}" 2>/dev/null; then
     echo "FAILURE"
     exit $ERR_STOP
   fi
