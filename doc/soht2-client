@@ -1,8 +1,9 @@
 #!/bin/bash
+# SOHT2 Client Control Script
+# ------------------------------------------------------
 
 APP_NAME="SOHT2 Client"
 APP_FILE="$(basename "$0")"
-LOG_NAME="${APP_FILE}.log"
 APP_HOME="$(dirname "$(readlink -f "$0")")"
 
 if [[ "$OSTYPE" =~ ^cygwin|msys|mingw ]]; then
@@ -11,8 +12,10 @@ fi
 
 APP_JAR="${APP_HOME}/${APP_FILE}.jar"
 PID_FILE="${APP_HOME}/${APP_FILE}.pid"
-LOG_FILE="${APP_HOME}/${LOG_NAME}"
+LOG_FILE="${APP_HOME}/${APP_FILE}.log"
 
+# ------------------------------------------------------
+# Check if the Java runtime is available and meets the minimum version requirement
 function check_java() {
   JAVA_HOME="${JAVA_HOME:-$(which java | sed -rn 's|^(.+)/bin/java$|\1|p')}"
   JAVA_CMD="${JAVA_HOME}/bin/java"
@@ -29,6 +32,8 @@ function check_java() {
   JAVA_OPTS="${JAVA_OPTS:--Xmx256m -server -Djava.awt.headless=true} -Dspring.pid.file=${PID_FILE}"
 }
 
+# ------------------------------------------------------
+# Check if the application is running and set APP_PID if it is
 function app_pid() {
   [[ ! -e "${PID_FILE}" ]] && return 3
   APP_PID="$(cat "${PID_FILE}" 2>/dev/null)"
@@ -47,6 +52,8 @@ function app_pid() {
   return 0
 }
 
+# ------------------------------------------------------
+# Start the application if it's not already running
 function start() {
   if app_pid; then
     echo >&2 "${APP_NAME} is already running with PID ${APP_PID}"
@@ -68,6 +75,8 @@ function start() {
   exit 2
 }
 
+# ------------------------------------------------------
+# Stop the application if it's running
 function stop() {
   status
   echo -n "Stopping ${APP_NAME}... "
@@ -97,6 +106,8 @@ function stop() {
   exit 6
 }
 
+# ------------------------------------------------------
+# Check the status of the application
 function status() {
   app_pid
   local STATUS=$?
@@ -110,6 +121,8 @@ function status() {
   exit $STATUS
 }
 
+# ------------------------------------------------------
+# Display the most recent log file using `less` command
 function log() {
   local LAST_LOG
   LAST_LOG="$(find "$APP_HOME" -type f -name "${APP_FILE}*.log" -print0 | xargs -0 ls -1t | head -1)"
@@ -121,6 +134,8 @@ function log() {
   less "${LAST_LOG}"
 }
 
+# ------------------------------------------------------
+# Main script logic
 case "${1}" in
 start)
   start
