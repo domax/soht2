@@ -77,7 +77,7 @@ function start() {
   "${JAVA_CMD}" $JAVA_OPTS -jar "${APP_JAR}" >>"${LOG_FILE}" 2>&1 &
   for _ in {1..10}; do
     sleep 1
-    if [[ -e "${PID_FILE}" ]]; then
+    if app_pid; then
       echo "SUCCESS"
       exit 0
     fi
