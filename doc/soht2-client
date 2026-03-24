@@ -86,7 +86,9 @@ function stop() {
     sleep 1
     if ! app_pid; then
       rm "${PID_FILE}" 2>/dev/null
-      [[ -e "${LOG_FILE}" ]] && mv "${LOG_FILE}" "${LOG_FILE}.$(date +%Y%m%d%H%M%S)" >/dev/null 2>&1
+      if [[ -e "${LOG_FILE}" ]]; then
+        mv "${LOG_FILE}" "${APP_HOME}/${APP_FILE}.$(date +%Y%m%d%H%M%S).log" >/dev/null 2>&1
+      fi
       echo "SUCCESS"
       exit 0
     fi
@@ -100,26 +102,19 @@ function status() {
   local STATUS=$?
   case $STATUS in
   0) return 0 ;;
-  3) 
-    echo >&2 "${APP_NAME}'s PID file doesn't exist"
-    exit 3
-    ;;
-  4) 
-    echo >&2 "${APP_NAME}'s PID file exists but empty"
-    exit 4
-    ;;
-  *) 
-    echo >&2 "${APP_NAME}'s is not running but PID file exists"
-    exit 5
-    ;;
+  3) echo >&2 "${APP_NAME}'s PID file doesn't exist" ;;
+  4) echo >&2 "${APP_NAME}'s PID file exists but empty" ;;
+  5) echo >&2 "${APP_NAME}'s is not running but PID file exists" ;;
+  *) echo >&2 "${APP_NAME}'s status code is ${STATUS}" ;;
   esac
+  exit $STATUS
 }
 
 function log() {
   local LAST_LOG
-  LAST_LOG="$(find "${APP_HOME}" -type f -name "${LOG_NAME}*" -print0 | xargs -0 ls -1t | head -1)"
+  LAST_LOG="$(find "$APP_HOME" -type f -name "${APP_FILE}*.log" -print0 | xargs -0 ls -1t | head -1)"
   if [[ -z "$LAST_LOG" ]]; then
-    echo "No log files found."
+    echo >&2 "No log files found."
     exit 9
   fi
   echo "Displaying the last log file: ${LAST_LOG}"
