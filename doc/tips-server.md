@@ -17,7 +17,7 @@ Create a Systemd Service
 
 In case if you start the SOHT2 server on a Linux (e.g., EC2 instance), you can create a systemd
 service to manage it. Suppose you put the `soht2-server-X.X.X.jar` file in the `/opt/soht2`
-directory and created the `application-server.yaml` file in the same directory.
+directory.
 
 I'd recommend making a symlink to the JAR file, so you can update it later without changing the
 service configuration:
@@ -28,13 +28,14 @@ ln -sf soht2-server-X.X.X.jar soht2-server.jar
 ```
 
 Create an environment file `/opt/soht2/soht2-server.env` with the following content,
-where you need to replace the `SOHT2_SERVER`, `SOHT2_USR`, and `SOHT2_PWD` with your actual values:
+where you need to replace the `SOHT2_SERVER_*` variables with your actual values:
 
 ```shell
-JAVA_OPTS="-Xmx256m -server"      # Java options for the SOHT2 server
-SOHT2_SERVER="soht2.example.com"  # Public domain name of the SOHT2 server
-SOHT2_USR="admin"                 # Username for the admin user
-SOHT2_PWD="password"              # Password for the admin user
+JAVA_OPTS="-Xmx256m -server -Djava.awt.headless=true"     # Java options for the SOHT2 server
+SOHT2_SERVER_DATABASEPATH="/opt/soht2/soht2"              # Path to the database file
+SOHT2_SERVER_OPENAPISERVERURL="https://soht2.example.com" # Public URL of the SOHT2 server
+SOHT2_SERVER_ADMINUSERNAME="admin"                        # Username for the admin user
+SOHT2_SERVER_DEFAULTADMINPASSWORD="password"              # Password for the admin user
 ```
 
 Make sure the environment file is available to the service user only (e.g., `ec2-user`):
@@ -92,6 +93,13 @@ server:
   port: 8080 # Change this to your desired port number
 ```
 
+Or, as an alternative, you can set the `SERVER_PORT` environment variable in the
+`/opt/soht2/soht2-server.env` file for systemd service:
+
+```shell
+SERVER_PORT=8080 # Change this to your desired port number
+```
+
 Change Context Path
 -------------------
 
@@ -104,8 +112,12 @@ make it publicly accessible by URL like `https://example.com/soht2`, you may do 
      servlet:
        context-path: /soht2
    ```
+   or, as an alternative, set the `SERVER_SERVLET_CONTEXTPATH` environment variable:
+   ```shell
+   SERVER_SERVLET_CONTEXTPATH="/soht2"
+   ```
 2. If you are using a reverse proxy (like Nginx or Apache), you can configure it to forward requests
-   from the desired context path to the SOHT2 server.
+   from the desired context path to the SOHT2 server.<br>
    E.g., for Nginx add the following configuration:
     ```nginx configuration
     location /soht2/ {
@@ -115,6 +127,16 @@ make it publicly accessible by URL like `https://example.com/soht2`, you may do 
       proxy_set_header Host $host;
       proxy_set_header X-Forwarded-Proto "https";
     }
+    ```
+   or, for Apache Httpd:
+    ```apache configuration
+    <Location "/soht2/">
+      ProxyPass "http://localhost:8080/soht2/"
+      ProxyPassReverse "http://localhost:8080/soht2/"
+      RequestHeader set X-Real-IP %{REMOTE_ADDR}s
+      RequestHeader set X-Forwarded-For %{REMOTE_ADDR}s
+      RequestHeader set X-Forwarded-Proto "https"
+    </Location>
     ```
 
 That way, you can access the SOHT2 server at `https://example.com/soht2/api/connection`, and it
@@ -141,16 +163,22 @@ If you want to use a different database instead of the default H2DB, you can con
     ```yaml
     spring:
       datasource:
-        url: jdbc:${MY_DATABASE_URL} # e.g., jdbc:mysql://localhost:3306/my_db
-        username: ${MY_DATABASE_USERNAME}
-        password: ${MY_DATABASE_PASSWORD}
+        url: ${MY_DATABASE_URL} # e.g., jdbc:mysql://localhost:3306/my_db
+        username: "my_user"
+        password: "my_password"
+    ```
+   or define the corresponding environment variables:
+    ```shell
+    SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/my_db"
+    SPRING_DATASOURCE_USERNAME="my_user"
+    SPRING_DATASOURCE_PASSWORD="my_password"
     ```
 4. Create a `loader.properties` file in the same directory where SOHT2 server JAR is placed, and put
    there the following content:
     ```properties
-    loader.path=path/to/your/jdbc/jars/
+    loader.path=/path/to/your/jdbc/jars/
     ```
-   The `path/to/your/jdbc/jars/` may be a relative path in case if you're sure that you run the
+   The `/path/to/your/jdbc/jars/` may be a relative path in case if you're sure that you run the
    SOHT2 server from correct working folder.
 5. Run the SOHT2 server as usual.
 
@@ -166,6 +194,11 @@ In addition to the API, SOHT2 server provides the web consoles for managing user
     - URL: `https://${SOHT2_SERVER}/swagger-ui`
     - This console provides an interactive interface for the SOHT2 server API, allowing you to test
       endpoints and view API documentation.
+
+Both UIs are available only for authenticated users. Features like user management, connection
+management, and viewing connection history are accessible through the SOHT2 UI, while the Swagger UI
+is primarily for API exploration and testing. The set of available actions and exposed data depends 
+on the user's role.
 
 See Also
 --------
