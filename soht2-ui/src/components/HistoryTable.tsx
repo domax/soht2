@@ -195,6 +195,7 @@ export default function HistoryTable({
         align: 'right',
         valueGetter: Number,
         filterOperators: portOperators,
+        renderCell: ({ value }) => (value ? value.toString() : ''),
       },
       {
         field: 'openedAt',

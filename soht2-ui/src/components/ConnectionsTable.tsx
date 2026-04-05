@@ -181,6 +181,7 @@ export default function ConnectionsTable({
     [connections]
   );
 
+  // noinspection JSUnusedGlobalSymbols
   const columns: GridColDef[] = useMemo(
     () => [
       {
@@ -202,6 +203,7 @@ export default function ConnectionsTable({
         minWidth: 100,
         align: 'right',
         valueGetter: Number,
+        renderCell: ({ value }) => (value ? value.toString() : ''),
       },
       {
         field: 'openedAt',
