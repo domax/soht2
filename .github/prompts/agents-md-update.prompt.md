@@ -1,6 +1,6 @@
 ---
 title: Update the existing AGENTS.md
-agent: qwen3.8:latest
+agent: Qwen3.8
 description: Update the existing `AGENTS.md` in the project root for guiding AI coding agents.
 ---
 
