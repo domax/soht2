@@ -1,6 +1,5 @@
 ---
 title: Generate a commit message for the current changes in the project
-agent: gemma4:26b
 description: Create a concise commit message based on the current changes in the project
 ---
 
