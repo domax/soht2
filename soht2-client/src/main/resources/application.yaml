@@ -34,3 +34,4 @@ soht2.client:
     max-delay: PT1S
     factor: 5
   disable-ssl-verification: false
+  disconnect-on-idle-timeout: PT0S

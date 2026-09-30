@@ -177,6 +177,12 @@ public class Soht2ClientProperties implements InitializingBean {
    */
   private boolean disableSslVerification = false;
 
+  /**
+   * The duration after which idle connections will be disconnected. Zero duration means no timeout,
+   * and connections will remain open indefinitely.
+   */
+  private Duration disconnectOnIdleTimeout = Duration.ZERO;
+
   @Override
   public void afterPropertiesSet() {
     log.debug("afterPropertiesSet: {}", this);
