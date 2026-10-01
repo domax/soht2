@@ -7,15 +7,19 @@ import static java.util.concurrent.CompletableFuture.runAsync;
 import io.vavr.control.Try;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import lombok.Builder;
@@ -41,7 +45,7 @@ public class ConnectionService {
   private final Soht2ClientProperties soht2ClientProperties;
   private final Soht2Client soht2Client;
   private final PollStrategy pollStrategy;
-  private final Executor threadExecutor;
+  private final ExecutorService threadExecutor;
 
   private final AtomicBoolean isRunning = new AtomicBoolean();
   private final Map<UUID, SessionState> sessions = new ConcurrentHashMap<>();
@@ -77,8 +81,15 @@ public class ConnectionService {
   }
 
   /** Gratefully stops all active connections. */
-  @SuppressWarnings("unused")
+  @SuppressWarnings("DataFlowIssue")
   public void stopConnections() {
+    sessions.keySet().forEach(soht2Client::close);
+    sessions.clear();
+    if (threadExecutor instanceof AutoCloseable ac) Try.run(ac::close);
+    else {
+      threadExecutor.shutdownNow();
+      Try.of(() -> threadExecutor.awaitTermination(5, TimeUnit.SECONDS));
+    }
     isRunning.set(false);
   }
 
@@ -88,8 +99,8 @@ public class ConnectionService {
    * @param connectionId the unique identifier of the connection
    * @return true if the server connection is open, false otherwise
    */
-  public boolean isServerOpen(UUID connectionId) {
-    return sessions.containsKey(connectionId);
+  public boolean isSessionClosed(UUID connectionId) {
+    return !sessions.containsKey(connectionId);
   }
 
   /**
@@ -131,8 +142,9 @@ public class ConnectionService {
                   Try.run(state.out::close);
                 });
       } catch (Exception e) {
-        if (e instanceof SocketException && "Closed by interrupt".equals(e.getMessage())) {
-          log.warn("connect: interrupted");
+        if (e instanceof SocketException && "Closed by interrupt".equals(e.getMessage())
+            || e instanceof BindException && "Address already in use".equals(e.getMessage())) {
+          log.warn("connect: interrupted with exception: {}", e.toString());
           isRunning.set(false);
         } else log.atError().setMessage("connect: {}").addArgument(e::toString).setCause(e).log();
       }
@@ -181,7 +193,11 @@ public class ConnectionService {
               // Message "Connection reset" is expected in 2 cases:
               // 1. The OS resets the socket connection.
               // 2. This loop is interrupted by throwing a SocketException above.
-              e -> "Connection reset".equals(e.getMessage()) ? Try.failure(e) : Try.success(null))
+              // Message "Idle timeout" is thrown when the idle TTL is exceeded.
+              e -> "Connection reset".equals(e.getMessage())
+                      || "Idle timeout".equals(e.getMessage())
+                  ? Try.failure(e)
+                  : Try.success(null))
           .onFailure(
               e -> {
                 sessions.remove(connectionId);
@@ -198,7 +214,30 @@ public class ConnectionService {
         log.debug("delay: id={} - {}", state.connection.id(), delay);
         Thread.sleep(delay.toMillis());
       }
-    } else state.emptyExchangeCount.set(0);
+      checkIdleTimeout(state);
+    } else {
+      state.emptyExchangeCount.set(0);
+      state.lastTrafficNanos.set(System.nanoTime());
+    }
+  }
+
+  /**
+   * Checks the per-connection idle TTL. If the timeout is enabled and no traffic has been
+   * exchanged for longer than the configured duration, the exchange loop is interrupted.
+   *
+   * @param state the session state containing the last traffic timestamp
+   */
+  @SneakyThrows
+  private void checkIdleTimeout(SessionState state) {
+    val timeout = soht2ClientProperties.getDisconnectOnIdleTimeout();
+    if (timeout.isZero()) return;
+
+    val idle = Duration.ofNanos(System.nanoTime() - state.lastTrafficNanos.get());
+    if (idle.compareTo(timeout) >= 0) {
+      log.info(
+          "checkIdleTimeout: id={} idle={} timeout={}", state.connection.id(), idle, timeout);
+      throw new SocketException("Idle timeout");
+    }
   }
 
   @Builder
@@ -209,5 +248,7 @@ public class ConnectionService {
     final InputStream in;
     final OutputStream out;
     final AtomicInteger emptyExchangeCount = new AtomicInteger(0);
+    /** The timestamp of the last in/out traffic, used to track the idle TTL. */
+    final AtomicLong lastTrafficNanos = new AtomicLong(System.nanoTime());
   }
 }

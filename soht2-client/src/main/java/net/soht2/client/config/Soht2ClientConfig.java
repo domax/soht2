@@ -8,7 +8,7 @@ import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE;
 
 import java.util.Base64;
 import java.util.Optional;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Stream;
@@ -84,7 +84,7 @@ public class Soht2ClientConfig {
   }
 
   @Bean
-  Executor threadExecutor(
+  ExecutorService threadExecutor(
       @Value("${spring.threads.virtual.enabled:false}") boolean isVirtualThreadsEnabled) {
     log.info("threadExecutor: isVirtualThreadsEnabled={}", isVirtualThreadsEnabled);
 

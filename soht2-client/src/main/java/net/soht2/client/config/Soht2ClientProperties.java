@@ -191,5 +191,8 @@ public class Soht2ClientProperties implements InitializingBean {
     Assert.hasText(password, "SOHT2 server password must be defined in soht2.client.password");
     Assert.notEmpty(
         connections, "At least one connection must be defined in soht2.client.connections");
+    Assert.isTrue(
+        !disconnectOnIdleTimeout.isNegative(),
+        "soht2.client.disconnect-on-idle-timeout must not be negative");
   }
 }
