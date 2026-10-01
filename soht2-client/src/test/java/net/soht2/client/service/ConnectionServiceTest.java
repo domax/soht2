@@ -105,9 +105,9 @@ class ConnectionServiceTest {
     verify(soht2Client).close(soht2.id());
   }
 
-//  @Test
-//  @Order(1)
-//  void startConnections_OK1() {
-//    startConnections_OK();
-//  }
+  //  @Test
+  //  @Order(1)
+  //  void startConnections_OK1() {
+  //    startConnections_OK();
+  //  }
 }

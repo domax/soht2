@@ -194,10 +194,10 @@ public class ConnectionService {
               // 1. The OS resets the socket connection.
               // 2. This loop is interrupted by throwing a SocketException above.
               // Message "Idle timeout" is thrown when the idle TTL is exceeded.
-              e -> "Connection reset".equals(e.getMessage())
-                      || "Idle timeout".equals(e.getMessage())
-                  ? Try.failure(e)
-                  : Try.success(null))
+              e ->
+                  "Connection reset".equals(e.getMessage()) || "Idle timeout".equals(e.getMessage())
+                      ? Try.failure(e)
+                      : Try.success(null))
           .onFailure(
               e -> {
                 sessions.remove(connectionId);
@@ -222,8 +222,8 @@ public class ConnectionService {
   }
 
   /**
-   * Checks the per-connection idle TTL. If the timeout is enabled and no traffic has been
-   * exchanged for longer than the configured duration, the exchange loop is interrupted.
+   * Checks the per-connection idle TTL. If the timeout is enabled and no traffic has been exchanged
+   * for longer than the configured duration, the exchange loop is interrupted.
    *
    * @param state the session state containing the last traffic timestamp
    */
@@ -234,8 +234,7 @@ public class ConnectionService {
 
     val idle = Duration.ofNanos(System.nanoTime() - state.lastTrafficNanos.get());
     if (idle.compareTo(timeout) >= 0) {
-      log.info(
-          "checkIdleTimeout: id={} idle={} timeout={}", state.connection.id(), idle, timeout);
+      log.info("checkIdleTimeout: id={} idle={} timeout={}", state.connection.id(), idle, timeout);
       throw new SocketException("Idle timeout");
     }
   }
@@ -248,6 +247,7 @@ public class ConnectionService {
     final InputStream in;
     final OutputStream out;
     final AtomicInteger emptyExchangeCount = new AtomicInteger(0);
+
     /** The timestamp of the last in/out traffic, used to track the idle TTL. */
     final AtomicLong lastTrafficNanos = new AtomicLong(System.nanoTime());
   }
