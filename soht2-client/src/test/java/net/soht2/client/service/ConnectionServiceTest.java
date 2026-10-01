@@ -105,9 +105,7 @@ class ConnectionServiceTest {
     verify(soht2Client).close(soht2.id());
   }
 
-  //  @Test
-  //  @Order(1)
-  //  void startConnections_OK1() {
-  //    startConnections_OK();
-  //  }
+  // Be aware that a new test with `connectionService.startConnections`
+  // will fail by "Address already in use".
+  // This is because the previous test has not released the port yet - should be fixed.
 }
