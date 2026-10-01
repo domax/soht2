@@ -131,6 +131,7 @@ Both the client and server components can be run using Java, so on both sides yo
         password: "${PROXY_PWD}"      # Optional, only for BASIC or NTLM proxy authentication
         domain: ${PROXY_DOMAIN}       # Optional, only if NTLM proxy requires domain name
       disable-ssl-verification: false # Disable SSL verification for the connections
+      disconnect-on-idle-timeout: P0D # Timeout for closing idle connections; P0D means never
     ```
    You have to define `soht2.client.url` and at least one connection in the
    `soht2.client.connections` list. All the rest of properties are optional.<br>
