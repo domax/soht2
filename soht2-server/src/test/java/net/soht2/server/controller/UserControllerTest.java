@@ -5,12 +5,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
 import java.time.LocalDateTime;
-import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
 import lombok.val;
@@ -23,14 +25,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.CorsEndpointProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.http.HttpHeaders;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.context.WebApplicationContext;
 
 @WebMvcTest({SecurityConfig.class, Soht2ServerConfig.class, UserController.class})
 @EnableConfigurationProperties(CorsEndpointProperties.class)
@@ -38,10 +40,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @WithMockUser(username = "system", password = "test", authorities = "ADMIN")
 class UserControllerTest {
 
-  static final String AUTH =
-      "Basic " + Base64.getEncoder().encodeToString("system:test".getBytes());
-
   @Autowired MockMvc mockMvc;
+  @Autowired WebApplicationContext webApplicationContext;
 
   @MockitoBean Soht2UserService soht2UserService;
 
@@ -49,6 +49,11 @@ class UserControllerTest {
 
   @BeforeEach
   void beforeEach() {
+    mockMvc =
+        webAppContextSetup(webApplicationContext)
+            .apply(springSecurity())
+            .defaultRequest(get("/").with(user("system").authorities(() -> "ADMIN")))
+            .build();
     val now = LocalDateTime.parse("2025-07-10T23:23:19");
     val targets = new LinkedHashSet<>(List.of("localhost:*", "example.com:8080"));
     soht2User =
@@ -70,7 +75,6 @@ class UserControllerTest {
     mockMvc
         .perform(
             post("/api/user")
-                .header(HttpHeaders.AUTHORIZATION, AUTH)
                 .queryParam("username", soht2User.username())
                 .queryParam("password", "1qaz@WSX")
                 .queryParam("target", String.join(",", soht2User.allowedTargets())))
@@ -93,7 +97,6 @@ class UserControllerTest {
     mockMvc
         .perform(
             post("/api/user")
-                .header(HttpHeaders.AUTHORIZATION, AUTH)
                 .queryParam("username", "a-b")
                 .queryParam("password", "1qaz")
                 .queryParam("target", String.join(",", soht2User.allowedTargets())))
@@ -109,7 +112,6 @@ class UserControllerTest {
     mockMvc
         .perform(
             put("/api/user/" + soht2User.username())
-                .header(HttpHeaders.AUTHORIZATION, AUTH)
                 .queryParam("password", "1qaz@WSX")
                 .queryParam("role", soht2User.role())
                 .queryParam("target", String.join(",", soht2User.allowedTargets())))
@@ -132,7 +134,6 @@ class UserControllerTest {
     mockMvc
         .perform(
             delete("/api/user/" + soht2User.username())
-                .header(HttpHeaders.AUTHORIZATION, AUTH)
                 .queryParam("force", "true")
                 .queryParam("history", "true"))
         .andExpect(status().isOk());
@@ -145,7 +146,7 @@ class UserControllerTest {
     doReturn(List.of(soht2User)).when(soht2UserService).listUsers();
 
     mockMvc
-        .perform(get("/api/user").header(HttpHeaders.AUTHORIZATION, AUTH))
+        .perform(get("/api/user"))
         .andExpect(status().isOk())
         .andExpect(content().contentType(APPLICATION_JSON))
         .andExpect(jsonPath("$[0].username").value(soht2User.username()))
@@ -173,7 +174,7 @@ class UserControllerTest {
     doReturn(soht2User).when(soht2UserService).getSelf(any(Authentication.class));
 
     mockMvc
-        .perform(get("/api/user/self").header(HttpHeaders.AUTHORIZATION, AUTH))
+        .perform(get("/api/user/self"))
         .andExpect(status().isOk())
         .andExpect(content().contentType(APPLICATION_JSON))
         .andExpect(jsonPath("$.username").value(soht2User.username()))
@@ -203,11 +204,7 @@ class UserControllerTest {
         .changePassword(anyString(), anyString(), any(Authentication.class));
 
     mockMvc
-        .perform(
-            put("/api/user/self")
-                .header(HttpHeaders.AUTHORIZATION, AUTH)
-                .queryParam("old", "test")
-                .queryParam("new", "1qaz@WSX"))
+        .perform(put("/api/user/self").queryParam("old", "test").queryParam("new", "1qaz@WSX"))
         .andExpect(status().isOk())
         .andExpect(content().contentType(APPLICATION_JSON))
         .andExpect(jsonPath("$.username").value(soht2User.username()))
