@@ -9,9 +9,11 @@ spring:
     file: ./soht2-client.pid
     fail-on-write-error: true
   jackson:
-    date-format: com.fasterxml.jackson.databind.util.StdDateFormat
+    date-format: tools.jackson.databind.util.StdDateFormat
+    datatype:
+      datetime:
+        write-dates-as-timestamps: false
     serialization:
-      write-dates-as-timestamps: false
       fail-on-empty-beans: false
     deserialization:
       fail-on-unknown-properties: false

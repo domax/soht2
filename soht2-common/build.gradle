@@ -31,24 +31,23 @@ configurations {
 
 dependencyManagement {
   imports {
-    mavenBom("org.springframework.boot:spring-boot-dependencies:3.5.9")
+    mavenBom("org.springframework.boot:spring-boot-dependencies:4.1.1")
   }
 }
 
 dependencies {
   dependencies {
-    implementation 'io.vavr:vavr:0.11.0'
+    implementation 'io.vavr:vavr:1.0.1'
     implementation 'com.fasterxml.uuid:java-uuid-generator:5.2.0'
     compileOnly 'org.springframework:spring-core'
     compileOnly 'org.projectlombok:lombok'
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-jackson-test'
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    testImplementation 'com.fasterxml.jackson.core:jackson-databind'
-    testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
   }
 }
 

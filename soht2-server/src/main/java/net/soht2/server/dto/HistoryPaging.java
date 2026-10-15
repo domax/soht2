@@ -3,6 +3,7 @@ package net.soht2.server.dto;
 
 import static java.util.Optional.ofNullable;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import lombok.Builder;
@@ -10,7 +11,11 @@ import lombok.Builder;
 public final class HistoryPaging extends Paging<HistorySorting> {
 
   @Builder
-  HistoryPaging(int pageNumber, int pageSize, List<HistoryOrder> sorting) {
+  @JsonCreator
+  HistoryPaging(
+      @JsonProperty("pageNumber") int pageNumber,
+      @JsonProperty("pageSize") int pageSize,
+      @JsonProperty("sorting") List<HistoryOrder> sorting) {
     super(
         pageNumber,
         pageSize,

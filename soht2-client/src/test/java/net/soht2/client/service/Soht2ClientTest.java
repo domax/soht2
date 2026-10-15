@@ -6,7 +6,6 @@ import static org.springframework.http.HttpMethod.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.UUID;
 import lombok.val;
 import net.soht2.client.config.Soht2ClientConfig;
@@ -15,11 +14,12 @@ import net.soht2.client.test.UTHelper;
 import net.soht2.common.dto.Soht2Connection;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
+import org.springframework.boot.restclient.test.autoconfigure.RestClientTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.client.MockRestServiceServer;
+import tools.jackson.databind.ObjectMapper;
 
 @RestClientTest(Soht2Client.class)
 @Import(Soht2ClientConfig.class)

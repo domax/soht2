@@ -30,7 +30,7 @@ import lombok.val;
 import net.soht2.client.config.Soht2ClientProperties;
 import net.soht2.client.config.Soht2ClientProperties.HostProperties;
 import net.soht2.common.dto.Soht2Connection;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 /**

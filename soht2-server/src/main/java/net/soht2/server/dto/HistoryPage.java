@@ -3,6 +3,7 @@ package net.soht2.server.dto;
 
 import static java.util.Optional.ofNullable;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import lombok.Builder;
@@ -11,7 +12,11 @@ import net.soht2.common.dto.Soht2Connection;
 public final class HistoryPage extends Page<Soht2Connection, HistorySorting> {
 
   @Builder
-  private HistoryPage(HistoryPaging paging, Long totalItems, List<Soht2Connection> data) {
+  @JsonCreator
+  private HistoryPage(
+      @JsonProperty("paging") HistoryPaging paging,
+      @JsonProperty("totalItems") Long totalItems,
+      @JsonProperty("data") List<Soht2Connection> data) {
     super(paging, totalItems, data);
   }
 

@@ -6,13 +6,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vavr.control.Try;
 import java.time.LocalDateTime;
-import java.util.Base64;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -33,13 +34,14 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.CorsEndpointProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.http.HttpHeaders;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.context.WebApplicationContext;
+import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest({SecurityConfig.class, Soht2ServerConfig.class, ConnectionController.class})
 @EnableConfigurationProperties(CorsEndpointProperties.class)
@@ -47,10 +49,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @WithMockUser(username = "system", password = "test", authorities = "USER")
 class ConnectionControllerTest {
 
-  static final String AUTH =
-      "Basic " + Base64.getEncoder().encodeToString("system:test".getBytes());
-
   @Autowired MockMvc mockMvc;
+  @Autowired WebApplicationContext webApplicationContext;
   @Autowired Soht2ServerConfig soht2ServerConfig;
   @Autowired ObjectMapper objectMapper;
 
@@ -58,6 +58,15 @@ class ConnectionControllerTest {
   Soht2Service soht2Service;
 
   @MockitoBean Soht2HistoryService soht2HistoryService;
+
+  @org.junit.jupiter.api.BeforeEach
+  void authenticateRequests() {
+    mockMvc =
+        webAppContextSetup(webApplicationContext)
+            .apply(springSecurity())
+            .defaultRequest(get("/").with(user("system").authorities(() -> "USER")))
+            .build();
+  }
 
   @SuppressWarnings("resource")
   @Test
@@ -89,10 +98,7 @@ class ConnectionControllerTest {
 
       mockMvc
           .perform(
-              post("/api/connection")
-                  .header(HttpHeaders.AUTHORIZATION, AUTH)
-                  .queryParam("host", "targetHost")
-                  .queryParam("port", "12345"))
+              post("/api/connection").queryParam("host", "targetHost").queryParam("port", "12345"))
           .andExpect(status().isOk())
           .andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.id").value(sohtConnection.id().toString()))
@@ -131,7 +137,6 @@ class ConnectionControllerTest {
         .perform(
             post("/api/connection/" + sohtConnection.id())
                 .contentType(APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.AUTHORIZATION, AUTH)
                 .content(bytesIn))
         .andExpect(status().isOk())
         .andExpect(content().contentType(APPLICATION_OCTET_STREAM))
@@ -204,7 +209,6 @@ class ConnectionControllerTest {
     mockMvc
         .perform(
             get("/api/connection/history")
-                .header(HttpHeaders.AUTHORIZATION, AUTH)
                 .queryParam("un", "user*")
                 .queryParam("id", "*-4f*")
                 .queryParam("ch", "168.1")

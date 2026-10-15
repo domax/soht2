@@ -11,3 +11,5 @@
 # Zeppelin ignored files
 /ZeppelinRemoteNotebooks/
 /data_source_mapping.xml
+/JPAMappingSettings.xml
+/db-forest-config.xml
