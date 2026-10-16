@@ -30,7 +30,7 @@ import net.soht2.server.dto.HistoryPage;
 import net.soht2.server.dto.HistoryPaging;
 import net.soht2.server.service.Soht2HistoryService;
 import net.soht2.server.service.Soht2Service;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -268,7 +268,7 @@ public class ConnectionController {
       consumes = APPLICATION_OCTET_STREAM_VALUE)
   public byte[] exchange(
       @PathVariable("id") UUID connectionId,
-      @RequestBody(required = false) @Nullable byte[] data,
+      @RequestBody(required = false) byte @Nullable [] data,
       @RequestHeader(name = CONTENT_ENCODING, required = false) @Nullable String contentEncoding) {
     return soht2Service.exchange(connectionId, data, contentEncoding).get();
   }

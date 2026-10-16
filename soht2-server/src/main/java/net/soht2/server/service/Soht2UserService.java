@@ -20,13 +20,12 @@ import net.soht2.common.dto.Soht2User;
 import net.soht2.server.config.Soht2ServerConfig;
 import net.soht2.server.entity.UserEntity;
 import net.soht2.server.repository.UserEntityRepository;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.Cache;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.lang.Nullable;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -332,15 +331,20 @@ public class Soht2UserService implements UserDetailsService {
 
   @Builder
   record CurrentUser(String name, String role, boolean isAdmin) {
+
     static CurrentUser from(UserDetails userDetails) {
       return new CurrentUser(
           userDetails.getUsername().toLowerCase(),
           userDetails.getAuthorities().stream()
-              .map(GrantedAuthority::getAuthority)
+              .map(ga -> ofNullable(ga.getAuthority()))
+              .filter(Optional::isPresent)
+              .map(Optional::get)
               .findAny()
               .orElse(UserEntity.ROLE_USER),
           userDetails.getAuthorities().stream()
-              .map(GrantedAuthority::getAuthority)
+              .map(ga -> ofNullable(ga.getAuthority()))
+              .filter(Optional::isPresent)
+              .map(Optional::get)
               .anyMatch(UserEntity.ROLE_ADMIN::equals));
     }
   }

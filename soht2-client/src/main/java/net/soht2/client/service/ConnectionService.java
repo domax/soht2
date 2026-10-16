@@ -16,7 +16,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -81,15 +80,10 @@ public class ConnectionService {
   }
 
   /** Gratefully stops all active connections. */
-  @SuppressWarnings("DataFlowIssue")
   public void stopConnections() {
     sessions.keySet().forEach(soht2Client::close);
     sessions.clear();
-    if (threadExecutor instanceof AutoCloseable ac) Try.run(ac::close);
-    else {
-      threadExecutor.shutdownNow();
-      Try.of(() -> threadExecutor.awaitTermination(5, TimeUnit.SECONDS));
-    }
+    Try.run(threadExecutor::close);
     isRunning.set(false);
   }
 

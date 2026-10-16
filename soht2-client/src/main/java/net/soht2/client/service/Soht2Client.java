@@ -1,6 +1,7 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.client.service;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 import static net.soht2.common.compress.Compressor.compressorCache;
 import static org.springframework.http.HttpHeaders.ACCEPT_ENCODING;
@@ -49,13 +50,16 @@ public class Soht2Client {
     log.debug("open: remoteHost={}, remotePort={}", remoteHost, remotePort);
     return Try.of(
             () ->
-                restClient
-                    .post()
-                    .uri(
-                        b ->
-                            b.queryParam("host", remoteHost).queryParam("port", remotePort).build())
-                    .retrieve()
-                    .body(Soht2Connection.class))
+                requireNonNull(
+                    restClient
+                        .post()
+                        .uri(
+                            b ->
+                                b.queryParam("host", remoteHost)
+                                    .queryParam("port", remotePort)
+                                    .build())
+                        .retrieve()
+                        .body(Soht2Connection.class)))
         .onSuccess(connection -> log.info("open: connection={}", connection))
         .onFailure(
             e -> log.atError().setMessage("open: {}").addArgument(e::toString).setCause(e).log());

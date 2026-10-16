@@ -16,6 +16,7 @@ import java.net.SocketTimeoutException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +25,7 @@ import net.soht2.common.dto.Soht2Connection;
 import net.soht2.common.dto.Soht2User;
 import net.soht2.server.config.Soht2ServerConfig;
 import net.soht2.server.entity.UserEntity;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -133,14 +134,15 @@ public class Soht2Service {
    * @return a {@link Try} containing the byte array received from the connection's input stream if
    *     the operation is successful, or an empty byte array in case of a timeout
    */
-  public Try<byte[]> exchange(UUID id, @Nullable byte[] data, @Nullable String encoding) {
+  public Try<byte[]> exchange(UUID id, byte @Nullable [] data, @Nullable String encoding) {
     if (log.isTraceEnabled())
       ofNullable(data)
           .map(v -> v.length)
           .filter(v -> v > 0)
           .ifPresent(v -> log.trace("exchange: id={}, in.length={}, encoding={}", id, v, encoding));
-    return Try.of(() -> connections.get(id))
-        .filter(Objects::nonNull, () -> gone("Connection " + id + " not found"))
+    return Try.of(() -> ofNullable(connections.get(id)))
+        .filter(Optional::isPresent, () -> gone("Connection " + id + " not found"))
+        .map(Optional::get)
         .filter(ServerConnection::isOpened, () -> gone("Connection " + id + " is closed"))
         .andThenTry(sc -> sc.lock().lock())
         .andThenTry(c -> c.lastActivity(LocalDateTime.now()))
@@ -158,7 +160,13 @@ public class Soht2Service {
               sc.addBytesRead(bufferLen);
               return bufferLen >= buffer.length ? buffer : Arrays.copyOf(buffer, bufferLen);
             })
-        .andFinally(() -> Try.run(connections.get(id).lock()::unlock))
+        .andFinally(
+            () ->
+                Try.run(
+                    () ->
+                        ofNullable(connections.get(id))
+                            .map(ServerConnection::lock)
+                            .ifPresent(ReentrantLock::unlock)))
         .recover(SocketTimeoutException.class, e -> EMPTY)
         .onFailure(e -> log.error("exchange: id={} - {}", id, e.toString()))
         .recover(SocketException.class, e -> EMPTY)

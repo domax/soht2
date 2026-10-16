@@ -1,7 +1,7 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.common.dto;
 
-import static net.soht2.common.UTHelper.getObjectMapper;
+import static net.soht2.common.UTHelper.getJsonMapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDateTime;
@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 class Soht2ConnectionTest {
 
   @Test
-  void serialization() throws Exception {
+  void serialization() {
     val timestamp = LocalDateTime.parse("2025-01-01T01:23:45");
     val object =
         Soht2Connection.builder()
@@ -46,9 +46,9 @@ class Soht2ConnectionTest {
     assertThat(object.bytesRead()).isEqualTo(100L);
     assertThat(object.bytesWritten()).isEqualTo(200L);
 
-    val objectMapper = getObjectMapper();
-    val json = objectMapper.writeValueAsString(object);
-    val deserialized = objectMapper.readValue(json, Soht2Connection.class);
+    val jsonMapper = getJsonMapper();
+    val json = jsonMapper.writeValueAsString(object);
+    val deserialized = jsonMapper.readValue(json, Soht2Connection.class);
 
     assertThat(deserialized).isEqualTo(object);
   }

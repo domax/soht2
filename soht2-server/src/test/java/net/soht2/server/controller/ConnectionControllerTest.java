@@ -41,7 +41,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest({SecurityConfig.class, Soht2ServerConfig.class, ConnectionController.class})
 @EnableConfigurationProperties(CorsEndpointProperties.class)
@@ -52,7 +52,7 @@ class ConnectionControllerTest {
   @Autowired MockMvc mockMvc;
   @Autowired WebApplicationContext webApplicationContext;
   @Autowired Soht2ServerConfig soht2ServerConfig;
-  @Autowired ObjectMapper objectMapper;
+  @Autowired JsonMapper jsonMapper;
 
   @MockitoBean("soht2Service")
   Soht2Service soht2Service;
@@ -227,7 +227,7 @@ class ConnectionControllerTest {
         .andDo(
             rh ->
                 assertThat(
-                        objectMapper.readValue(
+                        jsonMapper.readValue(
                             rh.getResponse().getContentAsString(), HistoryPage.class))
                     .isEqualTo(page));
 

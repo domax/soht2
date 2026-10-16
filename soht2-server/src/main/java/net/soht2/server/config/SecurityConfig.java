@@ -1,6 +1,7 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.server.config;
 
+import static java.util.Optional.ofNullable;
 import static org.springframework.security.config.Customizer.withDefaults;
 
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -30,7 +31,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
   @Bean
-  SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+  SecurityFilterChain securityFilterChain(HttpSecurity http) {
     return http.csrf(CsrfConfigurer::disable)
         .cors(withDefaults())
         .httpBasic(withDefaults())
@@ -44,7 +45,8 @@ public class SecurityConfig {
   @Bean
   CorsConfigurationSource corsConfigurationSource(CorsEndpointProperties corsEndpointProperties) {
     val configuration = new UrlBasedCorsConfigurationSource();
-    configuration.registerCorsConfiguration("/**", corsEndpointProperties.toCorsConfiguration());
+    ofNullable(corsEndpointProperties.toCorsConfiguration())
+        .ifPresent(cc -> configuration.registerCorsConfiguration("/**", cc));
     return configuration;
   }
 

@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 
 @Slf4j
-class TimeoutAwareExecutorService implements ExecutorService, AutoCloseable {
+class TimeoutAwareExecutorService implements ExecutorService {
 
   private final ExecutorService delegate;
 

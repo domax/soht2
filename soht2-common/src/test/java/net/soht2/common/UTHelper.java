@@ -6,7 +6,6 @@ import io.vavr.control.Option;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import tools.jackson.databind.DeserializationFeature;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.SerializationFeature;
 import tools.jackson.databind.cfg.DateTimeFeature;
 import tools.jackson.databind.json.JsonMapper;
@@ -15,7 +14,7 @@ import tools.jackson.databind.util.StdDateFormat;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class UTHelper {
 
-  public static ObjectMapper getObjectMapper() {
+  public static JsonMapper getJsonMapper() {
     return Option.of(
             JsonMapper.builder()
                 .findAndAddModules()

@@ -19,7 +19,7 @@ import net.soht2.server.dto.HistoryPage;
 import net.soht2.server.dto.HistoryPaging;
 import net.soht2.server.entity.HistoryEntity;
 import net.soht2.server.repository.HistoryEntityRepository;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -13,6 +13,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 @Slf4j
 class CompressorTest {
 
+  @SuppressWarnings("SpellCheckingInspection")
   static final String DATA =
       """
       Lorem ipsum dolor sit amet, consectetur adipiscing elit. \

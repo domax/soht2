@@ -50,6 +50,7 @@ public final class ExceptionHelper {
     return createServerException(SERVICE_UNAVAILABLE, message);
   }
 
+  @SuppressWarnings("DataFlowIssue")
   private static ResponseStatusException createClientException(HttpStatus status, String message) {
     return new ResponseStatusException(
         status,
@@ -58,6 +59,7 @@ public final class ExceptionHelper {
             message, status, status.getReasonPhrase(), null, message.getBytes(), null));
   }
 
+  @SuppressWarnings("DataFlowIssue")
   private static ResponseStatusException createServerException(HttpStatus status, String message) {
     return new ResponseStatusException(
         status,

@@ -32,7 +32,7 @@ import net.soht2.common.dto.Soht2Connection;
 public class ServerConnection implements Closeable {
 
   @Getter(AccessLevel.NONE)
-  AtomicReference<Soht2Connection> soht2 = new AtomicReference<>();
+  AtomicReference<Soht2Connection> soht2;
 
   @Getter(AccessLevel.NONE)
   Socket socket;
@@ -58,7 +58,7 @@ public class ServerConnection implements Closeable {
   private ServerConnection(
       Soht2Connection soht2, int socketTimeout, Consumer<ServerConnection> postCloseAction) {
     log.debug("new: connection={}", soht2);
-    this.soht2.set(soht2);
+    this.soht2 = new AtomicReference<>(soht2);
     socket =
         Try.of(() -> InetAddress.getByName(soht2.targetHost()))
             .mapTry(inet -> new Socket(inet, soht2.targetPort()))
@@ -151,6 +151,6 @@ public class ServerConnection implements Closeable {
     Try.run(outputStream::close);
     Try.run(socket::close);
     Try.run(lock::unlock);
-    if (postCloseAction != null) postCloseAction.accept(this);
+    postCloseAction.accept(this);
   }
 }

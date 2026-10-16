@@ -71,9 +71,11 @@ public class HCClientHttpRequest extends AbstractClientHttpRequest
 
   @Override
   protected ClientHttpResponse executeInternal(HttpHeaders headers) throws IOException {
-    if (this.body == null && this.bodyStream != null)
-      this.body = outputStream -> this.bodyStream.writeTo(outputStream);
-
+    if (this.body == null)
+      this.body =
+          outputStream -> {
+            if (this.bodyStream != null) this.bodyStream.writeTo(outputStream);
+          };
     return executeInternal(headers, this.body);
   }
 
