@@ -173,13 +173,13 @@ If you want to use a different database instead of the default H2DB, you can con
     SPRING_DATASOURCE_USERNAME="my_user"
     SPRING_DATASOURCE_PASSWORD="my_password"
     ```
-4. Create a `loader.properties` file in the same directory where SOHT2 server JAR is placed, and put
+4. Create a `loader.properties` file in the same directory where SOHT2 server JAR is placed and put
    there the following content:
     ```properties
     loader.path=/path/to/your/jdbc/jars/
     ```
    The `/path/to/your/jdbc/jars/` may be a relative path in case if you're sure that you run the
-   SOHT2 server from correct working folder.
+   SOHT2 server from the correct working folder.
 5. Run the SOHT2 server as usual.
 
 Web Consoles

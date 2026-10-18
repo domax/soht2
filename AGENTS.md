@@ -6,10 +6,10 @@ client can reach remote hosts (e.g. internal services) without direct exposure.
 ## Modules (Gradle multi-module, group `net.soht2`)
 
 - `soht2-common` — shared library: DTOs, compression, utilities (used by client and server).
-- `soht2-server` — Spring Boot 3.5 server: receives tunnel requests, forwards them to remote hosts.
+- `soht2-server` — Spring Boot 4.1 server: receives tunnel requests, forwards them to remote hosts.
   Uses Spring Security, Data JPA + H2 (file DB), Flyway, Caffeine cache, springdoc OpenAPI,
   Thymeleaf. Config: `application-server.yaml` (root) + `src/main/resources/application.yaml`.
-- `soht2-client` — Spring Boot 3.5 client: opens local ports, tunnels through the server over HTTP.
+- `soht2-client` — Spring Boot 4.1 client: opens local ports, tunnels through the server over HTTP.
   Config: `application-client.yaml` (root) + `src/main/resources/application.yaml`.
 - `soht2-ui` — React 19 + TypeScript 5 (Vite) admin UI. `npm run build` also deploys: copies `dist/`
   to `soht2-server/src/main/resources/public/` and moves `index.html` to
@@ -21,7 +21,7 @@ client can reach remote hosts (e.g. internal services) without direct exposure.
 
 ## Stack & versions
 
-- Java 21 (Gradle toolchain), Spring Boot 3.5.9, Lombok, vavr; Node ≥ 20 / npm.
+- Java 21 (Gradle toolchain), Spring Boot 4.1.1, Lombok, vavr; Node ≥ 20 / npm.
 - Code style: Spotless for Java (`./gradlew spotlessCheck|spotlessApply`); ESLint + Prettier for the
   UI (`npm run lint|format`). Every Java file must start with the Spotless-enforced header
   `/* SOHT2 © Licensed under MIT $YEAR. */` (UI TS/TSX files use
