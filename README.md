@@ -2,7 +2,7 @@ SOHT2 - Socket Over HTTP Tunnel 2
 =================================
 
 [![Made with Java](https://img.shields.io/badge/Java-21-blue?logo=openjdk&logoColor=white)](https://openjdk.org "OpenJDK homepage")
-[![Made with Spring Boot](https://img.shields.io/badge/SpringBoot-3-blue?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot "Spring Boot homepage")
+[![Made with Spring Boot](https://img.shields.io/badge/SpringBoot-4-blue?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot "Spring Boot homepage")
 [![Made with TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript&logoColor=white)](https://typescriptlang.org "TypeScript homepage")
 [![Made with React](https://img.shields.io/badge/React-19-blue?logo=react&logoColor=white)](https://reactjs.org "React homepage")
 [![Made with Node.js](https://img.shields.io/badge/Node.js-23-blue?logo=node.js&logoColor=white)](https://nodejs.org/en "Node.js homepage")<br>
