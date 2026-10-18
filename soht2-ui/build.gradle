@@ -1,3 +1,19 @@
+// Keep the UI package version in sync with the single VERSION file at the project root.
+def versionFile = new File(rootProject.projectDir, 'VERSION')
+
+tasks.register('syncVersion') {
+  def packageJson = new File(project.projectDir, 'package.json')
+  inputs.file(versionFile)
+  doLast {
+    def version = versionFile.text.trim()
+    def content = packageJson.text
+    def updated = content.replaceFirst(/"version":\s*"[^"]*"/, "\"version\": \"${version}\"")
+    if (updated != content) {
+      packageJson.text = updated
+    }
+  }
+}
+
 tasks.register('clean', Exec) {
   workingDir "${layout.projectDirectory}"
   if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')) {
@@ -8,6 +24,7 @@ tasks.register('clean', Exec) {
 }
 
 tasks.register('build', Exec) {
+  dependsOn 'syncVersion'
   workingDir "${layout.projectDirectory}"
   if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')) {
     commandLine 'cmd', '/c', 'npm install && npm run build'

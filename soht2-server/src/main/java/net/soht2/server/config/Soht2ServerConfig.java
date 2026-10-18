@@ -1,17 +1,21 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.server.config;
 
-import io.swagger.v3.oas.annotations.OpenAPIDefinition;
-import io.swagger.v3.oas.annotations.info.Info;
-import io.swagger.v3.oas.annotations.servers.Server;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.servers.Server;
 import java.io.File;
 import java.net.URI;
 import java.time.Duration;
+import java.util.List;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.util.Assert;
 import org.springframework.util.unit.DataSize;
@@ -22,18 +26,12 @@ import org.springframework.util.unit.DataSize;
  * <p>This class holds the properties required to configure the SOHT2 server, including the read
  * buffer size and socket timeout.
  */
-// <editor-fold desc="OpenAPI Annotations">
-@OpenAPIDefinition(
-    info = @Info(title = "SOHT2 Server API", version = "1.0.7"),
-    servers = {
-      @Server(url = "${soht2.server.open-api-server-url}", description = "SOHT2 OpenAPI Server")
-    })
-// </editor-fold>
 @Slf4j
 @Data
 @Configuration
 @EnableScheduling
 @ConfigurationProperties("soht2.server")
+@PropertySource(value = "classpath:version.properties", ignoreResourceNotFound = true)
 public class Soht2ServerConfig implements InitializingBean {
 
   /** The path to the database file. */
@@ -70,6 +68,19 @@ public class Soht2ServerConfig implements InitializingBean {
     Assert.notNull(databasePath, "Database path must not be empty");
     Assert.hasText(adminUsername, "Admin username must not be empty");
     Assert.hasText(defaultAdminPassword, "Default admin password must not be empty");
+  }
+
+  /**
+   * Builds the OpenAPI definition, using the project version baked into {@code version.properties}
+   * at build time.
+   */
+  @Bean
+  public OpenAPI soht2OpenApi(
+      @Value("${version:unknown}") String version,
+      @Value("${soht2.server.open-api-server-url:}") String openApiServerUrl) {
+    return new OpenAPI()
+        .info(new Info().title("SOHT2 Server API").version(version))
+        .servers(List.of(new Server().url(openApiServerUrl).description("SOHT2 OpenAPI Server")));
   }
 
   /**

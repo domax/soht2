@@ -19,6 +19,32 @@ java {
   }
 }
 
+// Bake the project version (from the root VERSION file) into a resource so the running
+// server can expose it (e.g. in the OpenAPI info) without hardcoding it in Java.
+def versionFile = new File(rootProject.projectDir, 'VERSION')
+def generatedVersionDir = layout.buildDirectory.dir('generated-resources/version')
+tasks.register('writeVersionProperties') {
+  def outputFile = generatedVersionDir.get().file('version.properties').asFile
+  inputs.file(versionFile)
+  outputs.file(outputFile)
+  doLast {
+    def version = versionFile.text.trim()
+    outputFile.text = "version=${version}\n"
+  }
+}
+
+sourceSets {
+  main {
+    resources {
+      srcDir generatedVersionDir
+    }
+  }
+}
+
+tasks.named('processResources') {
+  dependsOn 'writeVersionProperties'
+}
+
 idea {
   module {
     downloadSources = true

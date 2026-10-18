@@ -48,6 +48,10 @@ client can reach remote hosts (e.g. internal services) without direct exposure.
 
 ## Conventions
 
+- The project version lives in the root `VERSION` file (single source of truth). It is consumed by
+  Gradle (sets the version for all subprojects), the server's OpenAPI info (baked into
+  `version.properties` at build time), and the UI build (syncs `package.json` before `npm install`,
+  which regenerates `package-lock.json`). To bump the version, edit only `VERSION` and rebuild.
 - Server/client config properties are namespaced `soht2.server.*` / `soht2.client.*`; keep
   `@ConfigurationProperties` classes in sync with root `application-server.yaml` /
   `application-client.yaml` examples.
