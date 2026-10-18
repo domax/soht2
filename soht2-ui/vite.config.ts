@@ -9,11 +9,24 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          react: ['react', 'react-dom'],
-          material: ['@mui/material'],
-          dataGrid: ['@mui/x-data-grid'],
-          datePickers: ['@mui/x-date-pickers', 'dayjs'],
+        manualChunks(moduleId) {
+          const chunks: Record<string, string[]> = {
+            react: ['react', 'react-dom'],
+            material: ['@mui/material'],
+            dataGrid: ['@mui/x-data-grid'],
+            datePickers: ['@mui/x-date-pickers', 'dayjs'],
+          };
+          for (const [chunk, packages] of Object.entries(chunks)) {
+            for (const pkg of packages) {
+              if (
+                moduleId.includes(`node_modules/${pkg}/`) ||
+                moduleId.endsWith(`node_modules/${pkg}`)
+              ) {
+                return chunk;
+              }
+            }
+          }
+          return null;
         },
       },
     },
