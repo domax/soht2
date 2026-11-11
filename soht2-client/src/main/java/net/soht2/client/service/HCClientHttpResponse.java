@@ -51,12 +51,11 @@ public class HCClientHttpResponse implements ClientHttpResponse {
   @Override
   public void close() {
     Try.run(() -> EntityUtils.consume(httpResponse.getEntity()))
-        .andFinally(
-            () ->
-                Try.success(httpResponse)
-                    .filter(Closeable.class::isInstance)
-                    .mapTry(Closeable.class::cast)
-                    .andThenTry(Closeable::close));
+        .andFinally(() ->
+            Try.success(httpResponse)
+                .filter(Closeable.class::isInstance)
+                .mapTry(Closeable.class::cast)
+                .andThenTry(Closeable::close));
   }
 
   @Override

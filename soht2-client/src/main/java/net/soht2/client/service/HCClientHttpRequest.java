@@ -102,18 +102,17 @@ public class HCClientHttpRequest extends AbstractClientHttpRequest
   }
 
   static void addHeaders(HttpUriRequest httpRequest, HttpHeaders headers) {
-    headers.forEach(
-        (headerName, headerValues) -> {
-          if (COOKIE.equalsIgnoreCase(headerName)) { // RFC 6265
-            String headerValue = StringUtils.collectionToDelimitedString(headerValues, "; ");
-            httpRequest.addHeader(headerName, headerValue);
-          } else if (!CONTENT_LENGTH.equalsIgnoreCase(headerName)
-              && !TRANSFER_ENCODING.equalsIgnoreCase(headerName)) {
-            for (String headerValue : headerValues) {
-              httpRequest.addHeader(headerName, headerValue);
-            }
-          }
-        });
+    headers.forEach((headerName, headerValues) -> {
+      if (COOKIE.equalsIgnoreCase(headerName)) { // RFC 6265
+        String headerValue = StringUtils.collectionToDelimitedString(headerValues, "; ");
+        httpRequest.addHeader(headerName, headerValue);
+      } else if (!CONTENT_LENGTH.equalsIgnoreCase(headerName)
+          && !TRANSFER_ENCODING.equalsIgnoreCase(headerName)) {
+        for (String headerValue : headerValues) {
+          httpRequest.addHeader(headerName, headerValue);
+        }
+      }
+    });
   }
 
   record BodyEntity(HttpHeaders headers, Body body) implements HttpEntity {

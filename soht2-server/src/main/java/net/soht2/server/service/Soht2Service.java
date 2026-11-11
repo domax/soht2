@@ -146,37 +146,33 @@ public class Soht2Service {
         .filter(ServerConnection::isOpened, () -> gone("Connection " + id + " is closed"))
         .andThenTry(sc -> sc.lock().lock())
         .andThenTry(c -> c.lastActivity(LocalDateTime.now()))
-        .mapTry(
-            sc -> {
-              if (ofNullable(data).filter(v -> v.length > 0).isPresent()) {
-                val dataOut = compressorCache.apply(encoding).decompress(data);
-                sc.outputStream().write(dataOut);
-                sc.outputStream().flush();
-                sc.addBytesWritten(dataOut.length);
-              }
-              val buffer = new byte[(int) soht2ServerConfig.getReadBufferSize().toBytes()];
-              val bufferLen = sc.inputStream().read(buffer);
-              if (bufferLen <= 0) return EMPTY;
-              sc.addBytesRead(bufferLen);
-              return bufferLen >= buffer.length ? buffer : Arrays.copyOf(buffer, bufferLen);
-            })
-        .andFinally(
-            () ->
-                Try.run(
-                    () ->
-                        ofNullable(connections.get(id))
-                            .map(ServerConnection::lock)
-                            .ifPresent(ReentrantLock::unlock)))
+        .mapTry(sc -> {
+          if (ofNullable(data).filter(v -> v.length > 0).isPresent()) {
+            val dataOut = compressorCache.apply(encoding).decompress(data);
+            sc.outputStream().write(dataOut);
+            sc.outputStream().flush();
+            sc.addBytesWritten(dataOut.length);
+          }
+          val buffer = new byte[(int) soht2ServerConfig.getReadBufferSize().toBytes()];
+          val bufferLen = sc.inputStream().read(buffer);
+          if (bufferLen <= 0) return EMPTY;
+          sc.addBytesRead(bufferLen);
+          return bufferLen >= buffer.length ? buffer : Arrays.copyOf(buffer, bufferLen);
+        })
+        .andFinally(() ->
+            Try.run(() ->
+                ofNullable(connections.get(id))
+                    .map(ServerConnection::lock)
+                    .ifPresent(ReentrantLock::unlock)))
         .recover(SocketTimeoutException.class, e -> EMPTY)
         .onFailure(e -> log.error("exchange: id={} - {}", id, e.toString()))
         .recover(SocketException.class, e -> EMPTY)
-        .andThenTry(
-            bytes ->
-                ofNullable(bytes)
-                    .filter(v -> log.isTraceEnabled())
-                    .map(v -> v.length)
-                    .filter(v -> v > 0)
-                    .ifPresent(v -> log.trace("exchange: id={}, out.length={}", id, v)));
+        .andThenTry(bytes ->
+            ofNullable(bytes)
+                .filter(v -> log.isTraceEnabled())
+                .map(v -> v.length)
+                .filter(v -> v > 0)
+                .ifPresent(v -> log.trace("exchange: id={}, out.length={}", id, v)));
   }
 
   /**
@@ -190,14 +186,13 @@ public class Soht2Service {
     val ttl = soht2ServerConfig.getAbandonedConnections().getTimeout();
     connections.values().stream()
         .filter(ServerConnection::isOpened)
-        .peek(
-            sc ->
-                log.atDebug()
-                    .setMessage("closeAbandonedConnections: id={}, age={}/{}")
-                    .addArgument(sc.soht2()::id)
-                    .addArgument(sc::activityAge)
-                    .addArgument(sc::connectionAge)
-                    .log())
+        .peek(sc ->
+            log.atDebug()
+                .setMessage("closeAbandonedConnections: id={}, age={}/{}")
+                .addArgument(sc.soht2()::id)
+                .addArgument(sc::activityAge)
+                .addArgument(sc::connectionAge)
+                .log())
         .filter(sc -> sc.activityAge().compareTo(ttl) >= 0)
         .peek(sc -> log.warn("closeAbandonedConnections: soht2={}", sc.soht2()))
         .forEach(ServerConnection::close);

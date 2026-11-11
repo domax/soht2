@@ -63,12 +63,11 @@ public class TrustingSSLConfig {
     return Try.of(SSLContextBuilder::create)
         .mapTry(b -> b.loadTrustMaterial(null, TrustAllStrategy.INSTANCE).build())
         .mapTry(ctx -> new SSLConnectionSocketFactory(ctx, NoopHostnameVerifier.INSTANCE))
-        .mapTry(
-            sslSocketFactory ->
-                RegistryBuilder.<ConnectionSocketFactory>create()
-                    .register("http", PlainConnectionSocketFactory.getSocketFactory())
-                    .register("https", sslSocketFactory)
-                    .build())
+        .mapTry(sslSocketFactory ->
+            RegistryBuilder.<ConnectionSocketFactory>create()
+                .register("http", PlainConnectionSocketFactory.getSocketFactory())
+                .register("https", sslSocketFactory)
+                .build())
         .mapTry(PoolingHttpClientConnectionManager::new)
         .onSuccess(cm -> log.info("trustingClientConnectionManager: {}", cm))
         .get();

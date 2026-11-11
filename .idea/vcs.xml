@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AgentCommitMessageProject"><![CDATA[{
+  "mode": "CUSTOM",
+  "instruction": "Use conventional commit format. Avoid overly verbose descriptions or unnecessary details. Use bullet points for multiple changes. Keep message as short as possible, but less than 20 words."
+}]]></component>
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
   </component>

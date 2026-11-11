@@ -50,19 +50,18 @@ public class Soht2HistoryService {
   @Transactional
   public void addHistory(Soht2Connection connection) {
     if (!soht2ServerConfig.isEnableHistory()) throw serviceUnavailable(ERR_HISTORY_DISABLED);
-    Try.of(
-            () ->
-                HistoryEntity.builder()
-                    .userName(connection.user().username())
-                    .connectionId(connection.id())
-                    .clientHost(connection.clientHost())
-                    .targetHost(connection.targetHost())
-                    .targetPort(connection.targetPort())
-                    .openedAt(connection.openedAt())
-                    .closedAt(connection.closedAt())
-                    .bytesRead(connection.bytesRead())
-                    .bytesWritten(connection.bytesWritten())
-                    .build())
+    Try.of(() ->
+            HistoryEntity.builder()
+                .userName(connection.user().username())
+                .connectionId(connection.id())
+                .clientHost(connection.clientHost())
+                .targetHost(connection.targetHost())
+                .targetPort(connection.targetPort())
+                .openedAt(connection.openedAt())
+                .closedAt(connection.closedAt())
+                .bytesRead(connection.bytesRead())
+                .bytesWritten(connection.bytesWritten())
+                .build())
         .mapTry(historyEntityRepository::save)
         .onSuccess(v -> log.info("addHistory: {}", v))
         .onFailure(e -> log.error("addHistory: {}", e.toString()));

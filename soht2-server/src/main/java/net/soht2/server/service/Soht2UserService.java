@@ -71,12 +71,11 @@ public class Soht2UserService implements UserDetailsService {
   public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
     log.trace("loadUserByUsername: username={}", username);
     return self.getCachedUserEntity(username)
-        .map(
-            userEntity ->
-                User.withUsername(userEntity.getName())
-                    .password(userEntity.getPassword())
-                    .authorities(userEntity.getRole())
-                    .build())
+        .map(userEntity ->
+            User.withUsername(userEntity.getName())
+                .password(userEntity.getPassword())
+                .authorities(userEntity.getRole())
+                .build())
         .orElseThrow(() -> new UsernameNotFoundException(ERR_USER_NOT_FOUND));
   }
 
@@ -103,14 +102,13 @@ public class Soht2UserService implements UserDetailsService {
     val admin =
         userEntityRepository
             .findByNameIgnoreCase(username)
-            .orElseGet(
-                () ->
-                    userEntityRepository.save(
-                        UserEntity.builder()
-                            .name(username)
-                            .password(passwordEncoder.encode(password))
-                            .role(UserEntity.ROLE_ADMIN)
-                            .build()));
+            .orElseGet(() ->
+                userEntityRepository.save(
+                    UserEntity.builder()
+                        .name(username)
+                        .password(passwordEncoder.encode(password))
+                        .role(UserEntity.ROLE_ADMIN)
+                        .build()));
     log.debug("checkAdminUserExists: admin={}", admin);
   }
 
@@ -314,11 +312,10 @@ public class Soht2UserService implements UserDetailsService {
     return ofNullable(role)
         .filter(not(String::isBlank))
         .map(String::toUpperCase)
-        .map(
-            r ->
-                Optional.of(r)
-                    .filter(UserEntity.ROLES::contains)
-                    .orElseThrow(() -> badRequest("Invalid role: " + r)));
+        .map(r ->
+            Optional.of(r)
+                .filter(UserEntity.ROLES::contains)
+                .orElseThrow(() -> badRequest("Invalid role: " + r)));
   }
 
   static Optional<CurrentUser> getCurrentUser(Authentication authentication) {

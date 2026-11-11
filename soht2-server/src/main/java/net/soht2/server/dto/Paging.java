@@ -68,18 +68,16 @@ public sealed class Paging<S extends SortingField> permits HistoryPaging {
             .filter(not(String::isBlank))
             .map(v -> v.split(":", 2))
             .map(
-                unchecked(
-                    v ->
-                        orderClass
-                            .getDeclaredConstructor(sortingClass, SortingDir.class)
-                            .newInstance(
-                                Arrays.stream(sortingClass.getEnumConstants())
-                                    .filter(f -> f.name().equals(v[0]))
-                                    .findFirst()
-                                    .orElseThrow(
-                                        () ->
-                                            new IllegalArgumentException("Unknown field " + v[0])),
-                                v.length > 1 ? SortingDir.valueOf(v[1].toUpperCase()) : null)))
+                unchecked(v ->
+                    orderClass
+                        .getDeclaredConstructor(sortingClass, SortingDir.class)
+                        .newInstance(
+                            Arrays.stream(sortingClass.getEnumConstants())
+                                .filter(f -> f.name().equals(v[0]))
+                                .findFirst()
+                                .orElseThrow(
+                                    () -> new IllegalArgumentException("Unknown field " + v[0])),
+                            v.length > 1 ? SortingDir.valueOf(v[1].toUpperCase()) : null)))
             .toList();
     return pagingClass
         .getDeclaredConstructor(int.class, int.class, List.class)

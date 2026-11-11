@@ -12,7 +12,6 @@ import io.vavr.control.Try;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.common.dto.Soht2User;
@@ -31,7 +30,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SuppressWarnings("java:S2925")
-@Slf4j
 @SpringBootTest
 @ActiveProfiles("test")
 @WithMockUser(username = "system", password = "test", authorities = UserEntity.ROLE_ADMIN)
@@ -80,10 +78,9 @@ class Soht2ServiceTest {
           .peek(v -> Try.run(() -> Thread.sleep(500)).get())
           .peek(v -> assertThat(server.isRunning()).isTrue())
           .map(
-              unchecked(
-                  bytes ->
-                      // wrap to thread to prove a client.shout() has access to the socket
-                      supplyAsync(() -> client.shout(bytes)).get()))
+              unchecked(bytes ->
+                  // wrap to thread to prove a client.shout() has access to the socket
+                  supplyAsync(() -> client.shout(bytes)).get()))
           .forEach(data -> Try.run(() -> actual.write(data)).get());
       assertThat(actual.toByteArray()).isEqualTo(expected.toByteArray());
     }

@@ -31,17 +31,19 @@ configurations {
 
 dependencyManagement {
   imports {
-    mavenBom("org.springframework.boot:spring-boot-dependencies:4.1.1")
+    mavenBom("org.springframework.boot:spring-boot-dependencies:4.1.2")
   }
 }
 
 dependencies {
   dependencies {
-    implementation 'io.vavr:vavr:1.0.1'
+    implementation 'io.vavr:vavr:1.1.0'
     implementation 'com.fasterxml.uuid:java-uuid-generator:5.2.0'
+    implementation 'ch.qos.logback:logback-classic:1.6.6'
+    implementation 'ch.qos.logback:logback-core:1.6.6'
     compileOnly 'org.springframework:spring-core'
     compileOnly 'org.projectlombok:lombok'
-    compileOnly 'org.slf4j:slf4j-api:2.0.17'
+    compileOnly 'org.slf4j:slf4j-api:2.0.20'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-jackson-test'
@@ -66,14 +68,14 @@ jacocoTestReport {
 }
 
 jacoco {
-  toolVersion = "0.8.13"
+  toolVersion = "0.8.16"
 }
 
 spotless {
   java {
     removeUnusedImports('cleanthat-javaparser-unnecessaryimport')
     // apply a specific flavor of google-java-format
-    googleJavaFormat('1.27.0').reflowLongStrings(true).reorderImports(true)
+    googleJavaFormat('2.0.0').reflowLongStrings(true).reorderImports(true)
     // fix formatting of type annotations
     formatAnnotations()
     // make sure every file has the following copyright header.

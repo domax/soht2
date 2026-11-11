@@ -36,9 +36,8 @@ public class SecurityConfig {
         .cors(withDefaults())
         .httpBasic(withDefaults())
         .headers(h -> h.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
-        .authorizeHttpRequests(
-            registry ->
-                registry.requestMatchers("/api/**").authenticated().anyRequest().permitAll())
+        .authorizeHttpRequests(registry ->
+            registry.requestMatchers("/api/**").authenticated().anyRequest().permitAll())
         .build();
   }
 

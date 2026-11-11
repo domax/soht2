@@ -31,18 +31,16 @@ public final class HistoryPaging extends Paging<HistorySorting> {
 
   static List<HistoryOrder> sortingOrder(List<SortingOrder<HistorySorting>> sorting) {
     return ofNullable(sorting)
-        .map(
-            orders ->
-                orders.stream()
-                    .map(
-                        order ->
-                            order instanceof HistoryOrder historyOrder
-                                ? historyOrder
-                                : HistoryOrder.builder()
-                                    .field(order.field())
-                                    .direction(order.direction())
-                                    .build())
-                    .toList())
+        .map(orders ->
+            orders.stream()
+                .map(order ->
+                    order instanceof HistoryOrder historyOrder
+                        ? historyOrder
+                        : HistoryOrder.builder()
+                            .field(order.field())
+                            .direction(order.direction())
+                            .build())
+                .toList())
         .orElse(null);
   }
 

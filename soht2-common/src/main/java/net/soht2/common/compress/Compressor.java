@@ -17,16 +17,15 @@ public interface Compressor {
    * instances of the same compressor for the same encoding type.
    */
   Function1<String, Compressor> compressorCache =
-      Function1.<String, Compressor>of(
-              encoding ->
-                  switch (ofNullable(encoding)
-                      .map(String::toUpperCase)
-                      .map(v -> Try.of(() -> CompressionType.valueOf(v)).getOrNull())
-                      .orElse(CompressionType.NONE)) {
-                    case GZIP -> new GZIPCompressor();
-                    case DEFLATE -> new DeflateCompressor();
-                    default -> new IdentityCompressor();
-                  })
+      Function1.<String, Compressor>of(encoding ->
+              switch (ofNullable(encoding)
+                  .map(String::toUpperCase)
+                  .map(v -> Try.of(() -> CompressionType.valueOf(v)).getOrNull())
+                  .orElse(CompressionType.NONE)) {
+                case GZIP -> new GZIPCompressor();
+                case DEFLATE -> new DeflateCompressor();
+                default -> new IdentityCompressor();
+              })
           .memoized();
 
   /**

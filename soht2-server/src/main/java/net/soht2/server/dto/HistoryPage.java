@@ -24,15 +24,14 @@ public final class HistoryPage extends Page<Soht2Connection, HistorySorting> {
   @Override
   public HistoryPaging paging() {
     return ofNullable(super.paging())
-        .map(
-            p ->
-                p instanceof HistoryPaging historyPaging
-                    ? historyPaging
-                    : HistoryPaging.builder()
-                        .pageNumber(p.pageNumber())
-                        .pageSize(p.pageSize())
-                        .sorting(HistoryPaging.sortingOrder(p.sorting()))
-                        .build())
+        .map(p ->
+            p instanceof HistoryPaging historyPaging
+                ? historyPaging
+                : HistoryPaging.builder()
+                    .pageNumber(p.pageNumber())
+                    .pageSize(p.pageSize())
+                    .sorting(HistoryPaging.sortingOrder(p.sorting()))
+                    .build())
         .orElse(null);
   }
 }

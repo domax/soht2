@@ -97,13 +97,12 @@ public class ProxyConfig {
   @Bean
   Credentials ntlmProxyCredentials(Soht2ClientProperties properties) {
     return Try.of(properties::getProxy)
-        .mapTry(
-            p ->
-                new NTCredentials(
-                    p.getUsername(),
-                    p.getPassword(),
-                    InetAddress.getLocalHost().getHostName(),
-                    p.getDomain()))
+        .mapTry(p ->
+            new NTCredentials(
+                p.getUsername(),
+                p.getPassword(),
+                InetAddress.getLocalHost().getHostName(),
+                p.getDomain()))
         .onSuccess(credentials -> log.info("ntlmProxyCredentials: {}", credentials))
         .get();
   }
@@ -152,14 +151,13 @@ public class ProxyConfig {
         requestConfig,
         credentialsProvider,
         httpClientConnectionManager);
-    return Try.of(
-            () ->
-                HttpClients.custom()
-                    .setProxy(httpHostProxy)
-                    .setConnectionManager(httpClientConnectionManager)
-                    .setDefaultCredentialsProvider(credentialsProvider)
-                    .setDefaultRequestConfig(requestConfig)
-                    .build())
+    return Try.of(() ->
+            HttpClients.custom()
+                .setProxy(httpHostProxy)
+                .setConnectionManager(httpClientConnectionManager)
+                .setDefaultCredentialsProvider(credentialsProvider)
+                .setDefaultRequestConfig(requestConfig)
+                .build())
         .mapTry(HCClientHttpRequestFactory::new)
         .onSuccess(factory -> log.info("clientHttpRequestFactory: {}", factory))
         .get();

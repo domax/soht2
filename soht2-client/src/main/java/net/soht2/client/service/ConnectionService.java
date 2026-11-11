@@ -72,11 +72,10 @@ public class ConnectionService {
             soht2ClientProperties.getConnections().stream()
                 .map(host -> runAsync(() -> connect(host, socketOpenedCallback), threadExecutor))
                 .toArray(CompletableFuture[]::new))
-        .thenRun(
-            () -> {
-              isRunning.set(false);
-              log.info("startConnections: terminated");
-            });
+        .thenRun(() -> {
+          isRunning.set(false);
+          log.info("startConnections: terminated");
+        });
   }
 
   /** Gratefully stops all active connections. */
@@ -130,11 +129,10 @@ public class ConnectionService {
         log.debug("connect: connection={}", state.connection);
 
         runAsync(() -> exchange(state), threadExecutor)
-            .thenRun(
-                () -> {
-                  Try.run(state.in::close);
-                  Try.run(state.out::close);
-                });
+            .thenRun(() -> {
+              Try.run(state.in::close);
+              Try.run(state.out::close);
+            });
       } catch (Exception e) {
         if (e instanceof SocketException && "Closed by interrupt".equals(e.getMessage())
             || e instanceof BindException && "Address already in use".equals(e.getMessage())) {
@@ -168,18 +166,15 @@ public class ConnectionService {
           .filter(bufferLen -> bufferLen >= 0, () -> new SocketException("Connection reset"))
           .recover(SocketTimeoutException.class, 0)
           .andThen(readSize::set)
-          .flatMap(
-              bufferLen ->
-                  soht2Client.exchange(
-                      connectionId,
-                      bufferLen < bufferSize ? Arrays.copyOf(buffer, bufferLen) : buffer))
-          .flatMapTry(
-              bytes ->
-                  Optional.of(bytes)
-                      .filter(b -> b.length > 0)
-                      .map(b -> Try.run(() -> state.out.write(b)).andThenTry(state.out::flush))
-                      .orElse(Try.success(null))
-                      .andThenTry(v -> writeSize.set(bytes.length)))
+          .flatMap(bufferLen ->
+              soht2Client.exchange(
+                  connectionId, bufferLen < bufferSize ? Arrays.copyOf(buffer, bufferLen) : buffer))
+          .flatMapTry(bytes ->
+              Optional.of(bytes)
+                  .filter(b -> b.length > 0)
+                  .map(b -> Try.run(() -> state.out.write(b)).andThenTry(state.out::flush))
+                  .orElse(Try.success(null))
+                  .andThenTry(v -> writeSize.set(bytes.length)))
           .andFinallyTry(lock::unlock)
           .andThenTry(() -> delay(state, readSize.get() == 0 && writeSize.get() == 0))
           .recoverWith(
@@ -192,11 +187,10 @@ public class ConnectionService {
                   "Connection reset".equals(e.getMessage()) || "Idle timeout".equals(e.getMessage())
                       ? Try.failure(e)
                       : Try.success(null))
-          .onFailure(
-              e -> {
-                sessions.remove(connectionId);
-                soht2Client.close(connectionId);
-              });
+          .onFailure(e -> {
+            sessions.remove(connectionId);
+            soht2Client.close(connectionId);
+          });
     }
   }
 

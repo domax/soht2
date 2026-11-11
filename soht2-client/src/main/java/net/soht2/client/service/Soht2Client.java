@@ -1,7 +1,6 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.client.service;
 
-import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 import static net.soht2.common.compress.Compressor.compressorCache;
 import static org.springframework.http.HttpHeaders.ACCEPT_ENCODING;
@@ -46,20 +45,16 @@ public class Soht2Client {
    * @param remotePort the port number on the remote machine to connect to
    * @return a {@link Try} containing the Soht2Connection if successful, or an error if it fails
    */
+  @SuppressWarnings("NullableProblems")
   public Try<Soht2Connection> open(String remoteHost, Integer remotePort) {
     log.debug("open: remoteHost={}, remotePort={}", remoteHost, remotePort);
-    return Try.of(
-            () ->
-                requireNonNull(
-                    restClient
-                        .post()
-                        .uri(
-                            b ->
-                                b.queryParam("host", remoteHost)
-                                    .queryParam("port", remotePort)
-                                    .build())
-                        .retrieve()
-                        .body(Soht2Connection.class)))
+    return Try.of(() ->
+            restClient
+                .post()
+                .uri(b -> b.queryParam("host", remoteHost).queryParam("port", remotePort).build())
+                .retrieve()
+                .body(Soht2Connection.class))
+        .filter(Objects::nonNull, () -> new NullPointerException("connection is null"))
         .onSuccess(connection -> log.info("open: connection={}", connection))
         .onFailure(
             e -> log.atError().setMessage("open: {}").addArgument(e::toString).setCause(e).log());
@@ -74,22 +69,20 @@ public class Soht2Client {
   @SuppressWarnings("java:S1905")
   public Try<Void> close(UUID connectionId) {
     log.debug("close: id={}", connectionId);
-    return Try.of(
-            () ->
-                restClient
-                    .delete()
-                    .uri(PATH_ID, Map.of("id", connectionId))
-                    .retrieve()
-                    .toBodilessEntity())
+    return Try.of(() ->
+            restClient
+                .delete()
+                .uri(PATH_ID, Map.of("id", connectionId))
+                .retrieve()
+                .toBodilessEntity())
         .onSuccess(re -> log.info("close: id={} - {}", connectionId, re.getStatusCode()))
         .map(re -> (Void) null)
-        .onFailure(
-            e ->
-                log.atError()
-                    .setMessage("close: id={} - {}")
-                    .addArgument(connectionId)
-                    .addArgument(e::toString)
-                    .log());
+        .onFailure(e ->
+            log.atError()
+                .setMessage("close: id={} - {}")
+                .addArgument(connectionId)
+                .addArgument(e::toString)
+                .log());
   }
 
   /**
@@ -104,43 +97,38 @@ public class Soht2Client {
     if (log.isTraceEnabled() && data.length > 0)
       log.trace("exchange: id={}, in.length={}", connectionId, data.length);
     return Try.of(() -> requestExchangeEntity(data))
-        .peek(
-            entity ->
-                log.atTrace()
-                    .setMessage("exchange: id={}, request.headers={}")
-                    .addArgument(connectionId)
-                    .addArgument(entity::getHeaders)
-                    .log())
-        .mapTry(
-            entity ->
-                restClient
-                    .post()
-                    .uri(PATH_ID, Map.of("id", connectionId))
-                    .headers(h -> h.putAll(entity.getHeaders()))
-                    .body(ofNullable(entity.getBody()).orElse(EMPTY), PTR_BYTES)
-                    .retrieve()
-                    .toEntity(PTR_BYTES))
-        .peek(
-            entity ->
-                log.atTrace()
-                    .setMessage("exchange: id={}, response.headers={}")
-                    .addArgument(connectionId)
-                    .addArgument(entity::getHeaders)
-                    .log())
+        .peek(entity ->
+            log.atTrace()
+                .setMessage("exchange: id={}, request.headers={}")
+                .addArgument(connectionId)
+                .addArgument(entity::getHeaders)
+                .log())
+        .mapTry(entity ->
+            restClient
+                .post()
+                .uri(PATH_ID, Map.of("id", connectionId))
+                .headers(h -> h.putAll(entity.getHeaders()))
+                .body(ofNullable(entity.getBody()).orElse(EMPTY), PTR_BYTES)
+                .retrieve()
+                .toEntity(PTR_BYTES))
+        .peek(entity ->
+            log.atTrace()
+                .setMessage("exchange: id={}, response.headers={}")
+                .addArgument(connectionId)
+                .addArgument(entity::getHeaders)
+                .log())
         .mapTry(this::responseExchangeEntity)
-        .onSuccess(
-            bytes ->
-                Optional.of(bytes)
-                    .filter(v -> v.length > 0)
-                    .ifPresent(
-                        v -> log.trace("exchange: id={}, out.length={}", connectionId, v.length)))
-        .onFailure(
-            e ->
-                log.atError()
-                    .setMessage("exchange: id={}, {}")
-                    .addArgument(connectionId)
-                    .addArgument(e::toString)
-                    .log());
+        .onSuccess(bytes ->
+            Optional.of(bytes)
+                .filter(v -> v.length > 0)
+                .ifPresent(
+                    v -> log.trace("exchange: id={}, out.length={}", connectionId, v.length)))
+        .onFailure(e ->
+            log.atError()
+                .setMessage("exchange: id={}, {}")
+                .addArgument(connectionId)
+                .addArgument(e::toString)
+                .log());
   }
 
   private HttpEntity<byte[]> requestExchangeEntity(byte[] body) {

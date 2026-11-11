@@ -224,12 +224,10 @@ class ConnectionControllerTest {
                 .contentType(APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(content().contentType(APPLICATION_JSON))
-        .andDo(
-            rh ->
-                assertThat(
-                        jsonMapper.readValue(
-                            rh.getResponse().getContentAsString(), HistoryPage.class))
-                    .isEqualTo(page));
+        .andDo(rh ->
+            assertThat(
+                    jsonMapper.readValue(rh.getResponse().getContentAsString(), HistoryPage.class))
+                .isEqualTo(page));
 
     verify(soht2HistoryService)
         .searchHistory(
