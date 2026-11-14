@@ -32,7 +32,7 @@ function getDataGridStyle(theme: Theme): SxProps<Theme> {
   const { mode, grey } = theme.palette;
   return {
     border: 0,
-    height: 'calc(100vh - 130px)',
+    height: '100%',
     [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: { outline: 'none' },
     [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]: {
       outline: 'none',

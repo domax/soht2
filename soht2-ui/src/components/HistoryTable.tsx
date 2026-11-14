@@ -245,7 +245,7 @@ export default function HistoryTable({
 
   return (
     <Paper sx={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ flex: 1 }}>
+      <Box sx={{ flex: 1, minHeight: 0 }}>
         <DataGrid
           columns={columns}
           rows={rows}
