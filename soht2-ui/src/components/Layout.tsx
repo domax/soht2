@@ -23,6 +23,7 @@ import ChangePasswordDialog from './ChangePasswordDialog';
 import ErrorAlert from './ErrorAlert';
 
 const swaggerUrl = (globalThis as WindowProps).__SWAGGER_URL__ ?? null;
+const appVersion = __APP_VERSION__;
 
 export default function Layout({ children }: Readonly<{ children: ReactNode }>) {
   const { mode, toggle } = useThemeMode();
@@ -67,7 +68,8 @@ export default function Layout({ children }: Readonly<{ children: ReactNode }>) 
         <Toolbar>
           <img src={soht2Logo40} alt="Logo" style={{ height: 40, marginRight: 16 }} />
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            SOHT2 Server
+            <span style={{ marginRight: 8 }}>SOHT2 Server</span>
+            <span style={{ opacity: 0.7, fontSize: '0.8em' }}>v{appVersion}</span>
           </Typography>
           <Tooltip title="Menu">
             <IconButton color="inherit" onClick={handleMenu} size="large" aria-label="menu">
