@@ -4,12 +4,12 @@ package net.soht2.server.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.common.dto.Soht2User;
@@ -34,7 +34,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 
-@Slf4j
 @SpringBootTest
 @ActiveProfiles("test")
 @WithMockUser(username = "admin", password = "test", authorities = UserEntity.ROLE_ADMIN)
@@ -86,8 +85,8 @@ class Soht2HistoryServiceTest {
             .clientHost("localhost")
             .targetHost("example.com")
             .targetPort(443)
-            .openedAt(LocalDateTime.now())
-            .closedAt(LocalDateTime.now())
+            .openedAt(LocalDateTime.now(ZoneId.systemDefault()))
+            .closedAt(LocalDateTime.now(ZoneId.systemDefault()))
             .bytesRead(100L)
             .bytesWritten(200L)
             .build();
@@ -98,8 +97,8 @@ class Soht2HistoryServiceTest {
             .clientHost("localhost")
             .targetHost("example.com")
             .targetPort(443)
-            .openedAt(LocalDateTime.now())
-            .closedAt(LocalDateTime.now())
+            .openedAt(LocalDateTime.now(ZoneId.systemDefault()))
+            .closedAt(LocalDateTime.now(ZoneId.systemDefault()))
             .bytesRead(300L)
             .bytesWritten(400L)
             .build();

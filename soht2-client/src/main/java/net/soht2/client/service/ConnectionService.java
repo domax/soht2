@@ -5,10 +5,12 @@ import static java.util.Optional.ofNullable;
 import static java.util.concurrent.CompletableFuture.runAsync;
 
 import io.vavr.control.Try;
+import jakarta.annotation.PreDestroy;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.BindException;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
@@ -16,10 +18,11 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
@@ -48,7 +51,9 @@ public class ConnectionService {
 
   private final AtomicBoolean isRunning = new AtomicBoolean();
   private final Map<UUID, SessionState> sessions = new ConcurrentHashMap<>();
-  private final Map<Integer, ReentrantLock> locks = new ConcurrentHashMap<>();
+  private final Set<ServerSocket> serverSockets = ConcurrentHashMap.newKeySet();
+  private volatile CompletableFuture<Void> listeners = // NOSONAR java:S3077
+      CompletableFuture.completedFuture(null);
 
   /**
    * Starts connections to the specified hosts defined in the client properties.
@@ -68,22 +73,33 @@ public class ConnectionService {
   public CompletableFuture<Void> startConnections(
       @Nullable Consumer<HostProperties> socketOpenedCallback) {
     isRunning.set(true);
-    return CompletableFuture.allOf(
-            soht2ClientProperties.getConnections().stream()
-                .map(host -> runAsync(() -> connect(host, socketOpenedCallback), threadExecutor))
-                .toArray(CompletableFuture[]::new))
-        .thenRun(() -> {
-          isRunning.set(false);
-          log.info("startConnections: terminated");
-        });
+    listeners =
+        CompletableFuture.allOf(
+                soht2ClientProperties.getConnections().stream()
+                    .map(
+                        host -> runAsync(() -> connect(host, socketOpenedCallback), threadExecutor))
+                    .toArray(CompletableFuture[]::new))
+            .thenRun(() -> {
+              isRunning.set(false);
+              log.info("startConnections: terminated");
+            });
+    return listeners;
   }
 
-  /** Gratefully stops all active connections. */
+  /**
+   * Gratefully stops all active connections and releases the local ports. The shared thread
+   * executor is left running so that connections can be started again; it is shut down together
+   * with the application context.
+   */
+  @PreDestroy
   public void stopConnections() {
+    isRunning.set(false);
+    serverSockets.forEach(serverSocket -> Try.run(serverSocket::close));
+    serverSockets.clear();
+    Try.run(() -> listeners.get(5, TimeUnit.SECONDS))
+        .onFailure(e -> log.warn("stopConnections: listeners not stopped - {}", e.toString()));
     sessions.keySet().forEach(soht2Client::close);
     sessions.clear();
-    Try.run(threadExecutor::close);
-    isRunning.set(false);
   }
 
   /**
@@ -97,51 +113,86 @@ public class ConnectionService {
   }
 
   /**
-   * Connects to the specified host and starts a server socket to accept incoming connections.
+   * Binds a server socket on the local port of the specified host once and keeps accepting incoming
+   * connections while the service is running. Each accepted connection is served on its own task.
    *
    * @param host the properties of the host to connect to
-   * @param socketOpenedCallback an optional callback that is invoked when a socket connection is
-   *     opened
+   * @param socketOpenedCallback an optional callback that is invoked when the server socket is
+   *     bound
    */
-  @SneakyThrows
   void connect(HostProperties host, @Nullable Consumer<HostProperties> socketOpenedCallback) {
     log.info("connect: host={}", host);
 
-    while (isRunning.get()) {
-      try (val serverSocket = new ServerSocket(host.getLocalPort())) {
-        log.debug("connect: serverSocket={}", serverSocket);
-        ofNullable(socketOpenedCallback).ifPresent(cb -> cb.accept(host));
+    try (val serverSocket = new ServerSocket(host.getLocalPort())) {
+      serverSockets.add(serverSocket);
+      log.debug("connect: serverSocket={}", serverSocket);
+      ofNullable(socketOpenedCallback).ifPresent(cb -> cb.accept(host));
 
-        val socket = serverSocket.accept();
-        socket.setSoTimeout((int) soht2ClientProperties.getSocketReadTimeout().toMillis());
-        socket.setKeepAlive(true);
-        log.debug("connect: socket={}", socket);
-
-        locks.put(host.getLocalPort(), new ReentrantLock());
-        val state =
-            SessionState.builder()
-                .host(host)
-                .connection(soht2Client.open(host.getRemoteHost(), host.getRemotePort()).get())
-                .in(socket.getInputStream())
-                .out(socket.getOutputStream())
-                .build();
-        sessions.put(state.connection.id(), state);
-        log.debug("connect: connection={}", state.connection);
-
-        runAsync(() -> exchange(state), threadExecutor)
-            .thenRun(() -> {
-              Try.run(state.in::close);
-              Try.run(state.out::close);
-            });
-      } catch (Exception e) {
-        if (e instanceof SocketException && "Closed by interrupt".equals(e.getMessage())
-            || e instanceof BindException && "Address already in use".equals(e.getMessage())) {
-          log.warn("connect: interrupted with exception: {}", e.toString());
-          isRunning.set(false);
-        } else log.atError().setMessage("connect: {}").addArgument(e::toString).setCause(e).log();
-      }
+      while (isRunning.get())
+        if (!serveAsync(host, serverSocket)) break;
+      serverSockets.remove(serverSocket);
+    } catch (Exception e) {
+      if (e instanceof BindException && "Address already in use".equals(e.getMessage())) {
+        log.warn("connect: interrupted with exception: {}", e.toString());
+        isRunning.set(false);
+      } else log.atError().setMessage("connect: {}").addArgument(e::toString).setCause(e).log();
     }
-    locks.remove(host.getLocalPort());
+    log.info("connect: stopped host={}", host);
+  }
+
+  /**
+   * Accepts an incoming connection on the server socket and serves it asynchronously. If the
+   * service is no longer running, the connection is not accepted.
+   *
+   * @param host the properties of the host to connect to
+   * @param serverSocket the server socket to accept connections on
+   * @return {@code true} if the connection was accepted and served, {@code false} if the service is
+   *     no longer running
+   */
+  boolean serveAsync(HostProperties host, ServerSocket serverSocket) {
+    try {
+      val socket = serverSocket.accept();
+      log.debug("connect: socket={}", socket);
+      runAsync(() -> serve(host, socket), threadExecutor);
+    } catch (Exception e) {
+      if (!isRunning.get()
+          || serverSocket.isClosed()
+          || e instanceof RejectedExecutionException
+          || e instanceof SocketException && "Closed by interrupt".equals(e.getMessage())) {
+        log.warn("serveAsync: interrupted with exception: {}", e.toString());
+        return false;
+      }
+      log.atError().setMessage("connect: {}").addArgument(e::toString).setCause(e).log();
+    }
+    return true;
+  }
+
+  /**
+   * Opens a tunnel for the accepted local socket and exchanges data until the session ends. The
+   * local socket is always closed afterward, including when the tunnel cannot be opened.
+   *
+   * @param host the properties of the host the socket was accepted for
+   * @param socket the accepted local socket
+   */
+  void serve(HostProperties host, Socket socket) {
+    try (socket) {
+      socket.setSoTimeout((int) soht2ClientProperties.getSocketReadTimeout().toMillis());
+      socket.setKeepAlive(true);
+
+      val state =
+          SessionState.builder()
+              .host(host)
+              .connection(soht2Client.open(host.getRemoteHost(), host.getRemotePort()).get())
+              .in(socket.getInputStream())
+              .out(socket.getOutputStream())
+              .build();
+      sessions.put(state.connection.id(), state);
+      log.debug("serve: connection={}", state.connection);
+
+      exchange(state);
+    } catch (Exception e) {
+      log.atError().setMessage("serve: {}").addArgument(e::toString).setCause(e).log();
+    }
   }
 
   /**
@@ -160,8 +211,6 @@ public class ConnectionService {
       readSize.set(0);
       writeSize.set(0);
 
-      val lock = locks.get(state.host.getLocalPort());
-      lock.lock();
       Try.of(() -> state.in.read(buffer))
           .filter(bufferLen -> bufferLen >= 0, () -> new SocketException("Connection reset"))
           .recover(SocketTimeoutException.class, 0)
@@ -175,7 +224,6 @@ public class ConnectionService {
                   .map(b -> Try.run(() -> state.out.write(b)).andThenTry(state.out::flush))
                   .orElse(Try.success(null))
                   .andThenTry(v -> writeSize.set(bytes.length)))
-          .andFinallyTry(lock::unlock)
           .andThenTry(() -> delay(state, readSize.get() == 0 && writeSize.get() == 0))
           .recoverWith(
               SocketException.class,

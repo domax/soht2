@@ -9,6 +9,7 @@ Tips & Tricks for SOHT2 Server
   * [Fast Reset](#fast-reset)
   * [Alternative Database](#alternative-database)
   * [Web Consoles](#web-consoles)
+  * [Authentication Cache](#authentication-cache)
   * [See Also](#see-also)
 <!-- TOC -->
 
@@ -199,6 +200,22 @@ Both UIs are available only for authenticated users. Features like user manageme
 management, and viewing connection history are accessible through the SOHT2 UI, while the Swagger UI
 is primarily for API exploration and testing. The set of available actions and exposed data depends 
 on the user's role.
+
+Authentication Cache
+--------------------
+
+The SOHT2 client authenticates every tunnel request with HTTP Basic credentials, and verifying a
+BCrypt password hash on each request is expensive. To avoid that, the server remembers
+successfully verified credentials for `soht2.server.user-cache-ttl` (default `PT10M`, at most
+1000 users) - the same TTL as the user cache.
+
+* Only an HMAC fingerprint of the password is kept in memory, keyed with a random per-process
+  secret; plaintext passwords are never stored.
+* Failed logins are never cached, so a wrong password always goes through the full check.
+* Updating, deleting a user, or changing a password evicts the cached entry immediately; role
+  changes apply on the next request.
+* A shorter `user-cache-ttl` limits how long verified credentials are reused, at the cost of more
+  password hash checks.
 
 See Also
 --------

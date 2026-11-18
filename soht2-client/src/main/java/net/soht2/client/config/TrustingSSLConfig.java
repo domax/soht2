@@ -59,7 +59,7 @@ import org.springframework.http.client.ClientHttpRequestFactory;
 public class TrustingSSLConfig {
 
   @Bean
-  HttpClientConnectionManager trustingClientConnectionManager() {
+  HttpClientConnectionManager trustingClientConnectionManager(Soht2ClientProperties properties) {
     return Try.of(SSLContextBuilder::create)
         .mapTry(b -> b.loadTrustMaterial(null, TrustAllStrategy.INSTANCE).build())
         .mapTry(ctx -> new SSLConnectionSocketFactory(ctx, NoopHostnameVerifier.INSTANCE))
@@ -69,6 +69,8 @@ public class TrustingSSLConfig {
                 .register("https", sslSocketFactory)
                 .build())
         .mapTry(PoolingHttpClientConnectionManager::new)
+        .andThen(cm -> cm.setMaxTotal(properties.getMaxHttpConnections()))
+        .andThen(cm -> cm.setDefaultMaxPerRoute(properties.getMaxHttpConnections()))
         .onSuccess(cm -> log.info("trustingClientConnectionManager: {}", cm))
         .get();
   }

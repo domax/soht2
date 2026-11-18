@@ -17,10 +17,12 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import net.soht2.common.dto.Soht2User;
+import net.soht2.server.config.CachingAuthenticationProvider;
 import net.soht2.server.config.Soht2ServerConfig;
 import net.soht2.server.entity.UserEntity;
 import net.soht2.server.repository.UserEntityRepository;
 import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.Cache;
 import org.springframework.cache.annotation.Cacheable;
@@ -55,6 +57,7 @@ public class Soht2UserService implements UserDetailsService {
   private final PasswordEncoder passwordEncoder;
   private final Cache userCache;
   private final Soht2HistoryService soht2HistoryService;
+  private final ObjectProvider<CachingAuthenticationProvider> cachingAuthenticationProvider;
 
   @Setter(onMethod_ = {@Autowired, @Lazy})
   private Soht2UserService self;
@@ -66,7 +69,6 @@ public class Soht2UserService implements UserDetailsService {
    * @return a {@link UserDetails} object containing user information
    * @throws UsernameNotFoundException if the user is not found
    */
-  @Transactional(readOnly = true)
   @Override
   public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
     log.trace("loadUserByUsername: username={}", username);
@@ -194,7 +196,7 @@ public class Soht2UserService implements UserDetailsService {
     }
     if (hasChanges) {
       userEntity = userEntityRepository.save(userEntity);
-      userCache.evict(name);
+      evictUserCaches(name);
     }
     return userEntity.toSoht2User();
   }
@@ -226,7 +228,7 @@ public class Soht2UserService implements UserDetailsService {
     if (andHistory && soht2ServerConfig.isEnableHistory()) soht2HistoryService.deleteHistory(name);
 
     userEntityRepository.delete(userEntity);
-    userCache.evict(name);
+    evictUserCaches(name);
   }
 
   /**
@@ -303,9 +305,14 @@ public class Soht2UserService implements UserDetailsService {
 
     userEntity.setPassword(passwordEncoder.encode(newPassword));
     userEntity = userEntityRepository.save(userEntity);
-    userCache.evict(authentication.getName());
+    evictUserCaches(authentication.getName());
 
     return userEntity.toSoht2User();
+  }
+
+  private void evictUserCaches(String name) {
+    userCache.evict(name);
+    cachingAuthenticationProvider.ifAvailable(p -> p.evict(name));
   }
 
   private Optional<String> checkRole(@Nullable String role) {

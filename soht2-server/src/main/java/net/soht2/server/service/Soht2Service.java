@@ -14,6 +14,7 @@ import io.vavr.control.Try;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -60,6 +61,7 @@ public class Soht2Service {
         ServerConnection.builder()
             .soht2(soht2)
             .socketTimeout((int) soht2ServerConfig.getSocketReadTimeout().toMillis())
+            .readBufferSize((int) soht2ServerConfig.getReadBufferSize().toBytes())
             .postCloseAction(this::postCloseAction)
             .build();
     connections.put(soht2.id(), connection);
@@ -145,7 +147,7 @@ public class Soht2Service {
         .map(Optional::get)
         .filter(ServerConnection::isOpened, () -> gone("Connection " + id + " is closed"))
         .andThenTry(sc -> sc.lock().lock())
-        .andThenTry(c -> c.lastActivity(LocalDateTime.now()))
+        .andThenTry(c -> c.lastActivity(LocalDateTime.now(ZoneId.systemDefault())))
         .mapTry(sc -> {
           if (ofNullable(data).filter(v -> v.length > 0).isPresent()) {
             val dataOut = compressorCache.apply(encoding).decompress(data);
@@ -153,11 +155,12 @@ public class Soht2Service {
             sc.outputStream().flush();
             sc.addBytesWritten(dataOut.length);
           }
-          val buffer = new byte[(int) soht2ServerConfig.getReadBufferSize().toBytes()];
+          val buffer = sc.readBuffer();
           val bufferLen = sc.inputStream().read(buffer);
           if (bufferLen <= 0) return EMPTY;
           sc.addBytesRead(bufferLen);
-          return bufferLen >= buffer.length ? buffer : Arrays.copyOf(buffer, bufferLen);
+          // the buffer is reused by the connection, so always return a copy
+          return Arrays.copyOf(buffer, bufferLen);
         })
         .andFinally(() ->
             Try.run(() ->
@@ -168,7 +171,7 @@ public class Soht2Service {
         .onFailure(e -> log.error("exchange: id={} - {}", id, e.toString()))
         .recover(SocketException.class, e -> EMPTY)
         .andThenTry(bytes ->
-            ofNullable(bytes)
+            Optional.of(bytes)
                 .filter(v -> log.isTraceEnabled())
                 .map(v -> v.length)
                 .filter(v -> v > 0)
@@ -254,7 +257,7 @@ public class Soht2Service {
     val soht2 =
         connection
             .soht2()
-            .withClosedAt(LocalDateTime.now())
+            .withClosedAt(LocalDateTime.now(ZoneId.systemDefault()))
             .withBytesExchanged(connection.bytesRead(), connection.bytesWritten());
     connections.remove(soht2.id());
     if (soht2ServerConfig.isEnableHistory()) soht2HistoryService.addHistory(soht2);

@@ -36,6 +36,7 @@ import org.springframework.boot.actuate.autoconfigure.endpoint.web.CorsEndpointP
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -58,6 +59,9 @@ class ConnectionControllerTest {
   Soht2Service soht2Service;
 
   @MockitoBean Soht2HistoryService soht2HistoryService;
+
+  @SuppressWarnings("SpringTestingOverridenBeanResolveInspection")
+  @MockitoBean UserDetailsService userDetailsService;
 
   @org.junit.jupiter.api.BeforeEach
   void authenticateRequests() {

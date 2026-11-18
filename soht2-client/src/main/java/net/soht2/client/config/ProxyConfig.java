@@ -137,6 +137,7 @@ public class ProxyConfig {
 
   @Bean
   ClientHttpRequestFactory clientHttpRequestFactory(
+      Soht2ClientProperties properties,
       HttpHost httpHostProxy,
       @Autowired(required = false) RequestConfig requestConfig,
       @Autowired(required = false) CredentialsProvider credentialsProvider,
@@ -157,6 +158,9 @@ public class ProxyConfig {
                 .setConnectionManager(httpClientConnectionManager)
                 .setDefaultCredentialsProvider(credentialsProvider)
                 .setDefaultRequestConfig(requestConfig)
+                // applied only when no connection manager is supplied
+                .setMaxConnTotal(properties.getMaxHttpConnections())
+                .setMaxConnPerRoute(properties.getMaxHttpConnections())
                 .build())
         .mapTry(HCClientHttpRequestFactory::new)
         .onSuccess(factory -> log.info("clientHttpRequestFactory: {}", factory))

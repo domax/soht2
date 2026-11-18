@@ -8,9 +8,11 @@ client can reach remote hosts (e.g. internal services) without direct exposure.
 - `soht2-common` — shared library: DTOs, compression, utilities (used by client and server).
 - `soht2-server` — Spring Boot 4.1 server: receives tunnel requests, forwards them to remote hosts.
   Uses Spring Security, Data JPA + H2 (file DB), Flyway, Caffeine cache, springdoc OpenAPI,
-  Thymeleaf. Config: `application-server.yaml` (root) + `src/main/resources/application.yaml`.
+  Thymeleaf. Defaults: `src/main/resources/application.yaml`; release/runtime overrides are 
+  typically provided via external `application-server.yaml` next to the JAR (see root `README.md`).
 - `soht2-client` — Spring Boot 4.1 client: opens local ports, tunnels through the server over HTTP.
-  Config: `application-client.yaml` (root) + `src/main/resources/application.yaml`.
+  Defaults: `src/main/resources/application.yaml`; release/runtime overrides are typically provided
+  via external `application-client.yaml` next to the JAR (see root `README.md`).
 - `soht2-ui` — React 19 + TypeScript 5 (Vite) admin UI. `npm run build` also deploys: copies `dist/`
   to `soht2-server/src/main/resources/public/` and moves `index.html` to
   `soht2-server/src/main/resources/templates/index.html` (served by Thymeleaf server). Gradle wires
@@ -21,7 +23,7 @@ client can reach remote hosts (e.g. internal services) without direct exposure.
 
 ## Stack & versions
 
-- Java 21 (Gradle toolchain), Spring Boot 4.1.1, Lombok, vavr; Node ≥ 20 / npm.
+- Java 21 (Gradle toolchain), Spring Boot 4.1.2, Lombok, vavr; Node ≥ 20 / npm (CI uses Node 23).
 - Code style: Spotless for Java (`./gradlew spotlessCheck|spotlessApply`); ESLint + Prettier for the
   UI (`npm run lint|format`). Every Java file must start with the Spotless-enforced header
   `/* SOHT2 © Licensed under MIT $YEAR. */` (UI TS/TSX files use
@@ -31,15 +33,17 @@ client can reach remote hosts (e.g. internal services) without direct exposure.
 ## Build & run
 
 - `./gradlew build` — builds all modules (UI builds before server; runs tests).
-- Run server: `./gradlew :soht2-server:bootRun` (requires `database-path`, `admin-username`,
-  `default-admin-password` in `application-server.yaml`).
-- Run client: `./gradlew :soht2-client:bootRun` (requires `url` + at least one `connections` entry
-  in `application-client.yaml`).
+- Run server: `./gradlew :soht2-server:bootRun` (for release-style config, place
+  `application-server.yaml` next to the runnable JAR; defaults live in
+  `soht2-server/src/main/resources/application.yaml`).
+- Run client: `./gradlew :soht2-client:bootRun` (for release-style config, place
+  `application-client.yaml` next to the runnable JAR; defaults live in
+  `soht2-client/src/main/resources/application.yaml`, and at least one `connections` entry is
+  required).
 - UI dev: `cd soht2-ui && npm install && npm run dev`.
 - Tests: `./gradlew test` (per-module: `./gradlew :soht2-server:test`).
-- Server runs under context path `/soht2` (`server.servlet.context-path` in
-  `application-server.yaml`), so the API is at `/soht2/api/...`, the UI at `/soht2`, and Swagger UI
-  at `/soht2/swagger-ui`.
+- By default, server has no context path, so API is at `/api/...`, UI at `/`, and Swagger UI at
+  `/swagger-ui` (if a context path is set via config, these are prefixed accordingly).
 - API testing: `requests.http` (IntelliJ HTTP client) at the root, with vars in the gitignored
   `http-client.private.env.json`.
 - Client launcher: `doc/soht2-client` bash script (`start|stop|restart|status|log`) for running the
@@ -53,8 +57,8 @@ client can reach remote hosts (e.g. internal services) without direct exposure.
   `version.properties` at build time), and the UI build (syncs `package.json` before `npm install`,
   which regenerates `package-lock.json`). To bump the version, edit only `VERSION` and rebuild.
 - Server/client config properties are namespaced `soht2.server.*` / `soht2.client.*`; keep
-  `@ConfigurationProperties` classes in sync with root `application-server.yaml` /
-  `application-client.yaml` examples.
+  `@ConfigurationProperties` classes in sync with `README.md` config examples for
+  `application-server.yaml` / `application-client.yaml`.
 - API auth is HTTP Basic; roles are `USER` and `ADMIN` (see `SecurityConfig`,
   `UserEntity.ROLE_ADMIN`).
 - README docs: root README for config reference; `doc/tips-server.md`, `doc/tips-client.md` for

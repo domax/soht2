@@ -10,7 +10,6 @@ import java.util.Base64;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Stream;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -87,12 +86,9 @@ public class Soht2ClientConfig {
   ExecutorService threadExecutor(
       @Value("${spring.threads.virtual.enabled:false}") boolean isVirtualThreadsEnabled) {
     log.info("threadExecutor: isVirtualThreadsEnabled={}", isVirtualThreadsEnabled);
-
-    if (isVirtualThreadsEnabled)
-      return new TimeoutAwareExecutorService(Executors.newVirtualThreadPerTaskExecutor());
-
-    return ForkJoinPool.getCommonPoolParallelism() > 1
-        ? ForkJoinPool.commonPool()
-        : Executors.newThreadPerTaskExecutor(Executors.defaultThreadFactory());
+    return new TimeoutAwareExecutorService(
+        isVirtualThreadsEnabled
+            ? Executors.newVirtualThreadPerTaskExecutor()
+            : Executors.newCachedThreadPool());
   }
 }

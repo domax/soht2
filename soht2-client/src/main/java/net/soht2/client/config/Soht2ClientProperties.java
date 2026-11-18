@@ -183,6 +183,12 @@ public class Soht2ClientProperties implements InitializingBean {
    */
   private Duration disconnectOnIdleTimeout = Duration.ZERO;
 
+  /**
+   * The maximum number of concurrent HTTP connections to the SOHT2 server. It is applied to the
+   * HTTP client used in proxy and SSL-verification-disabled modes.
+   */
+  private int maxHttpConnections = 100;
+
   @Override
   public void afterPropertiesSet() {
     log.debug("afterPropertiesSet: {}", this);
@@ -194,5 +200,7 @@ public class Soht2ClientProperties implements InitializingBean {
     Assert.isTrue(
         !disconnectOnIdleTimeout.isNegative(),
         "soht2.client.disconnect-on-idle-timeout must not be negative");
+    Assert.isTrue(
+        maxHttpConnections >= 1, "soht2.client.max-http-connections must be greater than 0");
   }
 }

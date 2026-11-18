@@ -67,7 +67,7 @@ How to Configure And Run
 Both the client and server components can be run using Java, so on both sides you need to have Java
 21 or later installed.
 
-### Server Part
+### Server Side
 
 1. Get the latest release, e.g. `soht2-server-X.X.X.jar`
    from [packages](https://github.com/domax/soht2/packages).
@@ -77,7 +77,7 @@ Both the client and server components can be run using Java, so on both sides yo
     soht2.server:
       socket-read-timeout: PT0.1S                  # Timeout for socket read operations
       read-buffer-size: 1MB                        # Size of the read buffer for socket connections
-      user-cache-ttl: PT10M                        # Time-to-live for user cache entries
+      user-cache-ttl: PT10M                        # TTL for user and verified-credential cache
       database-path: ./soht2                       # Path to the database file
       admin-username: "${SOHT2_USR}"               # Username for the admin user
       default-admin-password: "${SOHT2_PWD}"       # Default password for the admin user
@@ -96,7 +96,7 @@ Both the client and server components can be run using Java, so on both sides yo
     ```
    __IMPORTANT! Change your admin's password via UI or REST API right after the server starts.__
 
-### Client Part
+### Client Side
 
 1. Get the latest release, e.g. `soht2-client-X.X.X.jar`
    from [packages](https://github.com/domax/soht2/packages).
@@ -132,6 +132,7 @@ Both the client and server components can be run using Java, so on both sides yo
         domain: ${PROXY_DOMAIN}       # Optional, only if NTLM proxy requires domain name
       disable-ssl-verification: false # Disable SSL verification for the connections
       disconnect-on-idle-timeout: P0D # Timeout for closing idle connections; P0D means never
+      max-http-connections: 100       # Max concurrent HTTP connections to the server
     ```
    You have to define `soht2.client.url` and at least one connection in the
    `soht2.client.connections` list. All the rest of properties are optional.<br>

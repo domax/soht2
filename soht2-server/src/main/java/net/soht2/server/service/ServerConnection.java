@@ -9,6 +9,8 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -39,11 +41,13 @@ public class ServerConnection implements Closeable {
 
   InputStream inputStream;
   OutputStream outputStream;
+  byte[] readBuffer;
   Consumer<ServerConnection> postCloseAction;
   ReentrantLock lock = new ReentrantLock();
 
   @Getter(AccessLevel.NONE)
-  AtomicReference<LocalDateTime> lastActivity = new AtomicReference<>(LocalDateTime.now());
+  AtomicReference<LocalDateTime> lastActivity =
+      new AtomicReference<>(LocalDateTime.now(ZoneId.systemDefault()));
 
   @Getter(AccessLevel.NONE)
   AtomicBoolean isOpened = new AtomicBoolean();
@@ -56,7 +60,10 @@ public class ServerConnection implements Closeable {
 
   @Builder
   private ServerConnection(
-      Soht2Connection soht2, int socketTimeout, Consumer<ServerConnection> postCloseAction) {
+      Soht2Connection soht2,
+      int socketTimeout,
+      int readBufferSize,
+      Consumer<ServerConnection> postCloseAction) {
     log.debug("new: connection={}", soht2);
     this.soht2 = new AtomicReference<>(soht2);
     socket =
@@ -68,6 +75,7 @@ public class ServerConnection implements Closeable {
     log.debug("new: socket={}", socket);
     inputStream = Try.of(socket::getInputStream).get();
     outputStream = Try.of(socket::getOutputStream).get();
+    readBuffer = new byte[readBufferSize];
     this.postCloseAction = postCloseAction;
     isOpened.set(true);
   }
@@ -101,7 +109,9 @@ public class ServerConnection implements Closeable {
    * @return the duration since the last activity
    */
   public Duration activityAge() {
-    return Duration.between(lastActivity.get(), LocalDateTime.now());
+    return Duration.between(
+        lastActivity.get().atZone(ZoneId.systemDefault()),
+        ZonedDateTime.now(ZoneId.systemDefault()));
   }
 
   /**
@@ -111,7 +121,9 @@ public class ServerConnection implements Closeable {
    * @return the duration since the connection was opened
    */
   public Duration connectionAge() {
-    return Duration.between(soht2.get().openedAt(), lastActivity.get());
+    return Duration.between(
+        soht2.get().openedAt().atZone(ZoneId.systemDefault()),
+        lastActivity.get().atZone(ZoneId.systemDefault()));
   }
 
   /**

@@ -3,6 +3,7 @@ spring:
   profiles.include: server
   devtools.add-properties: false
   main.banner-mode: off
+  threads.virtual.enabled: true
   jackson:
     date-format: tools.jackson.databind.util.StdDateFormat
     datatype:
@@ -21,7 +22,7 @@ spring:
       auto-commit: false
       maximum-pool-size: 5
   jpa:
-    open-in-view: true
+    open-in-view: false
     hibernate.ddl-auto: none
   flyway:
     enabled: true
@@ -54,6 +55,8 @@ management:
 
 logging.level:
   root: info
+  # CachingAuthenticationProvider intentionally wraps the UserDetailsService
+  org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer: error
 
 server:
   address: 0.0.0.0

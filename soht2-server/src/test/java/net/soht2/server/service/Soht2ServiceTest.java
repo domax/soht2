@@ -10,8 +10,11 @@ import static org.mockito.Mockito.doReturn;
 
 import io.vavr.control.Try;
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import lombok.val;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.common.dto.Soht2User;
@@ -129,5 +132,59 @@ class Soht2ServiceTest {
     }
 
     assertThat(soht2Service.list(authentication)).isEmpty();
+  }
+
+  @Test
+  void testExchange_returnsIndependentArrays() {
+    try (val ignored =
+            EchoServer.builder()
+                .portNumber(PORT_NUMBER)
+                .socketTimeout(socketTimeout)
+                .bufferSize(bufferSize)
+                .build();
+        val client =
+            soht2Service.open(
+                Soht2Connection.builder()
+                    .user(Soht2User.builder().username("system").build())
+                    .clientHost("localhost")
+                    .targetHost("localhost")
+                    .targetPort(PORT_NUMBER)
+                    .build(),
+                authentication)) {
+      val connectionId = client.soht2().id();
+      val first = createBinData(bufferSize);
+      val second = createBinData(bufferSize);
+
+      val firstChunks = exchangeFully(connectionId, first);
+      val secondChunks = exchangeFully(connectionId, second);
+
+      // the first response must not be overwritten by the next read on the same connection
+      assertThat(concat(firstChunks)).isEqualTo(first);
+      assertThat(concat(secondChunks)).isEqualTo(second);
+      assertThat(firstChunks).allMatch(c -> c.length <= bufferSize);
+      firstChunks.forEach(a -> secondChunks.forEach(b -> assertThat(a).isNotSameAs(b)));
+    }
+  }
+
+  List<byte[]> exchangeFully(UUID id, byte[] data) {
+    val chunks = new ArrayList<byte[]>();
+    var received = 0;
+    var payload = data;
+    val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+    while (received < data.length && System.nanoTime() < deadline) {
+      val chunk = soht2Service.exchange(id, payload, null).get();
+      payload = null;
+      if (chunk.length > 0) {
+        chunks.add(chunk);
+        received += chunk.length;
+      }
+    }
+    return chunks;
+  }
+
+  static byte[] concat(List<byte[]> chunks) {
+    val out = new ByteArrayOutputStream();
+    chunks.forEach(out::writeBytes);
+    return out.toByteArray();
   }
 }
