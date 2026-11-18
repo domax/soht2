@@ -128,8 +128,7 @@ public class ConnectionService {
       log.debug("connect: serverSocket={}", serverSocket);
       ofNullable(socketOpenedCallback).ifPresent(cb -> cb.accept(host));
 
-      while (isRunning.get())
-        if (!serveAsync(host, serverSocket)) break;
+      while (isRunning.get()) if (!serveAsync(host, serverSocket)) break;
       serverSockets.remove(serverSocket);
     } catch (Exception e) {
       if (e instanceof BindException && "Address already in use".equals(e.getMessage())) {

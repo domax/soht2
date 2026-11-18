@@ -15,7 +15,6 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import net.soht2.client.config.Soht2ClientConfig;
 import net.soht2.client.config.Soht2ClientProperties;
@@ -30,7 +29,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.client.RestClient;
 
-@Slf4j
 @SpringBootTest(classes = ConnectionService.class)
 @Import(Soht2ClientConfig.class)
 @ActiveProfiles("test")
@@ -179,7 +177,7 @@ class ConnectionServiceTest {
 
     startAndAwait();
     val bytesIn = UTHelper.createBinData(bufferSize / 2);
-    try (val blockedClient =
+    try (val ignored =
         EchoClient.builder()
             .portNumber(host.getLocalPort())
             .socketTimeout(5000)
