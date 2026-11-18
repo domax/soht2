@@ -38,12 +38,14 @@ dependencyManagement {
 dependencies {
   dependencies {
     implementation 'io.vavr:vavr:1.1.0'
+    // <vulnerability-fix>
     implementation 'com.fasterxml.uuid:java-uuid-generator:5.2.0'
     implementation 'ch.qos.logback:logback-classic:1.6.6'
     implementation 'ch.qos.logback:logback-core:1.6.6'
+    compileOnly 'org.slf4j:slf4j-api:2.0.20'
+    // </vulnerability-fix>
     compileOnly 'org.springframework:spring-core'
     compileOnly 'org.projectlombok:lombok'
-    compileOnly 'org.slf4j:slf4j-api:2.0.20'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-jackson-test'
