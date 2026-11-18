@@ -61,7 +61,8 @@ class ConnectionControllerTest {
   @MockitoBean Soht2HistoryService soht2HistoryService;
 
   @SuppressWarnings("SpringTestingOverridenBeanResolveInspection")
-  @MockitoBean UserDetailsService userDetailsService;
+  @MockitoBean
+  UserDetailsService userDetailsService;
 
   @org.junit.jupiter.api.BeforeEach
   void authenticateRequests() {
