@@ -1,7 +1,6 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.server.controller;
 
-import static java.util.Optional.ofNullable;
 import static net.soht2.server.controller.UserController.AUTH_REQ;
 import static net.soht2.server.entity.UserEntity.ROLE_ADMIN;
 import static org.springframework.http.HttpHeaders.CONTENT_ENCODING;
@@ -19,10 +18,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import lombok.RequiredArgsConstructor;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.common.dto.Soht2User;
@@ -174,31 +170,31 @@ public class ConnectionController {
       // <editor-fold desc="un, id, ch, th, tp, oa, ob, ca, cb, sort, pg, sz>
       @Parameter(description = "Get only history of specified substring in username" + AST)
           @RequestParam(name = "un", required = false)
-          @Nullable String username,
+          String username,
       @Parameter(description = "Get only history of specified substring in connection ID" + AST)
           @RequestParam(name = "id", required = false)
-          @Nullable String connectionId,
+          String connectionId,
       @Parameter(description = "Get only history of specified substring in client host" + AST)
           @RequestParam(name = "ch", required = false)
-          @Nullable String clientHost,
+          String clientHost,
       @Parameter(description = "Get only history of specified substring in target host" + AST)
           @RequestParam(name = "th", required = false)
-          @Nullable String targetHost,
+          String targetHost,
       @Parameter(description = "Get only history of specified target ports")
-          @RequestParam(name = "tp", required = false)
-          @Nullable Set<Integer> targetPorts,
+          @RequestParam(name = "tp")
+          Optional<Set<Integer>> targetPorts,
       @Parameter(description = "Get only connections opened after timestamp " + TS)
           @RequestParam(name = "oa", required = false)
-          @Nullable LocalDateTime openedAfter,
+          LocalDateTime openedAfter,
       @Parameter(description = "Get only connections opened before timestamp " + TS)
           @RequestParam(name = "ob", required = false)
-          @Nullable LocalDateTime openedBefore,
+          LocalDateTime openedBefore,
       @Parameter(description = "Get only connections closed after timestamp " + TS)
           @RequestParam(name = "ca", required = false)
-          @Nullable LocalDateTime closedAfter,
+          LocalDateTime closedAfter,
       @Parameter(description = "Get only connections closed before timestamp " + TS)
           @RequestParam(name = "cb", required = false)
-          @Nullable LocalDateTime closedBefore,
+          LocalDateTime closedBefore,
       @Parameter(
               description =
                   "Sorting criteria (supported fields: "
@@ -231,7 +227,7 @@ public class ConnectionController {
         connectionId,
         clientHost,
         targetHost,
-        ofNullable(targetPorts).orElse(Set.of()),
+        targetPorts.orElse(Set.of()),
         openedAfter,
         openedBefore,
         closedAfter,
@@ -269,7 +265,7 @@ public class ConnectionController {
   public byte[] exchange(
       @PathVariable("id") UUID connectionId,
       @RequestBody(required = false) byte @Nullable [] data,
-      @RequestHeader(name = CONTENT_ENCODING, required = false) @Nullable String contentEncoding) {
+      @RequestHeader(name = CONTENT_ENCODING, required = false) String contentEncoding) {
     return soht2Service.exchange(connectionId, data, contentEncoding).get();
   }
 

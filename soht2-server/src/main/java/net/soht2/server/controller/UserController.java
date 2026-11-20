@@ -15,7 +15,6 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import net.soht2.common.dto.Soht2User;
 import net.soht2.server.service.Soht2UserService;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,7 +27,6 @@ import org.springframework.web.bind.annotation.*;
  * deleting, and listing users, as well as retrieving the current user's information and changing
  * their password.
  */
-@Slf4j
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/user")
