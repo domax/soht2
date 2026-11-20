@@ -3,6 +3,7 @@ package net.soht2.client.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.HttpMethod.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -27,6 +28,9 @@ import tools.jackson.databind.json.JsonMapper;
 @ActiveProfiles("test")
 class Soht2ClientTest {
 
+  private static final String CLIENT_HEADER = "X-SOHT2-Client";
+  private static final String CLIENT_VALUE = "soht2-client";
+
   @Autowired MockRestServiceServer server;
   @Autowired Soht2ClientProperties soht2ClientProperties;
   @Autowired Soht2Client soht2Client;
@@ -44,6 +48,8 @@ class Soht2ClientTest {
     server
         .expect(requestTo(soht2ClientProperties.getUrl() + "?host=localhost&port=8080"))
         .andExpect(method(POST))
+        .andExpect(header(CLIENT_HEADER, CLIENT_VALUE))
+        .andExpect(header(AUTHORIZATION, "Basic c3lzdGVtOnRlc3QxMjM0"))
         .andRespond(
             withSuccess(jsonMapper.writeValueAsString(connection), MediaType.APPLICATION_JSON));
 
@@ -60,6 +66,8 @@ class Soht2ClientTest {
     server
         .expect(requestTo(soht2ClientProperties.getUrl() + "/" + connectionId))
         .andExpect(method(POST))
+        .andExpect(header(CLIENT_HEADER, CLIENT_VALUE))
+        .andExpect(header(AUTHORIZATION, "Basic c3lzdGVtOnRlc3QxMjM0"))
         .andExpect(content().contentType(MediaType.APPLICATION_OCTET_STREAM))
         .andExpect(content().bytes(bytesIn))
         .andRespond(withSuccess(bytesOut, MediaType.APPLICATION_OCTET_STREAM));
@@ -74,6 +82,8 @@ class Soht2ClientTest {
     server
         .expect(requestTo(soht2ClientProperties.getUrl() + "/" + connectionId))
         .andExpect(method(DELETE))
+        .andExpect(header(CLIENT_HEADER, CLIENT_VALUE))
+        .andExpect(header(AUTHORIZATION, "Basic c3lzdGVtOnRlc3QxMjM0"))
         .andRespond(withSuccess());
 
     assertThatNoException().isThrownBy(() -> soht2Client.close(connectionId).get());

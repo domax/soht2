@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -75,6 +76,7 @@ class UserControllerTest {
     mockMvc
         .perform(
             post("/api/user")
+                .with(csrf())
                 .queryParam("username", soht2User.username())
                 .queryParam("password", "1qaz@WSX")
                 .queryParam("target", String.join(",", soht2User.allowedTargets())))
@@ -97,6 +99,7 @@ class UserControllerTest {
     mockMvc
         .perform(
             post("/api/user")
+                .with(csrf())
                 .queryParam("username", "a-b")
                 .queryParam("password", "1qaz")
                 .queryParam("target", String.join(",", soht2User.allowedTargets())))
@@ -112,6 +115,7 @@ class UserControllerTest {
     mockMvc
         .perform(
             put("/api/user/" + soht2User.username())
+                .with(csrf())
                 .queryParam("password", "1qaz@WSX")
                 .queryParam("role", soht2User.role())
                 .queryParam("target", String.join(",", soht2User.allowedTargets())))
@@ -130,10 +134,22 @@ class UserControllerTest {
   }
 
   @Test
+  void update_WithoutTargets() throws Exception {
+    doReturn(soht2User).when(soht2UserService).updateUser(anyString(), any(), any(), isNull());
+
+    mockMvc
+        .perform(put("/api/user/" + soht2User.username()).with(csrf()))
+        .andExpect(status().isOk());
+
+    verify(soht2UserService).updateUser(soht2User.username(), null, null, null);
+  }
+
+  @Test
   void delete_OK() throws Exception {
     mockMvc
         .perform(
             delete("/api/user/" + soht2User.username())
+                .with(csrf())
                 .queryParam("force", "true")
                 .queryParam("history", "true"))
         .andExpect(status().isOk());
@@ -204,7 +220,11 @@ class UserControllerTest {
         .changePassword(anyString(), anyString(), any(Authentication.class));
 
     mockMvc
-        .perform(put("/api/user/self").queryParam("old", "test").queryParam("new", "1qaz@WSX"))
+        .perform(
+            put("/api/user/self")
+                .with(csrf())
+                .queryParam("old", "test")
+                .queryParam("new", "1qaz@WSX"))
         .andExpect(status().isOk())
         .andExpect(content().contentType(APPLICATION_JSON))
         .andExpect(jsonPath("$.username").value(soht2User.username()))

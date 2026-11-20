@@ -42,6 +42,9 @@ import org.springframework.web.client.RestClient;
 @EnableConfigurationProperties(Soht2ClientProperties.class)
 public class Soht2ClientConfig {
 
+  private static final String CLIENT_HEADER = "X-SOHT2-Client";
+  private static final String CLIENT_VALUE = "soht2-client";
+
   @Bean
   RestClient restClient(
       Soht2ClientProperties properties,
@@ -50,7 +53,8 @@ public class Soht2ClientConfig {
     ofNullable(clientHttpRequestFactory).ifPresent(restClientBuilder::requestFactory);
     restClientBuilder
         .baseUrl(properties.getUrl().toString())
-        .defaultHeader(ACCEPT, APPLICATION_JSON_VALUE, APPLICATION_OCTET_STREAM_VALUE);
+        .defaultHeader(ACCEPT, APPLICATION_JSON_VALUE, APPLICATION_OCTET_STREAM_VALUE)
+        .defaultHeader(CLIENT_HEADER, CLIENT_VALUE);
     Optional.of(
             Stream.of(properties.getUsername(), properties.getPassword())
                 .filter(StringUtils::hasLength)

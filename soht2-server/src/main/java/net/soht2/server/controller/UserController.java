@@ -12,14 +12,15 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Pattern;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.soht2.common.dto.Soht2User;
 import net.soht2.server.service.Soht2UserService;
-import org.jspecify.annotations.Nullable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -38,7 +39,7 @@ public class UserController {
   static final String AUTH_REQ =
       "This endpoint does not require any specific role - just regular authentication.";
 
-  @SuppressWarnings("java:S5857")
+  @SuppressWarnings({"java:S5857", "java:S2068"})
   static final String RE_PASSWORD =
       "^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?\\d)(?=.*?[#?!@$%^&*:;-]).{8,20}$";
 
@@ -87,7 +88,7 @@ public class UserController {
           String username,
       @Pattern(regexp = RE_PASSWORD, message = MSG_PASSWORD) @RequestParam("password")
           String password,
-      @RequestParam(name = "role", required = false) @Nullable String role,
+      @RequestParam(name = "role", required = false) String role,
       @RequestParam(name = "target", defaultValue = "*:*") Set<String> allowedTargets) {
     return soht2UserService.createUser(username, password, role, allowedTargets);
   }
@@ -119,10 +120,10 @@ public class UserController {
   public Soht2User update(
       @PathVariable("name") String name,
       @Pattern(regexp = RE_PASSWORD, message = MSG_PASSWORD) @RequestParam(name = "password", required = false)
-          @Nullable String password,
-      @RequestParam(name = "role", required = false) @Nullable String role,
-      @RequestParam(name = "target", required = false) @Nullable Set<String> allowedTargets) {
-    return soht2UserService.updateUser(name, password, role, allowedTargets);
+          String password,
+      @RequestParam(name = "role", required = false) String role,
+      @RequestParam(name = "target") Optional<Set<String>> allowedTargets) {
+    return soht2UserService.updateUser(name, password, role, allowedTargets.orElse(null));
   }
 
   /**
@@ -184,7 +185,8 @@ public class UserController {
   @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(hidden = true)))
   // </editor-fold>
   @GetMapping(path = "/self", produces = APPLICATION_JSON_VALUE)
-  public Soht2User self(Authentication authentication) {
+  public Soht2User self(Authentication authentication, CsrfToken csrfToken) {
+    csrfToken.getToken();
     return soht2UserService.getSelf(authentication);
   }
 

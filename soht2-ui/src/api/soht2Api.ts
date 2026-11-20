@@ -112,6 +112,9 @@ type QueryValue =
   | Array<string | number | boolean | null | undefined>;
 type Query = Record<string, QueryValue>;
 
+const CSRF_COOKIE_NAME = 'XSRF-TOKEN';
+const CSRF_HEADER_NAME = 'X-XSRF-TOKEN';
+
 class HttpClient {
   private readonly baseUrl: string;
   private authHeader: string | null = null;
@@ -131,11 +134,22 @@ class HttpClient {
     this.authHeader = null;
   }
 
-  private headers(contentType?: string, extra: HeadersInit = {}): HeadersInit {
+  private headers(contentType?: string, extra: HeadersInit = {}, includeCsrf = false): HeadersInit {
     const headers: Record<string, string> = {};
     if (contentType) headers['Content-Type'] = contentType;
     if (this.authHeader) headers['Authorization'] = this.authHeader;
+    if (includeCsrf) {
+      const csrfToken = this.csrfToken();
+      if (csrfToken) headers[CSRF_HEADER_NAME] = csrfToken;
+    }
     return { ...headers, ...extra };
+  }
+
+  private csrfToken(): string | null {
+    const cookie = globalThis.document?.cookie
+      .split('; ')
+      .find(value => value.startsWith(`${CSRF_COOKIE_NAME}=`));
+    return cookie ? decodeURIComponent(cookie.substring(CSRF_COOKIE_NAME.length + 1)) : null;
   }
 
   private makeUrl(path: string, query?: Query): string /* NOSONAR (typescript:S3776) */ {
@@ -163,7 +177,7 @@ class HttpClient {
   async postJson<T>(path: string, body?: unknown, query?: Query): Promise<T> {
     const res = await fetch(this.makeUrl(path, query), {
       method: 'POST',
-      headers: this.headers('application/json'),
+      headers: this.headers('application/json', {}, true),
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     if (!res.ok) throw await this.toError(res);
@@ -173,7 +187,7 @@ class HttpClient {
   async putJson<T>(path: string, body?: unknown, query?: Query): Promise<T> {
     const res = await fetch(this.makeUrl(path, query), {
       method: 'PUT',
-      headers: this.headers('application/json'),
+      headers: this.headers('application/json', {}, true),
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     if (!res.ok) throw await this.toError(res);
@@ -183,7 +197,7 @@ class HttpClient {
   async delete(path: string, query?: Query): Promise<void> {
     const res = await fetch(this.makeUrl(path, query), {
       method: 'DELETE',
-      headers: this.headers(),
+      headers: this.headers(undefined, {}, true),
     });
     if (!res.ok) throw await this.toError(res);
   }

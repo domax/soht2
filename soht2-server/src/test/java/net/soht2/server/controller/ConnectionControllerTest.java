@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -103,7 +104,10 @@ class ConnectionControllerTest {
 
       mockMvc
           .perform(
-              post("/api/connection").queryParam("host", "targetHost").queryParam("port", "12345"))
+              post("/api/connection")
+                  .with(csrf())
+                  .queryParam("host", "targetHost")
+                  .queryParam("port", "12345"))
           .andExpect(status().isOk())
           .andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.id").value(sohtConnection.id().toString()))
@@ -117,6 +121,61 @@ class ConnectionControllerTest {
       verify(soht2Service).open(eq(sohtConnection), any(Authentication.class));
       verify(connectionInfo).soht2();
     }
+  }
+
+  @Test
+  void open_withoutCsrfToken_FORBIDDEN() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/connection").queryParam("host", "targetHost").queryParam("port", "12345"))
+        .andExpect(status().isForbidden());
+
+    verifyNoInteractions(soht2Service);
+  }
+
+  @Test
+  void open_withInvalidCsrfToken_FORBIDDEN() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/connection")
+                .with(csrf().useInvalidToken())
+                .queryParam("host", "targetHost")
+                .queryParam("port", "12345"))
+        .andExpect(status().isForbidden());
+
+    verifyNoInteractions(soht2Service);
+  }
+
+  @SuppressWarnings("resource")
+  @Test
+  void open_withNonBrowserClientHeader_OK() throws Exception {
+    val randomUUID = UUID.randomUUID();
+    val sohtConnection =
+        Soht2Connection.builder()
+            .id(randomUUID)
+            .user(Soht2User.builder().username("system").build())
+            .clientHost("localhost")
+            .targetHost("targetHost")
+            .targetPort(12345)
+            .build();
+    val connectionInfo = mock(ServerConnection.class);
+    doReturn(sohtConnection).when(connectionInfo).soht2();
+    doReturn(true)
+        .when(soht2Service)
+        .isTargetAllowed(any(Authentication.class), anyString(), anyInt());
+    doReturn(connectionInfo)
+        .when(soht2Service)
+        .open(any(Soht2Connection.class), any(Authentication.class));
+
+    mockMvc
+        .perform(
+            post("/api/connection")
+                .header("X-SOHT2-Client", "soht2-client")
+                .queryParam("host", "targetHost")
+                .queryParam("port", "12345"))
+        .andExpect(status().isOk());
+
+    verify(soht2Service).open(any(Soht2Connection.class), any(Authentication.class));
   }
 
   @ParameterizedTest
@@ -141,6 +200,7 @@ class ConnectionControllerTest {
     mockMvc
         .perform(
             post("/api/connection/" + sohtConnection.id())
+                .with(csrf())
                 .contentType(APPLICATION_OCTET_STREAM)
                 .content(bytesIn))
         .andExpect(status().isOk())

@@ -138,6 +138,9 @@ Both the client and server components can be run using Java, so on both sides yo
    `soht2.client.connections` list. All the rest of properties are optional.<br>
    If you want to use an HTTP proxy, you can define the `soht2.client.proxy` section with
    appropriate values.<br>
+   The client automatically sends `X-SOHT2-Client: soht2-client` on tunnel requests so it can
+   operate with the server's browser CSRF protection. Do not remove or override this header when
+   customizing the client's HTTP transport.<br>
    If you want to use SOCKS5 proxy, just add `-DsocksProxyHost=localhost -DsocksProxyPort=1080` to
    the list of JVM options (see next step) - but set the correct host and port, of course.<br>
    _Be aware that this implementation does not support authentication for SOCKS5 proxy._

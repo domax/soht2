@@ -16,12 +16,13 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
@@ -31,9 +32,17 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+  private static final String CLIENT_HEADER = "X-SOHT2-Client";
+  private static final String CLIENT_VALUE = "soht2-client";
+
+  @SuppressWarnings("java:S3330")
   @Bean
   SecurityFilterChain securityFilterChain(HttpSecurity http) {
-    return http.csrf(CsrfConfigurer::disable)
+    val csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+    return http.csrf(csrf ->
+            csrf.csrfTokenRepository(csrfTokenRepository)
+                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                .ignoringRequestMatchers(rq -> CLIENT_VALUE.equals(rq.getHeader(CLIENT_HEADER))))
         .cors(withDefaults())
         .httpBasic(withDefaults())
         .headers(h -> h.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
