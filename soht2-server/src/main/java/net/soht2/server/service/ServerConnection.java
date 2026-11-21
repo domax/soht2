@@ -43,7 +43,26 @@ public class ServerConnection implements Closeable {
   OutputStream outputStream;
   byte[] readBuffer;
   Consumer<ServerConnection> postCloseAction;
-  ReentrantLock lock = new ReentrantLock();
+
+  /** Serializes writes to the target: duplex uploads and the write half of simple exchanges. */
+  ReentrantLock writeLock = new ReentrantLock();
+
+  /** Serializes reads from the target: duplex downloads and the read half of simple exchanges. */
+  ReentrantLock readLock = new ReentrantLock();
+
+  /** The sequence number of the last applied duplex upload request; {@code 0} before the first. */
+  AtomicLong lastUploadSeq = new AtomicLong(0);
+
+  /**
+   * The sequence number of the last answered duplex download request; {@code 0} before the first.
+   */
+  AtomicLong lastDownloadSeq = new AtomicLong(0);
+
+  /** The result produced for {@link #lastDownloadSeq}, replayed when that request is retried. */
+  AtomicReference<DownloadResult> lastDownloadResult = new AtomicReference<>(DownloadResult.EMPTY);
+
+  /** Whether the target has closed its side of the connection (end-of-stream was read). */
+  AtomicBoolean targetEof = new AtomicBoolean();
 
   @Getter(AccessLevel.NONE)
   AtomicReference<LocalDateTime> lastActivity =
@@ -154,15 +173,44 @@ public class ServerConnection implements Closeable {
     return bytesWritten.get();
   }
 
-  /** Closes the connection, releasing resources associated with the socket and streams. */
+  /**
+   * Acquires both locks in a fixed order (write, then read), so a simple exchange never interleaves
+   * with a duplex request on the same connection.
+   */
+  public void lockBoth() {
+    writeLock.lock();
+    Try.run(readLock::lock)
+        .recoverWith(RuntimeException.class, e -> Try.run(writeLock::unlock).orElse(Try.failure(e)))
+        .get();
+  }
+
+  /** Releases the locks acquired by {@link #lockBoth()} that are held by the current thread. */
+  public void unlockBoth() {
+    unlock(readLock);
+    unlock(writeLock);
+  }
+
+  /**
+   * Releases the given lock if it is held by the current thread.
+   *
+   * @param lock the lock to release
+   */
+  public static void unlock(ReentrantLock lock) {
+    if (lock.isHeldByCurrentThread()) lock.unlock();
+  }
+
+  /**
+   * Closes the connection, releasing resources associated with the socket and streams. Closing an
+   * already closed connection has no effect. Threads blocked in a read or write on the target
+   * socket are released with an exception and keep responsibility for unlocking their own locks.
+   */
   @Override
   public void close() {
+    if (!isOpened.compareAndSet(true, false)) return;
     log.debug("close: connection={}", soht2.get());
-    isOpened.set(false);
     Try.run(inputStream::close);
     Try.run(outputStream::close);
     Try.run(socket::close);
-    Try.run(lock::unlock);
     postCloseAction.accept(this);
   }
 }

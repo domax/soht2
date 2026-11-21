@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import net.soht2.common.compress.CompressionType;
+import net.soht2.common.dto.Soht2Protocol.TransportType;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.Assert;
@@ -163,7 +164,10 @@ public class Soht2ClientProperties implements InitializingBean {
   /** Properties for compression of requests. */
   private CompressionProperties compression = new CompressionProperties();
 
-  /** Properties for polling configuration. */
+  /** The transport used to tunnel sessions: {@code duplex} (default) or {@code simple}. */
+  private TransportType transport = TransportType.DUPLEX;
+
+  /** Properties for polling configuration. Used by the simple transport only. */
   private PollProperties poll = new PollProperties();
 
   /** Properties for proxy configuration. */

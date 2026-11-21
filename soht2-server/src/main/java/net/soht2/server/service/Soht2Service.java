@@ -6,18 +6,20 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static net.soht2.common.compress.Compressor.compressorCache;
 import static net.soht2.common.util.AuxUtil.peek;
+import static net.soht2.server.service.ExceptionHelper.conflict;
 import static net.soht2.server.service.ExceptionHelper.gone;
 import static net.soht2.server.service.Soht2UserService.EMPTY_CU;
 import static net.soht2.server.service.Soht2UserService.getCurrentUser;
+import static org.springframework.util.ObjectUtils.isEmpty;
 
 import io.vavr.control.Try;
+import java.io.IOException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +32,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Service responsible for managing connections, providing functionality such as adding, retrieving,
@@ -143,30 +146,29 @@ public class Soht2Service {
           .filter(v -> v > 0)
           .ifPresent(v -> log.trace("exchange: id={}, in.length={}, encoding={}", id, v, encoding));
     return Try.of(() -> ofNullable(connections.get(id)))
-        .filter(Optional::isPresent, () -> gone("Connection " + id + " not found"))
+        .filter(Optional::isPresent, () -> gone(connectionIdMsg(id, "not found")))
         .map(Optional::get)
-        .filter(ServerConnection::isOpened, () -> gone("Connection " + id + " is closed"))
-        .andThenTry(sc -> sc.lock().lock())
-        .andThenTry(c -> c.lastActivity(LocalDateTime.now(ZoneId.systemDefault())))
+        .filter(ServerConnection::isOpened, () -> gone(connectionIdMsg(id)))
         .mapTry(sc -> {
-          if (ofNullable(data).filter(v -> v.length > 0).isPresent()) {
-            val dataOut = compressorCache.apply(encoding).decompress(data);
-            sc.outputStream().write(dataOut);
-            sc.outputStream().flush();
-            sc.addBytesWritten(dataOut.length);
+          sc.lockBoth();
+          try {
+            sc.lastActivity(LocalDateTime.now(ZoneId.systemDefault()));
+            if (ofNullable(data).filter(v -> v.length > 0).isPresent()) {
+              val dataOut = compressorCache.apply(encoding).decompress(data);
+              sc.outputStream().write(dataOut);
+              sc.outputStream().flush();
+              sc.addBytesWritten(dataOut.length);
+            }
+            val buffer = sc.readBuffer();
+            val bufferLen = sc.inputStream().read(buffer);
+            if (bufferLen <= 0) return EMPTY;
+            sc.addBytesRead(bufferLen);
+            // the buffer is reused by the connection, so always return a copy
+            return Arrays.copyOf(buffer, bufferLen);
+          } finally {
+            sc.unlockBoth();
           }
-          val buffer = sc.readBuffer();
-          val bufferLen = sc.inputStream().read(buffer);
-          if (bufferLen <= 0) return EMPTY;
-          sc.addBytesRead(bufferLen);
-          // the buffer is reused by the connection, so always return a copy
-          return Arrays.copyOf(buffer, bufferLen);
         })
-        .andFinally(() ->
-            Try.run(() ->
-                ofNullable(connections.get(id))
-                    .map(ServerConnection::lock)
-                    .ifPresent(ReentrantLock::unlock)))
         .recover(SocketTimeoutException.class, e -> EMPTY)
         .onFailure(e -> log.error("exchange: id={} - {}", id, e.toString()))
         .recover(SocketException.class, e -> EMPTY)
@@ -176,6 +178,206 @@ public class Soht2Service {
                 .map(v -> v.length)
                 .filter(v -> v > 0)
                 .ifPresent(v -> log.trace("exchange: id={}, out.length={}", id, v)));
+  }
+
+  /**
+   * Applies a duplex upload request: writes the data to the target of the connection identified by
+   * the unique identifier, unless the request is a retry of the last applied upload.
+   *
+   * <p>A request with the next sequence number ({@code lastUploadSeq + 1}) is written to the
+   * target. A request repeating the last sequence number is acknowledged without writing. Any other
+   * sequence number closes the connection and fails with {@code 409 Conflict}.
+   *
+   * @param id the unique identifier of the connection
+   * @param seq the sequence number of the upload request
+   * @param data the (optionally compressed) data to write to the target
+   * @param encoding the content encoding of the data (optional)
+   * @return a successful {@link Try} when the request is applied or acknowledged as a retry, or a
+   *     failure with {@code 410 Gone} or {@code 409 Conflict}
+   */
+  @SuppressWarnings("java:S1905")
+  public Try<Void> upload(UUID id, long seq, byte @Nullable [] data, @Nullable String encoding) {
+    if (log.isTraceEnabled())
+      log.trace(
+          "upload: id={}, seq={}, in.length={}, encoding={}",
+          id,
+          seq,
+          data == null ? 0 : data.length,
+          encoding);
+    return findOpened(id)
+        .andThenTry(sc -> {
+          sc.writeLock().lock();
+          try {
+            applyUpload(sc, seq, data, encoding);
+          } finally {
+            ServerConnection.unlock(sc.writeLock());
+          }
+        })
+        .map(sc -> (Void) null)
+        .onFailure(e -> log.warn("upload: id={}, seq={} - {}", id, seq, e.toString()));
+  }
+
+  /**
+   * Answers a duplex download request for the connection identified by the unique identifier.
+   *
+   * <p>A request with the next sequence number ({@code lastDownloadSeq + 1}) reads the target until
+   * data arrives, the target closes (end-of-stream), or {@code download-hold-timeout} elapses
+   * (empty result); the result is stored for that sequence number. A request repeating the last
+   * sequence number replays the stored result exactly, without reading the target. Any other
+   * sequence number closes the connection and fails with {@code 409 Conflict}. After an
+   * end-of-stream result is produced, the connection is closed.
+   *
+   * @param id the unique identifier of the connection
+   * @param seq the sequence number of the download request
+   * @return a {@link Try} with the {@link DownloadResult}, or a failure with {@code 410 Gone} or
+   *     {@code 409 Conflict}
+   */
+  public Try<DownloadResult> download(UUID id, long seq) {
+    log.trace("download: id={}, seq={}", id, seq);
+    return findOpened(id)
+        .mapTry(sc -> {
+          sc.readLock().lock();
+          try {
+            return answerDownload(sc, seq);
+          } finally {
+            ServerConnection.unlock(sc.readLock());
+          }
+        })
+        .onSuccess(r -> {
+          if (log.isTraceEnabled())
+            log.trace(
+                "download: id={}, seq={}, out.length={}, eos={}",
+                id,
+                seq,
+                r.data().length,
+                r.eos());
+        })
+        .onFailure(e -> {
+          // A held download released by DELETE of its connection is expected
+          if (e instanceof ResponseStatusException rse && rse.getStatusCode().value() == 410)
+            log.debug("download: id={}, seq={} - {}", id, seq, e.toString());
+          else log.warn("download: id={}, seq={} - {}", id, seq, e.toString());
+        });
+  }
+
+  private Try<ServerConnection> findOpened(UUID id) {
+    return Try.of(() -> ofNullable(connections.get(id)))
+        .filter(Optional::isPresent, () -> gone(connectionIdMsg(id, "not found")))
+        .map(Optional::get)
+        .filter(ServerConnection::isOpened, () -> gone(connectionIdMsg(id)));
+  }
+
+  private void applyUpload(
+      ServerConnection sc, long seq, byte @Nullable [] data, @Nullable String encoding) {
+    val id = sc.soht2().id();
+    if (!sc.isOpened()) throw gone(connectionIdMsg(id));
+    val lastSeq = sc.lastUploadSeq().get();
+    if (seq > 0 && seq == lastSeq) {
+      log.debug("upload: id={}, seq={} - duplicate, not written", id, seq);
+      return;
+    }
+    if (seq != lastSeq + 1) throw sequenceConflict(sc, "upload", seq, lastSeq);
+
+    sc.lastActivity(LocalDateTime.now(ZoneId.systemDefault()));
+    if (data != null && data.length > 0) {
+      val dataOut = compressorCache.apply(encoding).decompress(data);
+      try {
+        sc.outputStream().write(dataOut);
+        sc.outputStream().flush();
+      } catch (IOException e) {
+        throw targetFailure(sc, e);
+      }
+      sc.addBytesWritten(dataOut.length);
+    }
+    sc.lastUploadSeq().set(seq);
+    sc.lastActivity(LocalDateTime.now(ZoneId.systemDefault()));
+  }
+
+  private DownloadResult answerDownload(ServerConnection sc, long seq) {
+    val id = sc.soht2().id();
+    val lastSeq = sc.lastDownloadSeq().get();
+    if (seq > 0 && seq == lastSeq) {
+      log.debug("download: id={}, seq={} - retry, replaying the stored result", id, seq);
+      return sc.lastDownloadResult().get();
+    }
+    if (!sc.isOpened()) throw gone(connectionIdMsg(id));
+    if (seq != lastSeq + 1) throw sequenceConflict(sc, "download", seq, lastSeq);
+
+    sc.lastActivity(LocalDateTime.now(ZoneId.systemDefault()));
+    val result = readTarget(sc);
+    sc.lastDownloadResult().set(result);
+    sc.lastDownloadSeq().set(seq);
+    sc.lastActivity(LocalDateTime.now(ZoneId.systemDefault()));
+    if (result.eos()) {
+      log.info("download: id={}, seq={} - target end-of-stream", id, seq);
+      sc.close();
+    }
+    return result;
+  }
+
+  /**
+   * Reads the target with the short socket timeout until data is read, the target closes, the hold
+   * timeout elapses, or the connection is closed by another thread.
+   */
+  @SuppressWarnings({"java:S3776", "java:S135"})
+  private DownloadResult readTarget(ServerConnection sc) {
+    if (sc.targetEof().get()) return DownloadResult.EOS;
+    val id = sc.soht2().id();
+    val deadline = System.nanoTime() + soht2ServerConfig.getDownloadHoldTimeout().toNanos();
+    val buffer = sc.readBuffer();
+    while (true) {
+      if (!sc.isOpened()) throw gone(connectionIdMsg(id));
+
+      final int bufferLen;
+      try {
+        bufferLen = sc.inputStream().read(buffer);
+      } catch (SocketTimeoutException e) {
+        sc.lastActivity(LocalDateTime.now(ZoneId.systemDefault()));
+        if (System.nanoTime() - deadline >= 0) return DownloadResult.EMPTY;
+        continue;
+      } catch (IOException e) {
+        if (!sc.isOpened()) throw gone(connectionIdMsg(id));
+        throw targetFailure(sc, e);
+      }
+
+      if (bufferLen == 0) continue;
+
+      if (bufferLen < 0) {
+        sc.targetEof().set(true);
+        return DownloadResult.EOS;
+      } else {
+        sc.addBytesRead(bufferLen);
+        // the buffer is reused by the connection, so always return a copy
+        return DownloadResult.of(Arrays.copyOf(buffer, bufferLen));
+      }
+    }
+  }
+
+  private ResponseStatusException sequenceConflict(
+      ServerConnection sc, String lane, long seq, long lastSeq) {
+    log.warn(
+        "{}: id={}, seq={}, lastSeq={} - out-of-order sequence, closing",
+        lane,
+        sc.soht2().id(),
+        seq,
+        lastSeq);
+    sc.close();
+    return conflict(
+        "Out-of-order "
+            + lane
+            + " sequence "
+            + seq
+            + " for connection "
+            + sc.soht2().id()
+            + " (last "
+            + lastSeq
+            + ")");
+  }
+
+  private ResponseStatusException targetFailure(ServerConnection sc, IOException e) {
+    log.warn("targetFailure: id={} - {}, closing", sc.soht2().id(), e.toString());
+    sc.close();
+    return gone(connectionIdMsg(sc.soht2().id(), "failed:", e.getMessage()));
   }
 
   /**
@@ -261,5 +463,10 @@ public class Soht2Service {
             .withBytesExchanged(connection.bytesRead(), connection.bytesWritten());
     connections.remove(soht2.id());
     if (soht2ServerConfig.isEnableHistory()) soht2HistoryService.addHistory(soht2);
+  }
+
+  private static String connectionIdMsg(UUID connectionId, String... msg) {
+    val parts = isEmpty(msg) ? new String[] {"is closed"} : msg;
+    return "Connection " + connectionId + " " + String.join(" ", parts);
   }
 }

@@ -19,12 +19,16 @@ spring:
       fail-on-unknown-properties: false
     default-property-inclusion: non_null
   threads.virtual.enabled: true
+  # A duplex download is held by the server for up to soht2.server.download-hold-timeout (25s by
+  # default), so the read timeout of the default HTTP client must be longer than that.
+  http.clients.read-timeout: PT60S
 
 logging.level:
   root: info
 
 soht2.client:
   url: http://localhost:8080/api/connection
+  transport: duplex
   socket-read-timeout: PT0.1S
   read-buffer-size: 1MB
   compression:

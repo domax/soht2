@@ -38,6 +38,10 @@ public final class ExceptionHelper {
     return createClientException(NOT_FOUND, message);
   }
 
+  public static ResponseStatusException conflict(String message) {
+    return createClientException(CONFLICT, message);
+  }
+
   public static ResponseStatusException gone(String message) {
     return createClientException(GONE, message);
   }

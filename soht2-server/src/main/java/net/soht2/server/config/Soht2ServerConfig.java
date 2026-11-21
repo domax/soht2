@@ -49,6 +49,12 @@ public class Soht2ServerConfig implements InitializingBean {
   /** The timeout for server socket read operations. */
   private Duration socketReadTimeout = Duration.ofMillis(100);
 
+  /**
+   * The maximum time a duplex download request is held open while the target sends nothing. When it
+   * elapses, the request is answered with an empty response and the client issues the next one.
+   */
+  private Duration downloadHoldTimeout = Duration.ofSeconds(25);
+
   /** The time-to-live (TTL) for user cache entries. */
   private Duration userCacheTtl = Duration.ofMinutes(10);
 
@@ -68,6 +74,11 @@ public class Soht2ServerConfig implements InitializingBean {
     Assert.notNull(databasePath, "Database path must not be empty");
     Assert.hasText(adminUsername, "Admin username must not be empty");
     Assert.hasText(defaultAdminPassword, "Default admin password must not be empty");
+    Assert.isTrue(
+        downloadHoldTimeout != null
+            && !downloadHoldTimeout.isZero()
+            && !downloadHoldTimeout.isNegative(),
+        "soht2.server.download-hold-timeout must be positive");
   }
 
   /**

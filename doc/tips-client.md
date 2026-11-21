@@ -5,6 +5,7 @@ Tips & Tricks for SOHT2 Client
 * [Tips & Tricks for SOHT2 Client](#tips--tricks-for-soht2-client)
   * [Prerequisites](#prerequisites)
   * [Create a Client Launcher](#create-a-client-launcher)
+  * [Duplex Transport](#duplex-transport)
   * [See Also](#see-also)
 <!-- TOC -->
 
@@ -71,6 +72,24 @@ traffic unless some connection is established through it.
 
 Logs are stored in the `~/soht2-client/soht2-client.log` file, and you can check them for any
 issues.
+
+Duplex Transport
+----------------
+
+By default, the client uses the duplex transport (`soht2.client.transport: duplex`, see
+[README](../README.md#transport)): every tunneled session has its own upload and download HTTP
+requests in flight, so data flows in both directions without polling delays.
+
+* **Connection budget.** Each active session uses up to two concurrent HTTP requests to the server,
+  one of them held open while the remote host is silent. Keep `soht2.client.max-http-connections`
+  (default `100`) at least twice the number of sessions you expect at the same time.
+* **Timeouts.** The server holds a download for up to `soht2.server.download-hold-timeout` (`25s` by
+  default). The client's HTTP read timeout (`spring.http.clients.read-timeout`, `60s` by default)
+  and any HTTP proxy on the way must allow requests to last longer than that.
+* **Rollback.** If a proxy drops long requests, or anything else goes wrong, set
+  `soht2.client.transport: simple` in `application-client.yaml` to use the original
+  request-per-round-trip transport. The client also falls back to `simple` automatically when the
+  server is older and does not support duplex.
 
 See Also
 --------

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -25,6 +26,8 @@ import net.soht2.common.util.AuxUtil;
 import net.soht2.server.config.SecurityConfig;
 import net.soht2.server.config.Soht2ServerConfig;
 import net.soht2.server.dto.*;
+import net.soht2.server.service.DownloadResult;
+import net.soht2.server.service.ExceptionHelper;
 import net.soht2.server.service.ServerConnection;
 import net.soht2.server.service.Soht2HistoryService;
 import net.soht2.server.service.Soht2Service;
@@ -115,7 +118,8 @@ class ConnectionControllerTest {
           .andExpect(jsonPath("$.clientHost").value(sohtConnection.clientHost()))
           .andExpect(jsonPath("$.targetHost").value(sohtConnection.targetHost()))
           .andExpect(jsonPath("$.targetPort").value(sohtConnection.targetPort().toString()))
-          .andExpect(jsonPath("$.openedAt").value(sohtConnection.openedAt().toString()));
+          .andExpect(jsonPath("$.openedAt").value(sohtConnection.openedAt().toString()))
+          .andExpect(header().string("X-SOHT2-Transport", "duplex"));
 
       verify(soht2Service).isTargetAllowed(any(Authentication.class), eq("targetHost"), eq(12345));
       verify(soht2Service).open(eq(sohtConnection), any(Authentication.class));
@@ -209,6 +213,160 @@ class ConnectionControllerTest {
 
     verify(soht2Service).isConnectionOwner(any(Authentication.class), eq(sohtConnection.id()));
     verify(soht2Service).exchange(sohtConnection.id(), bytesIn.length > 0 ? bytesIn : null, null);
+  }
+
+  @Test
+  void upload_OK() throws Exception {
+    val id = UUID.randomUUID();
+    val bytesIn = UTHelper.createBinData(100);
+    doReturn(true).when(soht2Service).isConnectionOwner(any(Authentication.class), any(UUID.class));
+    doReturn(Try.success(null)).when(soht2Service).upload(any(UUID.class), anyLong(), any(), any());
+
+    mockMvc
+        .perform(
+            post("/api/connection/" + id + "/upload")
+                .header("X-SOHT2-Client", "soht2-client")
+                .header("X-SOHT2-Seq", "7")
+                .header("Content-Encoding", "gzip")
+                .contentType(APPLICATION_OCTET_STREAM)
+                .content(bytesIn))
+        .andExpect(status().isNoContent());
+
+    verify(soht2Service).isConnectionOwner(any(Authentication.class), eq(id));
+    verify(soht2Service).upload(id, 7L, bytesIn, "gzip");
+  }
+
+  @Test
+  void upload_sequenceConflict_CONFLICT() throws Exception {
+    val id = UUID.randomUUID();
+    doReturn(true).when(soht2Service).isConnectionOwner(any(Authentication.class), any(UUID.class));
+    doReturn(Try.failure(ExceptionHelper.conflict("Out-of-order")))
+        .when(soht2Service)
+        .upload(any(UUID.class), anyLong(), any(), any());
+
+    mockMvc
+        .perform(
+            post("/api/connection/" + id + "/upload")
+                .with(csrf())
+                .header("X-SOHT2-Seq", "3")
+                .contentType(APPLICATION_OCTET_STREAM)
+                .content(new byte[] {1}))
+        .andExpect(status().isConflict());
+  }
+
+  @Test
+  void upload_notOwner_FORBIDDEN() throws Exception {
+    val id = UUID.randomUUID();
+    doReturn(false)
+        .when(soht2Service)
+        .isConnectionOwner(any(Authentication.class), any(UUID.class));
+
+    mockMvc
+        .perform(
+            post("/api/connection/" + id + "/upload")
+                .with(csrf())
+                .header("X-SOHT2-Seq", "1")
+                .contentType(APPLICATION_OCTET_STREAM)
+                .content(new byte[] {1}))
+        .andExpect(status().isForbidden());
+
+    verify(soht2Service, never()).upload(any(UUID.class), anyLong(), any(), any());
+  }
+
+  @Test
+  void upload_unauthenticated_UNAUTHORIZED() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/connection/" + UUID.randomUUID() + "/upload")
+                .with(anonymous())
+                .with(csrf())
+                .header("X-SOHT2-Seq", "1")
+                .contentType(APPLICATION_OCTET_STREAM)
+                .content(new byte[] {1}))
+        .andExpect(status().isUnauthorized());
+
+    verifyNoInteractions(soht2Service);
+  }
+
+  @Test
+  void download_data_OK() throws Exception {
+    val id = UUID.randomUUID();
+    val bytesOut = UTHelper.createBinData(100);
+    doReturn(true).when(soht2Service).isConnectionOwner(any(Authentication.class), any(UUID.class));
+    doReturn(Try.success(DownloadResult.of(bytesOut))).when(soht2Service).download(id, 5L);
+
+    mockMvc
+        .perform(get("/api/connection/" + id + "/download").header("X-SOHT2-Seq", "5"))
+        .andExpect(status().isOk())
+        .andExpect(content().contentType(APPLICATION_OCTET_STREAM))
+        .andExpect(content().bytes(bytesOut));
+
+    verify(soht2Service).isConnectionOwner(any(Authentication.class), eq(id));
+    verify(soht2Service).download(id, 5L);
+  }
+
+  @Test
+  void download_empty_NO_CONTENT() throws Exception {
+    val id = UUID.randomUUID();
+    doReturn(true).when(soht2Service).isConnectionOwner(any(Authentication.class), any(UUID.class));
+    doReturn(Try.success(DownloadResult.EMPTY)).when(soht2Service).download(id, 1L);
+
+    mockMvc
+        .perform(get("/api/connection/" + id + "/download").header("X-SOHT2-Seq", "1"))
+        .andExpect(status().isNoContent())
+        .andExpect(content().bytes(new byte[0]));
+  }
+
+  @Test
+  void download_eos_GONE() throws Exception {
+    val id = UUID.randomUUID();
+    doReturn(true).when(soht2Service).isConnectionOwner(any(Authentication.class), any(UUID.class));
+    doReturn(Try.success(DownloadResult.EOS)).when(soht2Service).download(id, 2L);
+
+    mockMvc
+        .perform(get("/api/connection/" + id + "/download").header("X-SOHT2-Seq", "2"))
+        .andExpect(status().isGone())
+        .andExpect(header().string("X-SOHT2-EOS", "true"));
+  }
+
+  @Test
+  void download_connectionGone_GONE_withoutEosHeader() throws Exception {
+    val id = UUID.randomUUID();
+    doReturn(true).when(soht2Service).isConnectionOwner(any(Authentication.class), any(UUID.class));
+    doReturn(Try.failure(ExceptionHelper.gone("Connection closed")))
+        .when(soht2Service)
+        .download(id, 2L);
+
+    mockMvc
+        .perform(get("/api/connection/" + id + "/download").header("X-SOHT2-Seq", "2"))
+        .andExpect(status().isGone())
+        .andExpect(header().doesNotExist("X-SOHT2-EOS"));
+  }
+
+  @Test
+  void download_notOwner_FORBIDDEN() throws Exception {
+    val id = UUID.randomUUID();
+    doReturn(false)
+        .when(soht2Service)
+        .isConnectionOwner(any(Authentication.class), any(UUID.class));
+
+    mockMvc
+        .perform(get("/api/connection/" + id + "/download").header("X-SOHT2-Seq", "1"))
+        .andExpect(status().isForbidden());
+
+    verify(soht2Service, never()).download(any(UUID.class), anyLong());
+  }
+
+  @Test
+  void download_unauthenticated_UNAUTHORIZED() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/connection/" + UUID.randomUUID() + "/download")
+                .with(anonymous())
+                .header("X-SOHT2-Seq", "1"))
+        .andExpect(status().isUnauthorized());
+
+    verifyNoInteractions(soht2Service);
   }
 
   @Test

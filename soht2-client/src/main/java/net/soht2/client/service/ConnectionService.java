@@ -6,6 +6,7 @@ import static java.util.concurrent.CompletableFuture.runAsync;
 
 import io.vavr.control.Try;
 import jakarta.annotation.PreDestroy;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.BindException;
@@ -31,9 +32,12 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import net.soht2.client.config.Soht2ClientProperties;
 import net.soht2.client.config.Soht2ClientProperties.HostProperties;
+import net.soht2.client.service.Soht2Client.OpenResult;
 import net.soht2.common.dto.Soht2Connection;
+import net.soht2.common.dto.Soht2Protocol.TransportType;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 
 /**
  * Service responsible for managing connections to SOHT2 servers. It handles starting and stopping
@@ -44,12 +48,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class ConnectionService {
 
+  private static final String ERR_CONN_RESET = "Connection reset";
+
   private final Soht2ClientProperties soht2ClientProperties;
   private final Soht2Client soht2Client;
   private final PollStrategy pollStrategy;
   private final ExecutorService threadExecutor;
 
   private final AtomicBoolean isRunning = new AtomicBoolean();
+  private final AtomicBoolean isFallbackLogged = new AtomicBoolean();
   private final Map<UUID, SessionState> sessions = new ConcurrentHashMap<>();
   private final Set<ServerSocket> serverSockets = ConcurrentHashMap.newKeySet();
   private volatile CompletableFuture<Void> listeners = // NOSONAR java:S3077
@@ -178,24 +185,28 @@ public class ConnectionService {
       socket.setSoTimeout((int) soht2ClientProperties.getSocketReadTimeout().toMillis());
       socket.setKeepAlive(true);
 
+      val opened = soht2Client.open(host.getRemoteHost(), host.getRemotePort()).get();
       val state =
           SessionState.builder()
               .host(host)
-              .connection(soht2Client.open(host.getRemoteHost(), host.getRemotePort()).get())
+              .connection(opened.connection())
+              .socket(socket)
               .in(socket.getInputStream())
               .out(socket.getOutputStream())
               .build();
       sessions.put(state.connection.id(), state);
       log.debug("serve: connection={}", state.connection);
 
-      exchange(state);
+      if (isDuplex(opened)) duplex(state);
+      else exchange(state);
     } catch (Exception e) {
       log.atError().setMessage("serve: {}").addArgument(e::toString).setCause(e).log();
     }
   }
 
   /**
-   * Exchanges data between the client and server for the given session state.
+   * Exchanges data between the client and server for the given session state using the simple
+   * transport: one request per round trip carries both directions, with client-side polling.
    *
    * @param state the session state containing connection and I/O streams
    */
@@ -211,7 +222,7 @@ public class ConnectionService {
       writeSize.set(0);
 
       Try.of(() -> state.in.read(buffer))
-          .filter(bufferLen -> bufferLen >= 0, () -> new SocketException("Connection reset"))
+          .filter(bufferLen -> bufferLen >= 0, () -> new SocketException(ERR_CONN_RESET))
           .recover(SocketTimeoutException.class, 0)
           .andThen(readSize::set)
           .flatMap(bufferLen ->
@@ -231,7 +242,7 @@ public class ConnectionService {
               // 2. This loop is interrupted by throwing a SocketException above.
               // Message "Idle timeout" is thrown when the idle TTL is exceeded.
               e ->
-                  "Connection reset".equals(e.getMessage()) || "Idle timeout".equals(e.getMessage())
+                  ERR_CONN_RESET.equals(e.getMessage()) || "Idle timeout".equals(e.getMessage())
                       ? Try.failure(e)
                       : Try.success(null))
           .onFailure(e -> {
@@ -239,6 +250,108 @@ public class ConnectionService {
             soht2Client.close(connectionId);
           });
     }
+  }
+
+  /**
+   * Chooses the transport of a session: duplex when it is configured and the server advertised it
+   * on open, the simple exchange otherwise. A fallback because of an older server is logged once.
+   *
+   * @param opened the result of opening the connection
+   * @return {@code true} to use the duplex transport, {@code false} to use the simple exchange
+   */
+  boolean isDuplex(OpenResult opened) {
+    if (soht2ClientProperties.getTransport() == TransportType.SIMPLE) return false;
+    if (opened.duplex()) return true;
+    if (isFallbackLogged.compareAndSet(false, true))
+      log.info("isDuplex: the server does not support the duplex transport, using simple");
+    return false;
+  }
+
+  /**
+   * Tunnels a session with the duplex transport: the download loop runs on its own task, the upload
+   * loop on the current one. The session is closed once when either loop ends.
+   *
+   * @param state the session state containing connection and I/O streams
+   */
+  void duplex(SessionState state) {
+    Try.run(() -> runAsync(() -> download(state), threadExecutor))
+        .onFailure(e -> closeSession(state, "duplex", e));
+    upload(state);
+  }
+
+  /**
+   * Duplex upload loop: sends bytes read from the local socket to the server as soon as they
+   * arrive, without waiting for the download lane. Local EOF or a failed request ends the session.
+   *
+   * @param state the session state containing connection and I/O streams
+   */
+  @SuppressWarnings("java:S3358")
+  void upload(SessionState state) {
+    val connectionId = state.connection.id();
+    val bufferSize = (int) soht2ClientProperties.getReadBufferSize().toBytes();
+    val buffer = new byte[bufferSize];
+
+    while (sessions.containsKey(connectionId))
+      Try.of(() -> state.in.read(buffer))
+          .filter(bufferLen -> bufferLen >= 0, () -> new SocketException(ERR_CONN_RESET))
+          .recover(SocketTimeoutException.class, 0)
+          .flatMap(bufferLen ->
+              bufferLen == 0
+                  ? Try.success(0)
+                  : soht2Client
+                      .upload(
+                          connectionId,
+                          state.uploadSeq.incrementAndGet(),
+                          bufferLen < bufferSize ? Arrays.copyOf(buffer, bufferLen) : buffer)
+                      .map(v -> bufferLen))
+          .andThen(bufferLen -> {
+            if (bufferLen > 0) state.lastTrafficNanos.set(System.nanoTime());
+          })
+          .andThenTry(() -> checkIdleTimeout(state))
+          .onFailure(e -> closeSession(state, "upload", e));
+  }
+
+  /**
+   * Duplex download loop: issues a held download request with the next sequence number right after
+   * the previous one completes, and writes received bytes to the local socket. End-of-stream, a
+   * gone connection, or a failed request ends the session.
+   *
+   * @param state the session state containing connection and I/O streams
+   */
+  void download(SessionState state) {
+    val connectionId = state.connection.id();
+
+    while (sessions.containsKey(connectionId))
+      soht2Client
+          .download(connectionId, state.downloadSeq.incrementAndGet())
+          .andThenTry(d -> {
+            switch (d.status()) {
+              case DATA -> {
+                state.out.write(d.data());
+                state.out.flush();
+                state.lastTrafficNanos.set(System.nanoTime());
+              }
+              case EMPTY -> log.trace("download: id={} - no data", connectionId);
+              case EOS -> throw new ServerClosedException("Target end-of-stream");
+              case GONE -> throw new ServerClosedException("Connection gone");
+            }
+          })
+          .andThenTry(() -> checkIdleTimeout(state))
+          .onFailure(e -> closeSession(state, "download", e));
+  }
+
+  /**
+   * Closes a duplex session exactly once: removes the session (which stops both loops), closes the
+   * local socket (which unblocks the upload loop), and closes the server connection (which releases
+   * a held download), unless the server has already closed it.
+   */
+  private void closeSession(SessionState state, String lane, Throwable cause) {
+    val connectionId = state.connection.id();
+    if (sessions.remove(connectionId) == null) return;
+    log.info("closeSession: id={}, lane={} - {}", connectionId, lane, cause.toString());
+    ofNullable(state.socket).ifPresent(socket -> Try.run(socket::close));
+    if (!(cause instanceof ServerClosedException || cause instanceof HttpClientErrorException.Gone))
+      soht2Client.close(connectionId);
   }
 
   @SneakyThrows
@@ -279,11 +392,25 @@ public class ConnectionService {
   static class SessionState {
     final HostProperties host;
     final Soht2Connection connection;
+    final @Nullable Socket socket;
     final InputStream in;
     final OutputStream out;
     final AtomicInteger emptyExchangeCount = new AtomicInteger(0);
 
     /** The timestamp of the last in/out traffic, used to track the idle TTL. */
     final AtomicLong lastTrafficNanos = new AtomicLong(System.nanoTime());
+
+    /** The sequence number of the last duplex upload request. */
+    final AtomicLong uploadSeq = new AtomicLong(0);
+
+    /** The sequence number of the last duplex download request. */
+    final AtomicLong downloadSeq = new AtomicLong(0);
+  }
+
+  /** Signals that the server has already closed the connection (end-of-stream or gone). */
+  static final class ServerClosedException extends IOException {
+    ServerClosedException(String message) {
+      super(message);
+    }
   }
 }

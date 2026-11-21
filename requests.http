@@ -52,6 +52,33 @@ Authorization: Basic {{admin_username}} {{admin_password}}
 DELETE {{base_url}}/api/user/{{user2_username}}?force=true
 Authorization: Basic {{admin_username}} {{admin_password}}
 
+### Open a tunnel connection (duplex servers respond with X-SOHT2-Transport: duplex)
+POST {{base_url}}/api/connection?host=localhost&port=22
+Authorization: Basic {{user1_username}} {{user1_password}}
+X-SOHT2-Client: soht2-client
+
+> {% client.global.set("connection_id", response.body.id); %}
+
+### Duplex upload: send data to the target (X-SOHT2-Seq starts at 1, +1 per request)
+POST {{base_url}}/api/connection/{{connection_id}}/upload
+Authorization: Basic {{user1_username}} {{user1_password}}
+X-SOHT2-Client: soht2-client
+X-SOHT2-Seq: 1
+Content-Type: application/octet-stream
+
+SSH-2.0-test
+
+### Duplex download: held until target data, EOS (410 + X-SOHT2-EOS), or hold timeout (204)
+GET {{base_url}}/api/connection/{{connection_id}}/download
+Authorization: Basic {{user1_username}} {{user1_password}}
+X-SOHT2-Client: soht2-client
+X-SOHT2-Seq: 1
+
+### Close a tunnel connection
+DELETE {{base_url}}/api/connection/{{connection_id}}
+Authorization: Basic {{user1_username}} {{user1_password}}
+X-SOHT2-Client: soht2-client
+
 ### Get history
 GET {{base_url}}/api/connection/history
 #GET {{base_url}}/api/connection/history?ch=*168.1*&th=dms&tp=22,2020&oa=2025-08-07T21:03

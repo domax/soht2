@@ -18,9 +18,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.val;
 import net.soht2.client.config.Soht2ClientConfig;
 import net.soht2.client.config.Soht2ClientProperties;
+import net.soht2.client.service.Soht2Client.Download;
+import net.soht2.client.service.Soht2Client.OpenResult;
 import net.soht2.client.test.EchoClient;
 import net.soht2.client.test.UTHelper;
 import net.soht2.common.dto.Soht2Connection;
+import net.soht2.common.dto.Soht2Protocol.TransportType;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -57,13 +60,17 @@ class ConnectionServiceTest {
             .targetPort(host.getRemotePort())
             .build();
 
-    doReturn(Try.success(soht2)).when(soht2Client).open(anyString(), anyInt());
+    doReturn(Try.success(new OpenResult(soht2, false)))
+        .when(soht2Client)
+        .open(anyString(), anyInt());
     doReturn(Try.success((Void) null)).when(soht2Client).close(any(UUID.class));
+    doReturn(Try.success((Void) null)).when(soht2Client).upload(any(UUID.class), anyLong(), any());
   }
 
   @AfterEach
   void afterEach() {
     soht2ClientProperties.setDisconnectOnIdleTimeout(Duration.ZERO);
+    soht2ClientProperties.setTransport(TransportType.DUPLEX);
     connectionService.stopConnections();
   }
 
@@ -111,7 +118,9 @@ class ConnectionServiceTest {
   @Test
   @Order(2)
   void startConnections_openFailureClosesSocketAndKeepsAccepting() throws Exception {
-    doReturn(Try.failure(new IllegalStateException("open failed")), Try.success(soht2))
+    doReturn(
+            Try.failure(new IllegalStateException("open failed")),
+            Try.success(new OpenResult(soht2, false)))
         .when(soht2Client)
         .open(anyString(), anyInt());
     doReturn(Try.success(bytesEmpty)).when(soht2Client).exchange(any(UUID.class), any());
@@ -156,7 +165,9 @@ class ConnectionServiceTest {
             .targetHost(host.getRemoteHost())
             .targetPort(host.getRemotePort())
             .build();
-    doReturn(Try.success(soht2Blocked), Try.success(soht2Active))
+    doReturn(
+            Try.success(new OpenResult(soht2Blocked, false)),
+            Try.success(new OpenResult(soht2Active, false)))
         .when(soht2Client)
         .open(anyString(), anyInt());
 
@@ -200,6 +211,206 @@ class ConnectionServiceTest {
     } finally {
       release.countDown();
     }
+  }
+
+  @Test
+  @Order(5)
+  void duplex_uploadProceedsWhileDownloadIsBlocked() throws Exception {
+    openDuplex();
+    val release = new CountDownLatch(1);
+    doAnswer(
+            inv -> {
+              await()
+                  .with()
+                  .timeout(11, TimeUnit.SECONDS)
+                  .until(() -> release.await(10, TimeUnit.SECONDS));
+              return Try.success(Download.EMPTY);
+            })
+        .when(soht2Client)
+        .download(any(UUID.class), anyLong());
+
+    startAndAwait();
+    val bytesIn1 = UTHelper.createBinData(100);
+    val bytesIn2 = UTHelper.createBinData(200);
+    try (val socket = new Socket("localhost", host.getLocalPort())) {
+      verify(soht2Client, timeout(5000)).download(soht2.id(), 1);
+      socket.getOutputStream().write(bytesIn1);
+      socket.getOutputStream().flush();
+      verify(soht2Client, timeout(2000)).upload(soht2.id(), 1, bytesIn1);
+      socket.getOutputStream().write(bytesIn2);
+      socket.getOutputStream().flush();
+      verify(soht2Client, timeout(2000)).upload(soht2.id(), 2, bytesIn2);
+      assertThat(release.getCount()).isEqualTo(1);
+    } finally {
+      release.countDown();
+    }
+    verify(soht2Client, never()).exchange(any(UUID.class), any());
+  }
+
+  @SuppressWarnings("java:S2925")
+  @Test
+  @Order(6)
+  void duplex_serverDataIsWrittenWithoutPollDelay() throws Exception {
+    openDuplex();
+    val bytesOut = UTHelper.createBinData(1000);
+    val dataSent = new AtomicBoolean();
+    doAnswer(
+            inv -> {
+              if (dataSent.compareAndSet(false, true)) {
+                Thread.sleep(300);
+                return Try.success(Download.of(bytesOut));
+              }
+              Thread.sleep(100);
+              return Try.success(Download.EMPTY);
+            })
+        .when(soht2Client)
+        .download(any(UUID.class), anyLong());
+
+    startAndAwait();
+    try (val socket = new Socket("localhost", host.getLocalPort())) {
+      socket.setSoTimeout(5000);
+      val started = System.nanoTime();
+      assertThat(socket.getInputStream().readNBytes(bytesOut.length)).isEqualTo(bytesOut);
+      assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(1));
+      verify(soht2Client, timeout(2000)).download(soht2.id(), 2);
+    }
+  }
+
+  @Test
+  @Order(7)
+  void duplex_endOfStreamClosesLocalSocketWithoutDelete() throws Exception {
+    openDuplex();
+    val bytesOut = UTHelper.createBinData(100);
+    doReturn(Try.success(Download.of(bytesOut)), Try.success(Download.EOS))
+        .when(soht2Client)
+        .download(any(UUID.class), anyLong());
+
+    startAndAwait();
+    try (val socket = new Socket("localhost", host.getLocalPort())) {
+      socket.setSoTimeout(5000);
+      assertThat(socket.getInputStream().readNBytes(bytesOut.length)).isEqualTo(bytesOut);
+      assertThat(socket.getInputStream().read()).isEqualTo(-1);
+    }
+    await().until(() -> connectionService.isSessionClosed(soht2.id()));
+    verify(soht2Client, never()).close(soht2.id());
+  }
+
+  @Test
+  @Order(8)
+  void duplex_localEndOfStreamClosesServerConnection() throws Exception {
+    openDuplex();
+    stubEmptyDownloads();
+
+    startAndAwait();
+    try (val ignored = new Socket("localhost", host.getLocalPort())) {
+      await().until(() -> !connectionService.isSessionClosed(soht2.id()));
+    }
+    await().until(() -> connectionService.isSessionClosed(soht2.id()));
+    verify(soht2Client, timeout(2000)).close(soht2.id());
+  }
+
+  @Test
+  @Order(9)
+  void duplex_failedUploadClosesSession() throws Exception {
+    openDuplex();
+    stubEmptyDownloads();
+    doReturn(Try.failure(new IllegalStateException("upload failed")))
+        .when(soht2Client)
+        .upload(any(UUID.class), anyLong(), any());
+
+    startAndAwait();
+    try (val socket = new Socket("localhost", host.getLocalPort())) {
+      socket.setSoTimeout(5000);
+      socket.getOutputStream().write(UTHelper.createBinData(10));
+      socket.getOutputStream().flush();
+      assertThat(socket.getInputStream().read()).isEqualTo(-1);
+    }
+    assertThat(connectionService.isSessionClosed(soht2.id())).isTrue();
+    verify(soht2Client, timeout(2000)).close(soht2.id());
+  }
+
+  @SuppressWarnings({"java:S2925", "BusyWait"})
+  @Test
+  @Order(10)
+  void duplex_idleTimeoutFiresOnlyWhenBothLanesAreIdle() throws Exception {
+    openDuplex();
+    soht2ClientProperties.setDisconnectOnIdleTimeout(Duration.ofSeconds(1));
+    val downloadActiveUntil = System.nanoTime() + Duration.ofMillis(1500).toNanos();
+    doAnswer(
+            inv -> {
+              Thread.sleep(200);
+              return Try.success(
+                  System.nanoTime() < downloadActiveUntil
+                      ? Download.of(new byte[] {1})
+                      : Download.EMPTY);
+            })
+        .when(soht2Client)
+        .download(any(UUID.class), anyLong());
+
+    startAndAwait();
+    try (val socket = new Socket("localhost", host.getLocalPort())) {
+      await().until(() -> !connectionService.isSessionClosed(soht2.id()));
+      // Download lane carries data for 1.5 s, upload lane carries data until 2.5 s.
+      val uploadActiveUntil = System.nanoTime() + Duration.ofMillis(2500).toNanos();
+      while (System.nanoTime() < uploadActiveUntil) {
+        assertThat(connectionService.isSessionClosed(soht2.id())).isFalse();
+        socket.getOutputStream().write(1);
+        socket.getOutputStream().flush();
+        Thread.sleep(200);
+      }
+      val idleSince = System.nanoTime();
+      await()
+          .atMost(Duration.ofSeconds(3))
+          .until(() -> connectionService.isSessionClosed(soht2.id()));
+      assertThat(Duration.ofNanos(System.nanoTime() - idleSince))
+          .isGreaterThanOrEqualTo(Duration.ofMillis(700));
+    }
+    verify(soht2Client, timeout(2000)).close(soht2.id());
+  }
+
+  @Test
+  @Order(11)
+  void transport_simpleSettingUsesExchange() throws Exception {
+    openDuplex();
+    soht2ClientProperties.setTransport(TransportType.SIMPLE);
+    doReturn(Try.success(bytesEmpty)).when(soht2Client).exchange(any(UUID.class), any());
+
+    startAndAwait();
+    try (val ignored = new Socket("localhost", host.getLocalPort())) {
+      verify(soht2Client, timeout(5000).atLeastOnce()).exchange(eq(soht2.id()), any());
+    }
+    verify(soht2Client, never()).download(any(UUID.class), anyLong());
+    verify(soht2Client, never()).upload(any(UUID.class), anyLong(), any());
+  }
+
+  @Test
+  @Order(12)
+  void transport_missingOpenHeaderFallsBackToExchange() throws Exception {
+    doReturn(Try.success(bytesEmpty)).when(soht2Client).exchange(any(UUID.class), any());
+
+    startAndAwait();
+    try (val ignored = new Socket("localhost", host.getLocalPort())) {
+      verify(soht2Client, timeout(5000).atLeastOnce()).exchange(eq(soht2.id()), any());
+    }
+    verify(soht2Client, never()).download(any(UUID.class), anyLong());
+    verify(soht2Client, never()).upload(any(UUID.class), anyLong(), any());
+  }
+
+  private void openDuplex() {
+    doReturn(Try.success(new OpenResult(soht2, true)))
+        .when(soht2Client)
+        .open(anyString(), anyInt());
+  }
+
+  @SuppressWarnings("java:S2925")
+  private void stubEmptyDownloads() {
+    doAnswer(
+            inv -> {
+              Thread.sleep(100);
+              return Try.success(Download.EMPTY);
+            })
+        .when(soht2Client)
+        .download(any(UUID.class), anyLong());
   }
 
   private void startAndAwait() {

@@ -83,13 +83,18 @@ Both the client and server components can be run using Java, so on both sides yo
       default-admin-password: "${SOHT2_PWD}"       # Default password for the admin user
       open-api-server-url: https://${SOHT2_SERVER} # Public URL of the OpenAPI server
       enable-history: true                         # Enable gathering connection history
+      download-hold-timeout: PT25S                 # Max time a duplex download waits for data
       abandoned-connections:                       # Settings for abandoned connections
         timeout: PT1M                              # Timeout for abandoned connections
         check-interval: PT5S                       # Interval for checking abandoned connections
     ```
    All settings are optional, but you have to define `soht2.server.database-path`,
    `soht2.server.admin-username`, and `soht2.server.default-admin-password` to create database and
-   admin user for the server.
+   admin user for the server.<br>
+   The server advertises the duplex transport (see [Transport](#transport)) and holds each download
+   request for up to `soht2.server.download-hold-timeout`. Any reverse proxy in front of the server
+   must allow requests to last longer than this hold time (e.g. Nginx `proxy_read_timeout`, 60s by
+   default).
 3. Run the server with the following command:
     ```shell
     java -jar soht2-server-X.X.X.jar
@@ -107,6 +112,7 @@ Both the client and server components can be run using Java, so on both sides yo
     ```yaml
     soht2.client:
       url: https://${SOHT2_SERVER}/api/connection # URL of the SOHT2 server API endpoint
+      transport: duplex               # Tunnel transport (duplex, simple), see "Transport" below
       socket-read-timeout: PT0.1S     # Timeout for reading from socket connections
       read-buffer-size: 1MB           # Size of the read buffer for socket connections
       username: "${SOHT2_USR}"        # Username for authentication on SOHT2 server
@@ -118,7 +124,7 @@ Both the client and server components can be run using Java, so on both sides yo
       compression:                    # Compression settings for the connections
         type: none                    # Compression type for the connections (none, gzip, deflate)
         min-request-size: 2KB         # Minimum request size to apply compression
-      poll:                           # Polling settings for the connections
+      poll:                           # Polling settings - used by the simple transport only
         strategy: exponent            # Polling strategy for connections (exponent, linear, fixed)
         initial-delay: PT0.1S         # Initial delay before the first poll retry
         max-delay: PT1S               # Maximum delay between retries
@@ -143,7 +149,11 @@ Both the client and server components can be run using Java, so on both sides yo
    customizing the client's HTTP transport.<br>
    If you want to use SOCKS5 proxy, just add `-DsocksProxyHost=localhost -DsocksProxyPort=1080` to
    the list of JVM options (see next step) - but set the correct host and port, of course.<br>
-   _Be aware that this implementation does not support authentication for SOCKS5 proxy._
+   _Be aware that this implementation does not support authentication for SOCKS5 proxy._<br>
+   With the duplex transport, the client's HTTP read timeout (60s by default, see
+   `spring.http.clients.read-timeout`) and any HTTP proxy between the client and the server must
+   allow requests to last longer than the server's `soht2.server.download-hold-timeout` (25s by
+   default).
 3. Run the client with the following command:
     ```shell
     java -jar soht2-client-X.X.X.jar
@@ -156,6 +166,25 @@ Both the client and server components can be run using Java, so on both sides yo
    You can test it by running `telnet localhost ${LOCAL_PORT}` (or whatever local port you defined
    in the configuration) and then trying to connect to the remote host, e.g. in case of SSH:
    `ssh -p ${LOCAL_PORT} user@localhost`.
+
+### Transport
+
+The client supports two tunnel transports, selected with `soht2.client.transport`:
+
+* `duplex` (default) - each session uses two independent HTTP lanes: an upload lane
+  (`POST /api/connection/{id}/upload`) that sends local data as soon as it is read, and a download
+  lane (`GET /api/connection/{id}/download`) that the server holds open until the remote host sends
+  data, closes its connection, or the hold timeout elapses. Both directions flow at the same time
+  without client-side polling, so interactive traffic (e.g. SSH) responds within one round trip.
+  Each active session uses up to two concurrent HTTP requests, so keep
+  `soht2.client.max-http-connections` at least twice the number of expected concurrent sessions.
+* `simple` - the original transport: one request per round trip carries both directions, and the
+  client polls with the `soht2.client.poll` settings while the session is idle.
+
+The client uses duplex only if the server advertises it when a connection is opened; with an older
+server it falls back to `simple` automatically (logged once at INFO level). To roll back to the
+original behavior, for example when a proxy cannot hold long requests, set
+`soht2.client.transport: simple`.
 
 Tips & Tricks
 -------------

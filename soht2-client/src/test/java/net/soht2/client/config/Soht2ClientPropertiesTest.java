@@ -2,6 +2,7 @@
 package net.soht2.client.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -10,7 +11,11 @@ import java.time.Duration;
 import java.util.Map;
 import lombok.val;
 import net.soht2.client.config.Soht2ClientProperties.HostProperties;
+import net.soht2.common.dto.Soht2Protocol.TransportType;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.boot.context.properties.bind.BindException;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 
@@ -60,5 +65,27 @@ class Soht2ClientPropertiesTest {
     val props = validProperties();
     props.setMaxHttpConnections(0);
     assertThrows(IllegalArgumentException.class, props::afterPropertiesSet);
+  }
+
+  @Test
+  void transport_default() {
+    assertThat(new Soht2ClientProperties().getTransport()).isEqualTo(TransportType.DUPLEX);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"duplex,DUPLEX", "simple,SIMPLE", "SIMPLE,SIMPLE"})
+  void transport_binding(String value, TransportType expected) {
+    val source = new MapConfigurationPropertySource(Map.of("soht2.client.transport", value));
+    val props = new Binder(source).bind("soht2.client", Soht2ClientProperties.class).get();
+    assertThat(props.getTransport()).isEqualTo(expected);
+  }
+
+  @Test
+  void transport_invalid_value() {
+    val source = new MapConfigurationPropertySource(Map.of("soht2.client.transport", "legacy"));
+    val binder = new Binder(source);
+    assertThatThrownBy(() -> binder.bind("soht2.client", Soht2ClientProperties.class))
+        .isInstanceOf(BindException.class)
+        .hasMessageContaining("soht2.client.transport");
   }
 }

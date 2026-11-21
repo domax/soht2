@@ -10,6 +10,7 @@ Tips & Tricks for SOHT2 Server
   * [Alternative Database](#alternative-database)
   * [Web Consoles](#web-consoles)
   * [Authentication Cache](#authentication-cache)
+  * [Duplex Transport](#duplex-transport)
   * [See Also](#see-also)
 <!-- TOC -->
 
@@ -216,6 +217,24 @@ successfully verified credentials for `soht2.server.user-cache-ttl` (default `PT
   changes apply on the next request.
 * A shorter `user-cache-ttl` limits how long verified credentials are reused, at the cost of more
   password hash checks.
+
+Duplex Transport
+----------------
+
+The server supports the duplex transport used by default by the SOHT2 client (see
+[README](../README.md#transport)) along with the original simple one. With duplex, every active
+session has an upload request and a download request; the server holds the download until the
+remote host sends data, closes its connection, or `soht2.server.download-hold-timeout` (default
+`PT25S`) elapses.
+
+* **Proxies.** A reverse proxy in front of the server must allow requests to last longer than the
+  hold timeout - e.g. Nginx `proxy_read_timeout` (default `60s`) or Apache `ProxyTimeout`. If you
+  have to use a shorter proxy timeout, lower `download-hold-timeout` below it.
+* **Capacity.** Each active duplex session has up to two concurrent requests on the server, one of
+  them waiting for data. The server handles requests on virtual threads, so a held download is
+  cheap, but count two HTTP connections per session when sizing proxies and load balancers.
+* **Rollback.** Clients can switch back to the original transport with
+  `soht2.client.transport: simple`; no server change is needed.
 
 See Also
 --------
