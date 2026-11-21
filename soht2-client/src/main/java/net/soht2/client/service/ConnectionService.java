@@ -104,7 +104,11 @@ public class ConnectionService {
     serverSockets.forEach(serverSocket -> Try.run(serverSocket::close));
     serverSockets.clear();
     Try.run(() -> listeners.get(5, TimeUnit.SECONDS))
-        .onFailure(e -> log.warn("stopConnections: listeners not stopped - {}", e.toString()));
+        .onFailure(e ->
+            log.atWarn()
+                .setMessage("stopConnections: listeners not stopped - {}")
+                .addArgument(e::toString)
+                .log());
     sessions.keySet().forEach(soht2Client::close);
     sessions.clear();
   }
@@ -139,7 +143,10 @@ public class ConnectionService {
       serverSockets.remove(serverSocket);
     } catch (Exception e) {
       if (e instanceof BindException && "Address already in use".equals(e.getMessage())) {
-        log.warn("connect: interrupted with exception: {}", e.toString());
+        log.atWarn()
+            .setMessage("connect: interrupted with exception: {}")
+            .addArgument(e::toString)
+            .log();
         isRunning.set(false);
       } else log.atError().setMessage("connect: {}").addArgument(e::toString).setCause(e).log();
     }
@@ -158,17 +165,20 @@ public class ConnectionService {
   boolean serveAsync(HostProperties host, ServerSocket serverSocket) {
     try {
       val socket = serverSocket.accept();
-      log.debug("connect: socket={}", socket);
+      log.debug("serveAsync: socket={}", socket);
       runAsync(() -> serve(host, socket), threadExecutor);
     } catch (Exception e) {
       if (!isRunning.get()
           || serverSocket.isClosed()
           || e instanceof RejectedExecutionException
           || e instanceof SocketException && "Closed by interrupt".equals(e.getMessage())) {
-        log.warn("serveAsync: interrupted with exception: {}", e.toString());
+        log.atWarn()
+            .setMessage("serveAsync: interrupted with exception: {}")
+            .addArgument(e::toString)
+            .log();
         return false;
       }
-      log.atError().setMessage("connect: {}").addArgument(e::toString).setCause(e).log();
+      log.atError().setMessage("serveAsync: {}").addArgument(e::toString).setCause(e).log();
     }
     return true;
   }
@@ -263,7 +273,7 @@ public class ConnectionService {
     if (soht2ClientProperties.getTransport() == TransportType.SIMPLE) return false;
     if (opened.duplex()) return true;
     if (isFallbackLogged.compareAndSet(false, true))
-      log.info("isDuplex: the server does not support the duplex transport, using simple");
+      log.warn("isDuplex: the server does not support the duplex transport, using simple");
     return false;
   }
 
@@ -331,7 +341,11 @@ public class ConnectionService {
                 state.out.flush();
                 state.lastTrafficNanos.set(System.nanoTime());
               }
-              case EMPTY -> log.trace("download: id={} - no data", connectionId);
+              case EMPTY ->
+                  log.atTrace()
+                      .setMessage("download: id={} - no data")
+                      .addArgument(connectionId::toString)
+                      .log();
               case EOS -> throw new ServerClosedException("Target end-of-stream");
               case GONE -> throw new ServerClosedException("Connection gone");
             }
@@ -348,7 +362,12 @@ public class ConnectionService {
   private void closeSession(SessionState state, String lane, Throwable cause) {
     val connectionId = state.connection.id();
     if (sessions.remove(connectionId) == null) return;
-    log.info("closeSession: id={}, lane={} - {}", connectionId, lane, cause.toString());
+    log.atInfo()
+        .setMessage("closeSession: id={}, lane={} - {}")
+        .addArgument(connectionId::toString)
+        .addArgument(lane)
+        .addArgument(() -> ofNullable(cause.getMessage()).orElseGet(cause::toString))
+        .log();
     ofNullable(state.socket).ifPresent(socket -> Try.run(socket::close));
     if (!(cause instanceof ServerClosedException || cause instanceof HttpClientErrorException.Gone))
       soht2Client.close(connectionId);
@@ -359,7 +378,11 @@ public class ConnectionService {
     if (isEmptyExchange) {
       val delay = pollStrategy.getDelay(state.emptyExchangeCount.getAndIncrement());
       if (!delay.isZero()) {
-        log.debug("delay: id={} - {}", state.connection.id(), delay);
+        log.atDebug()
+            .setMessage("delay: id={} - {}")
+            .addArgument(state.connection::id)
+            .addArgument(delay::toString)
+            .log();
         Thread.sleep(delay.toMillis());
       }
       checkIdleTimeout(state);
@@ -382,7 +405,12 @@ public class ConnectionService {
 
     val idle = Duration.ofNanos(System.nanoTime() - state.lastTrafficNanos.get());
     if (idle.compareTo(timeout) >= 0) {
-      log.info("checkIdleTimeout: id={} idle={} timeout={}", state.connection.id(), idle, timeout);
+      log.atInfo()
+          .setMessage("checkIdleTimeout: id={} idle={} timeout={}")
+          .addArgument(state.connection::id)
+          .addArgument(idle::toString)
+          .addArgument(timeout::toString)
+          .log();
       throw new SocketException("Idle timeout");
     }
   }
@@ -395,6 +423,8 @@ public class ConnectionService {
     final @Nullable Socket socket;
     final InputStream in;
     final OutputStream out;
+
+    /** The number of consecutive empty exchanges, used to calculate the polling delay. */
     final AtomicInteger emptyExchangeCount = new AtomicInteger(0);
 
     /** The timestamp of the last in/out traffic, used to track the idle TTL. */

@@ -197,21 +197,19 @@ public class Soht2Service {
    */
   @SuppressWarnings("java:S1905")
   public Try<Void> upload(UUID id, long seq, byte @Nullable [] data, @Nullable String encoding) {
-    if (log.isTraceEnabled())
-      log.trace(
-          "upload: id={}, seq={}, in.length={}, encoding={}",
-          id,
-          seq,
-          data == null ? 0 : data.length,
-          encoding);
+    log.atTrace()
+        .setMessage("upload: id={}, seq={}, in.length={}, encoding={}")
+        .addArgument(id)
+        .addArgument(seq)
+        .addArgument(() -> data == null ? 0 : data.length)
+        .addArgument(encoding)
+        .log();
     return findOpened(id)
         .andThenTry(sc -> {
           sc.writeLock().lock();
-          try {
-            applyUpload(sc, seq, data, encoding);
-          } finally {
-            ServerConnection.unlock(sc.writeLock());
-          }
+          Try.run(() -> applyUpload(sc, seq, data, encoding))
+              .andFinallyTry(() -> ServerConnection.unlock(sc.writeLock()))
+              .get();
         })
         .map(sc -> (Void) null)
         .onFailure(e -> log.warn("upload: id={}, seq={} - {}", id, seq, e.toString()));
@@ -237,21 +235,18 @@ public class Soht2Service {
     return findOpened(id)
         .mapTry(sc -> {
           sc.readLock().lock();
-          try {
-            return answerDownload(sc, seq);
-          } finally {
-            ServerConnection.unlock(sc.readLock());
-          }
+          return Try.of(() -> answerDownload(sc, seq))
+              .andFinallyTry(() -> ServerConnection.unlock(sc.readLock()))
+              .get();
         })
-        .onSuccess(r -> {
-          if (log.isTraceEnabled())
-            log.trace(
-                "download: id={}, seq={}, out.length={}, eos={}",
-                id,
-                seq,
-                r.data().length,
-                r.eos());
-        })
+        .onSuccess(r ->
+            log.atTrace()
+                .setMessage("download: id={}, seq={}, out.length={}, eos={}")
+                .addArgument(id)
+                .addArgument(seq)
+                .addArgument(() -> r.data().length)
+                .addArgument(r::eos)
+                .log())
         .onFailure(e -> {
           // A held download released by DELETE of its connection is expected
           if (e instanceof ResponseStatusException rse && rse.getStatusCode().value() == 410)
@@ -319,7 +314,7 @@ public class Soht2Service {
    * Reads the target with the short socket timeout until data is read, the target closes, the hold
    * timeout elapses, or the connection is closed by another thread.
    */
-  @SuppressWarnings({"java:S3776", "java:S135"})
+  @SuppressWarnings({"java:S3776"})
   private DownloadResult readTarget(ServerConnection sc) {
     if (sc.targetEof().get()) return DownloadResult.EOS;
     val id = sc.soht2().id();
@@ -340,12 +335,11 @@ public class Soht2Service {
         throw targetFailure(sc, e);
       }
 
-      if (bufferLen == 0) continue;
-
       if (bufferLen < 0) {
         sc.targetEof().set(true);
         return DownloadResult.EOS;
-      } else {
+      }
+      if (bufferLen > 0) {
         sc.addBytesRead(bufferLen);
         // the buffer is reused by the connection, so always return a copy
         return DownloadResult.of(Arrays.copyOf(buffer, bufferLen));
@@ -355,12 +349,13 @@ public class Soht2Service {
 
   private ResponseStatusException sequenceConflict(
       ServerConnection sc, String lane, long seq, long lastSeq) {
-    log.warn(
-        "{}: id={}, seq={}, lastSeq={} - out-of-order sequence, closing",
-        lane,
-        sc.soht2().id(),
-        seq,
-        lastSeq);
+    log.atWarn()
+        .setMessage("{}: id={}, seq={}, lastSeq={} - out-of-order sequence, closing")
+        .addArgument(lane)
+        .addArgument(sc.soht2()::id)
+        .addArgument(seq)
+        .addArgument(lastSeq)
+        .log();
     sc.close();
     return conflict(
         "Out-of-order "
@@ -375,7 +370,11 @@ public class Soht2Service {
   }
 
   private ResponseStatusException targetFailure(ServerConnection sc, IOException e) {
-    log.warn("targetFailure: id={} - {}, closing", sc.soht2().id(), e.toString());
+    log.atWarn()
+        .setMessage("targetFailure: id={} - {}, closing")
+        .addArgument(sc.soht2()::id)
+        .addArgument(e::toString)
+        .log();
     sc.close();
     return gone(connectionIdMsg(sc.soht2().id(), "failed:", e.getMessage()));
   }
@@ -399,7 +398,11 @@ public class Soht2Service {
                 .addArgument(sc::connectionAge)
                 .log())
         .filter(sc -> sc.activityAge().compareTo(ttl) >= 0)
-        .peek(sc -> log.warn("closeAbandonedConnections: soht2={}", sc.soht2()))
+        .peek(sc ->
+            log.atWarn()
+                .setMessage("closeAbandonedConnections: soht2={}")
+                .addArgument(sc.soht2())
+                .log())
         .forEach(ServerConnection::close);
   }
 

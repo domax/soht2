@@ -57,6 +57,7 @@ logging.level:
   root: info
   # CachingAuthenticationProvider intentionally wraps the UserDetailsService
   org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer: error
+  net.soht2.server.config.CachingAuthenticationProvider: info
 
 server:
   address: 0.0.0.0

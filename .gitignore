@@ -54,8 +54,8 @@ HELP.md
 /soht2-server/src/main/resources/public/assets/
 /soht2-server/src/main/resources/templates/index.html
 application-local.yaml
-/soht2-server/**/application-server.yaml
-/soht2-client/**/application-client.yaml
+/**/application-server.yaml
+/**/application-client.yaml
 /soht2-client/src/main/java/net/soht2/client/example/
 *.mv.db
 *.trace.db

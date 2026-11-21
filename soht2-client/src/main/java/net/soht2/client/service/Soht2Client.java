@@ -131,7 +131,12 @@ public class Soht2Client {
             new OpenResult(
                 Objects.requireNonNull(entity.getBody()),
                 TRANSPORT_DUPLEX.equalsIgnoreCase(entity.getHeaders().getFirst(HEADER_TRANSPORT))))
-        .onSuccess(r -> log.info("open: connection={}, duplex={}", r.connection(), r.duplex()))
+        .onSuccess(r ->
+            log.atInfo()
+                .setMessage("open: connection={}, duplex={}")
+                .addArgument(r::connection)
+                .addArgument(r::duplex)
+                .log())
         .onFailure(
             e -> log.atError().setMessage("open: {}").addArgument(e::toString).setCause(e).log());
   }
@@ -142,7 +147,7 @@ public class Soht2Client {
    * @param connectionId the ID of the connection to close
    * @return a {@link Try} containing Void if successful, or an error if it fails
    */
-  @SuppressWarnings("java:S1905")
+  @SuppressWarnings({"java:S1905", "LoggingSimilarMessage"})
   public Try<Void> close(UUID connectionId) {
     log.debug("close: id={}", connectionId);
     return Try.of(() ->
@@ -151,7 +156,12 @@ public class Soht2Client {
                 .uri(PATH_ID, Map.of("id", connectionId))
                 .retrieve()
                 .toBodilessEntity())
-        .onSuccess(re -> log.info("close: id={} - {}", connectionId, re.getStatusCode()))
+        .onSuccess(re ->
+            log.atInfo()
+                .setMessage("close: id={} - {}")
+                .addArgument(connectionId)
+                .addArgument(re::getStatusCode)
+                .log())
         .map(re -> (Void) null)
         .onFailure(e ->
             log.atError()
@@ -217,8 +227,12 @@ public class Soht2Client {
    */
   @SuppressWarnings("java:S1905")
   public Try<Void> upload(UUID connectionId, long seq, byte[] data) {
-    if (log.isTraceEnabled())
-      log.trace("upload: id={}, seq={}, in.length={}", connectionId, seq, data.length);
+    log.atTrace()
+        .setMessage("upload: id={}, seq={}, in.length={}")
+        .addArgument(connectionId)
+        .addArgument(seq)
+        .addArgument(data.length)
+        .log();
     return Try.of(() -> requestExchangeEntity(data))
         .mapTry(entity ->
             restClient
@@ -258,15 +272,14 @@ public class Soht2Client {
                 .header(HEADER_SEQ, Long.toString(seq))
                 .header(ACCEPT_ENCODING, acceptEncoding())
                 .exchange((request, response) -> toDownload(response)))
-        .onSuccess(d -> {
-          if (log.isTraceEnabled())
-            log.trace(
-                "download: id={}, seq={}, status={}, out.length={}",
-                connectionId,
-                seq,
-                d.status(),
-                d.data().length);
-        })
+        .onSuccess(d ->
+            log.atTrace()
+                .setMessage("download: id={}, seq={}, status={}, out.length={}")
+                .addArgument(connectionId)
+                .addArgument(seq)
+                .addArgument(d::status)
+                .addArgument(() -> d.data().length)
+                .log())
         .onFailure(e ->
             log.atError()
                 .setMessage("download: id={}, seq={} - {}")
