@@ -56,10 +56,19 @@ exposing them directly to the client.
 
 ![components.png](doc/components.png "Component Diagram for SOHT2 Client-Server Architecture")
 
-Below is a simplified sequence diagram illustrating the flow of a connection request from the client
-to the server and how the server processes this request to establish a tunnel to a remote host:
+SOHT2 supports two transport modes: `duplex` and `simple`.
 
-![sequence.png](doc/sequence.png "Sequence Diagram for Client-Server SOHT2 Connection")
+The `duplex` (default) mode uses two independent HTTP lanes for upload and download, allowing for
+simultaneous bidirectional communication:
+
+![sequence-duplex.png](doc/sequence-duplex.png "Sequence Diagram for Client-Server SOHT2 Connection in Duplex Mode")
+
+The `simple` mode uses a single HTTP request for each round trip, with the client polling for data:
+
+![sequence-simple.png](doc/sequence-simple.png "Sequence Diagram for Client-Server SOHT2 Connection in Simple Mode")
+
+The `duplex` mode is preferred for interactive traffic, while the `simple` mode is suitable for
+scenarios where long-lived connections are not feasible.
 
 How to Configure And Run
 ------------------------

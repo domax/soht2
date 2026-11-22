@@ -12,7 +12,9 @@ client can reach remote hosts (e.g. internal services) without direct exposure.
   typically provided via external `application-server.yaml` next to the JAR (see root `README.md`).
 - `soht2-client` — Spring Boot 4.1 client: opens local ports, tunnels through the server over HTTP.
   Defaults: `src/main/resources/application.yaml`; release/runtime overrides are typically provided
-  via external `application-client.yaml` next to the JAR (see root `README.md`).
+  via external `application-client.yaml` next to the JAR (see root `README.md`). The default `duplex`
+  transport uses separate upload/download HTTP lanes; `simple` remains available for proxies that
+  cannot hold long-lived requests, and the client falls back to it when an older server lacks duplex.
 - `soht2-ui` — React 19 + TypeScript 5 (Vite) admin UI. `npm run build` also deploys: copies `dist/`
   to `soht2-server/src/main/resources/public/` and moves `index.html` to
   `soht2-server/src/main/resources/templates/index.html` (served by Thymeleaf server). Gradle wires
@@ -44,6 +46,11 @@ client can reach remote hosts (e.g. internal services) without direct exposure.
 - Tests: `./gradlew test` (per-module: `./gradlew :soht2-server:test`).
 - By default, server has no context path, so API is at `/api/...`, UI at `/`, and Swagger UI at
   `/swagger-ui` (if a context path is set via config, these are prefixed accordingly).
+- Duplex sessions use up to two concurrent HTTP requests per connection. Keep
+  `soht2.client.max-http-connections` (default `100`) at least twice the expected concurrent
+  sessions, and keep `spring.http.clients.read-timeout` longer than
+  `soht2.server.download-hold-timeout` (default `PT25S`); reverse proxies must also allow the
+  held download request to last that long.
 - API testing: `requests.http` (IntelliJ HTTP client) at the root, with vars in the gitignored
   `http-client.private.env.json`.
 - Client launcher: `doc/soht2-client` bash script (`start|stop|restart|status|log`) for running the
@@ -60,7 +67,14 @@ client can reach remote hosts (e.g. internal services) without direct exposure.
   `@ConfigurationProperties` classes in sync with `README.md` config examples for
   `application-server.yaml` / `application-client.yaml`.
 - API auth is HTTP Basic; roles are `USER` and `ADMIN` (see `SecurityConfig`,
-  `UserEntity.ROLE_ADMIN`).
+  `UserEntity.ROLE_ADMIN`). Browser requests use CSRF protection; tunnel requests must preserve
+  `X-SOHT2-Client: soht2-client` so the server can distinguish the client transport.
+- The server enables virtual threads because duplex downloads may be held while waiting for remote
+  data (`soht2-server/src/main/resources/application.yaml`).
+- Non-trivial changes follow the OpenSpec workflow in `.github/copilot-instructions.md`: plan with
+  `/opsx-propose` or `/opsx-update`, implement with `/opsx-apply`, and archive with
+  `/opsx-archive`. Approved changes include `proposal.md`, `specs/`, `tasks.md`, and `design.md`
+  when architectural decisions are needed; implementation follows `tasks.md` in order.
 - README docs: root README for config reference; `doc/tips-server.md`, `doc/tips-client.md` for
   tips.
 - Change admin password right after first server start; never commit H2 DB files (`soht2.mv.db`,

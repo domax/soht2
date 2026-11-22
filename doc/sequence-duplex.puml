@@ -1,0 +1,66 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+title Sequence Diagram for Client-Server SOHT2 Connection\n(Duplex Transport)
+hide footbox
+
+'autonumber
+activate "SOHT2 Client"
+
+"SOHT2 Client" -> "Client Socket" **: open socket
+
+"SOHT2 Client" -> "SOHT2 Server" ++: open session (transport: duplex)
+"SOHT2 Server" -> "Target Socket" **: open socket
+"SOHT2 Server" --> "SOHT2 Client" --: done (transport: duplex)
+
+alt #AliceBlue exchange
+
+  par #Application upload lane
+
+    loop #WhiteSmoke while connection is open and no errors
+
+      "SOHT2 Client" -> "Client Socket" ++: read buffer
+      note right of "Client Socket": blocks until data arrives
+      "SOHT2 Client" <-- "Client Socket" --: return data_in
+
+      "SOHT2 Client" -> "SOHT2 Server" ++: upload data_in (seq N)
+
+      "SOHT2 Server" -> "Target Socket" ++: write data_in
+      note left of "Target Socket": skipped if seq N is a retry
+      "SOHT2 Server" <-- "Target Socket" --: done
+
+      "SOHT2 Client" <-- "SOHT2 Server" --: done
+
+    end loop
+
+  else #Technology download lane
+
+    loop #WhiteSmoke while connection is open and no errors
+
+      "SOHT2 Client" -> "SOHT2 Server" ++: download (seq M)
+
+      "SOHT2 Server" -> "Target Socket" ++: read buffer
+      note left of "Target Socket": waits for data up to download-hold-timeout;\nreplays stored result if seq M is a retry
+      "SOHT2 Server" <-- "Target Socket" --: return data_out
+
+      "SOHT2 Client" <-- "SOHT2 Server" --: return data_out
+
+      "SOHT2 Client" -> "Client Socket" ++: write data_out
+      note right of "Client Socket": optional - if data_out isn't empty
+      "SOHT2 Client" <-- "Client Socket" --: done
+
+    end loop
+
+  end par
+
+else #MistyRose on connection close or error
+
+  "SOHT2 Client" -> "SOHT2 Server" ++: close session
+  note right of "SOHT2 Client": skipped if server signaled end-of-stream or gone
+  "SOHT2 Server" -> "Target Socket" !!: close socket
+  "SOHT2 Client" <-- "SOHT2 Server" --: done
+
+  "SOHT2 Client" -> "Client Socket" !!: close socket
+
+end alt
+
+@enduml

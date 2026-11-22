@@ -8,13 +8,13 @@ activate "SOHT2 Client"
 
 "SOHT2 Client" -> "Client Socket" **: open socket
 
-"SOHT2 Client" -> "SOHT2 Server" ++: open session
+"SOHT2 Client" -> "SOHT2 Server" ++: open session (transport: simple)
 "SOHT2 Server" -> "Target Socket" **: open socket
-"SOHT2 Server" --> "SOHT2 Client" --: done
+"SOHT2 Server" --> "SOHT2 Client" --: done (transport: simple)
 
-alt exchange
+alt #AliceBlue exchange
 
-  loop while connection is open and no errors
+  loop #WhiteSmoke while connection is open and no errors
 
     "SOHT2 Client" -> "Client Socket" ++: read buffer
     note right of "Client Socket": reads to buffer with timeout
@@ -41,7 +41,7 @@ alt exchange
 
   end loop
 
-else on connection close or error
+else #MistyRose on connection close or error
 
   "SOHT2 Client" -> "SOHT2 Server" ++: close session
   "SOHT2 Server" -> "Target Socket" !!: close socket
