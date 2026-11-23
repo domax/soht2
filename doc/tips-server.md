@@ -119,7 +119,8 @@ make it publicly accessible by URL like `https://example.com/soht2`, you may do 
    SERVER_SERVLET_CONTEXTPATH="/soht2"
    ```
 2. If you are using a reverse proxy (like Nginx or Apache), you can configure it to forward requests
-   from the desired context path to the SOHT2 server.<br>
+   from the desired context path to the SOHT2 server.
+
    E.g., for Nginx add the following configuration:
     ```nginx configuration
     location /soht2/ {

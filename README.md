@@ -99,7 +99,8 @@ Both the client and server components can be run using Java, so on both sides yo
     ```
    All settings are optional, but you have to define `soht2.server.database-path`,
    `soht2.server.admin-username`, and `soht2.server.default-admin-password` to create database and
-   admin user for the server.<br>
+   admin user for the server.
+
    The server advertises the duplex transport (see [Transport](#transport)) and holds each download
    request for up to `soht2.server.download-hold-timeout`. Any reverse proxy in front of the server
    must allow requests to last longer than this hold time (e.g. Nginx `proxy_read_timeout`, 60s by
@@ -150,15 +151,20 @@ Both the client and server components can be run using Java, so on both sides yo
       max-http-connections: 100       # Max concurrent HTTP connections to the server
     ```
    You have to define `soht2.client.url` and at least one connection in the
-   `soht2.client.connections` list. All the rest of properties are optional.<br>
+   `soht2.client.connections` list. All the rest of properties are optional.
+
    If you want to use an HTTP proxy, you can define the `soht2.client.proxy` section with
-   appropriate values.<br>
+   appropriate values.
+
    The client automatically sends `X-SOHT2-Client: soht2-client` on tunnel requests so it can
    operate with the server's browser CSRF protection. Do not remove or override this header when
-   customizing the client's HTTP transport.<br>
+   customizing the client's HTTP transport.
+
    If you want to use SOCKS5 proxy, just add `-DsocksProxyHost=localhost -DsocksProxyPort=1080` to
-   the list of JVM options (see next step) - but set the correct host and port, of course.<br>
-   _Be aware that this implementation does not support authentication for SOCKS5 proxy._<br>
+   the list of JVM options (see next step) - but set the correct host and port, of course.
+
+   _Be aware that this implementation does not support authentication for SOCKS5 proxy._
+
    With the duplex transport, the client's HTTP read timeout (60s by default, see
    `spring.http.clients.read-timeout`) and any HTTP proxy between the client and the server must
    allow requests to last longer than the server's `soht2.server.download-hold-timeout` (25s by
