@@ -11,6 +11,9 @@ Tips & Tricks for SOHT2 Server
   * [Web Consoles](#web-consoles)
   * [Authentication Cache](#authentication-cache)
   * [Duplex Transport](#duplex-transport)
+  * [Actuator Endpoints](#actuator-endpoints)
+  * [CORS for UI Development](#cors-for-ui-development)
+  * [Tunnel Request Size](#tunnel-request-size)
   * [See Also](#see-also)
 <!-- TOC -->
 
@@ -236,6 +239,50 @@ remote host sends data, closes its connection, or `soht2.server.download-hold-ti
   cheap, but count two HTTP connections per session when sizing proxies and load balancers.
 * **Rollback.** Clients can switch back to the original transport with
   `soht2.client.transport: simple`; no server change is needed.
+
+Actuator Endpoints
+------------------
+
+By default, only the actuator `health` endpoint is exposed. It is available without
+authentication (e.g. for load balancer probes) and returns the overall status without details:
+
+```shell
+curl https://${SOHT2_SERVER}/actuator/health   # {"status":"UP"}
+```
+
+To expose more endpoints, list them in `application-server.yaml`. Every actuator endpoint other
+than `health` requires a user with the `ADMIN` role:
+
+```yaml
+management.endpoints.web.exposure.include: health,info,metrics
+```
+
+```shell
+curl -u "${SOHT2_USR}:${SOHT2_PWD}" https://${SOHT2_SERVER}/actuator/metrics
+```
+
+Avoid exposing sensitive endpoints such as `heapdump` or `env` on public servers.
+
+CORS for UI Development
+-----------------------
+
+Cross-origin access is disabled by default. To run the UI in development mode (`npm run dev`)
+against a remote server, allow the Vite dev server origin:
+
+```yaml
+soht2.server.cors.allowed-origins:
+  - http://localhost:5173
+```
+
+Only listed origins get CORS access; credentials are not allowed for cross-origin requests.
+
+Tunnel Request Size
+-------------------
+
+Tunnel upload and exchange request bodies are limited by `soht2.server.max-request-size`
+(default `4MB`), both as received and after decompression. Larger requests are rejected with
+`413` without writing anything to the remote host, and the session stays open. Keep the client's
+`soht2.client.read-buffer-size` (default `1MB`) below this limit.
 
 See Also
 --------

@@ -7,6 +7,7 @@ import io.swagger.v3.oas.models.servers.Server;
 import java.io.File;
 import java.net.URI;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +47,12 @@ public class Soht2ServerConfig implements InitializingBean {
   /** The size of the read buffer for incoming data. */
   private DataSize readBufferSize = DataSize.ofMegabytes(1);
 
+  /**
+   * The maximum size of a tunnel request body (upload or simple exchange), both as received and
+   * after decompression. Larger requests are rejected with {@code 413 Payload Too Large}.
+   */
+  private DataSize maxRequestSize = DataSize.ofMegabytes(4);
+
   /** The timeout for server socket read operations. */
   private Duration socketReadTimeout = Duration.ofMillis(100);
 
@@ -61,6 +68,9 @@ public class Soht2ServerConfig implements InitializingBean {
   /** Properties for managing abandoned connections. */
   private AbandonedConnectionsProperties abandonedConnections =
       new AbandonedConnectionsProperties();
+
+  /** Cross-origin (CORS) access settings. Cross-origin access is disabled by default. */
+  private CorsProperties cors = new CorsProperties();
 
   /** A public URL of the OpenAPI server */
   private URI openApiServerUrl;
@@ -79,6 +89,9 @@ public class Soht2ServerConfig implements InitializingBean {
             && !downloadHoldTimeout.isZero()
             && !downloadHoldTimeout.isNegative(),
         "soht2.server.download-hold-timeout must be positive");
+    Assert.isTrue(
+        maxRequestSize != null && maxRequestSize.toBytes() > 0,
+        "soht2.server.max-request-size must be positive");
   }
 
   /**
@@ -109,5 +122,16 @@ public class Soht2ServerConfig implements InitializingBean {
 
     /** The interval at which the server checks for abandoned connections. */
     private Duration checkInterval = Duration.ofSeconds(5);
+  }
+
+  /** Cross-origin (CORS) access settings. */
+  @Data
+  public static class CorsProperties {
+
+    /**
+     * Origins allowed to make cross-origin requests (e.g. {@code http://localhost:5173} for UI
+     * development). Empty by default, which disables cross-origin access.
+     */
+    private List<String> allowedOrigins = new ArrayList<>();
   }
 }

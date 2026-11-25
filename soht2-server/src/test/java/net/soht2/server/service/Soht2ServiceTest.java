@@ -20,6 +20,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import lombok.val;
+import net.soht2.common.compress.Compressor;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.common.dto.Soht2User;
 import net.soht2.server.config.Soht2ServerConfig;
@@ -278,6 +279,53 @@ class Soht2ServiceTest {
       assertThat(sc.bytesRead()).isZero();
       // the new data is returned only under the next sequence number
       assertThat(soht2Service.download(id, 2).get().data()).isEqualTo(data);
+    }
+  }
+
+  @Test
+  void testUpload_compressionBombIsRejectedAndRetryable() {
+    soht2ServerConfig.setDownloadHoldTimeout(Duration.ofMillis(500));
+    try (val ignored = echoServer();
+        val sc = openConnection()) {
+      val id = sc.soht2().id();
+      val gzip = Compressor.compressorCache.apply("gzip");
+      val maxBytes = (int) soht2ServerConfig.getMaxRequestSize().toBytes();
+      val bomb = gzip.compress(new byte[maxBytes + 1]);
+
+      val rejected = soht2Service.upload(id, 1, bomb, "gzip");
+      assertThat(rejected.isFailure()).isTrue();
+      assertThat(rejected.getCause())
+          .isInstanceOfSatisfying(
+              ResponseStatusException.class,
+              e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONTENT_TOO_LARGE));
+      assertThat(sc.isOpened()).isTrue();
+      assertThat(sc.bytesWritten()).isZero();
+      assertThat(sc.lastUploadSeq().get()).isZero();
+
+      // a retry with the same sequence number and a valid body is written and acknowledged
+      val data = "retry".getBytes(StandardCharsets.UTF_8);
+      assertThat(soht2Service.upload(id, 1, gzip.compress(data), "gzip").isSuccess()).isTrue();
+      assertThat(sc.bytesWritten()).isEqualTo(data.length);
+      assertThat(soht2Service.download(id, 1).get().data()).isEqualTo(data);
+    }
+  }
+
+  @Test
+  void testExchange_compressionBombIsRejected() {
+    try (val ignored = echoServer();
+        val sc = openConnection()) {
+      val gzip = Compressor.compressorCache.apply("gzip");
+      val maxBytes = (int) soht2ServerConfig.getMaxRequestSize().toBytes();
+      val bomb = gzip.compress(new byte[maxBytes + 1]);
+
+      val rejected = soht2Service.exchange(sc.soht2().id(), bomb, "gzip");
+      assertThat(rejected.isFailure()).isTrue();
+      assertThat(rejected.getCause())
+          .isInstanceOfSatisfying(
+              ResponseStatusException.class,
+              e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONTENT_TOO_LARGE));
+      assertThat(sc.isOpened()).isTrue();
+      assertThat(sc.bytesWritten()).isZero();
     }
   }
 

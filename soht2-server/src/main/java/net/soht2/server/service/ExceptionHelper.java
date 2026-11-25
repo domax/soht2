@@ -46,6 +46,10 @@ public final class ExceptionHelper {
     return createClientException(GONE, message);
   }
 
+  public static ResponseStatusException contentTooLarge(String message) {
+    return createClientException(CONTENT_TOO_LARGE, message);
+  }
+
   public static ResponseStatusException notImplemented(String message) {
     return createServerException(NOT_IMPLEMENTED, message);
   }

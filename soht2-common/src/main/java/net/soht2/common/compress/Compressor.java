@@ -5,6 +5,7 @@ import static java.util.Optional.ofNullable;
 
 import io.vavr.Function1;
 import io.vavr.control.Try;
+import lombok.val;
 
 /**
  * Compressor interface defines methods for compressing and decompressing byte arrays.
@@ -61,4 +62,19 @@ public interface Compressor {
    * @return a decompressed byte array
    */
   byte[] decompress(byte[] data);
+
+  /**
+   * Decompresses the given byte array, failing once the decompressed size exceeds {@code maxBytes}.
+   *
+   * @param data the byte array to decompress
+   * @param maxBytes the maximum allowed size of the decompressed data
+   * @return a decompressed byte array
+   * @throws DecompressedSizeExceededException if the decompressed data exceeds {@code maxBytes}
+   */
+  default byte[] decompress(byte[] data, long maxBytes) {
+    val decompressed = decompress(data);
+    if (decompressed != null && decompressed.length > maxBytes)
+      throw new DecompressedSizeExceededException(maxBytes);
+    return decompressed;
+  }
 }

@@ -23,6 +23,7 @@ import lombok.val;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.common.dto.Soht2User;
 import net.soht2.common.util.AuxUtil;
+import net.soht2.server.config.RequestSizeLimitFilter;
 import net.soht2.server.config.SecurityConfig;
 import net.soht2.server.config.Soht2ServerConfig;
 import net.soht2.server.dto.*;
@@ -36,8 +37,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.actuate.autoconfigure.endpoint.web.CorsEndpointProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -48,8 +47,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.json.JsonMapper;
 
-@WebMvcTest({SecurityConfig.class, Soht2ServerConfig.class, ConnectionController.class})
-@EnableConfigurationProperties(CorsEndpointProperties.class)
+@WebMvcTest({
+  SecurityConfig.class,
+  Soht2ServerConfig.class,
+  RequestSizeLimitFilter.class,
+  ConnectionController.class
+})
 @ActiveProfiles("test")
 @WithMockUser(username = "system", password = "test", authorities = "USER")
 class ConnectionControllerTest {
@@ -58,6 +61,7 @@ class ConnectionControllerTest {
   @Autowired WebApplicationContext webApplicationContext;
   @Autowired Soht2ServerConfig soht2ServerConfig;
   @Autowired JsonMapper jsonMapper;
+  @Autowired RequestSizeLimitFilter requestSizeLimitFilter;
 
   @MockitoBean("soht2Service")
   Soht2Service soht2Service;
@@ -73,6 +77,7 @@ class ConnectionControllerTest {
     mockMvc =
         webAppContextSetup(webApplicationContext)
             .apply(springSecurity())
+            .addFilters(requestSizeLimitFilter)
             .defaultRequest(get("/").with(user("system").authorities(() -> "USER")))
             .build();
   }
@@ -283,6 +288,60 @@ class ConnectionControllerTest {
                 .header("X-SOHT2-Seq", "1")
                 .contentType(APPLICATION_OCTET_STREAM)
                 .content(new byte[] {1}))
+        .andExpect(status().isUnauthorized());
+
+    verifyNoInteractions(soht2Service);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"", "/upload"})
+  void tunnelData_oversized_CONTENT_TOO_LARGE(String suffix) throws Exception {
+    val maxBytes = (int) soht2ServerConfig.getMaxRequestSize().toBytes();
+    doReturn(true).when(soht2Service).isConnectionOwner(any(Authentication.class), any(UUID.class));
+
+    mockMvc
+        .perform(
+            post("/api/connection/" + UUID.randomUUID() + suffix)
+                .header("X-SOHT2-Client", "soht2-client")
+                .header("X-SOHT2-Seq", "1")
+                .contentType(APPLICATION_OCTET_STREAM)
+                .content(new byte[maxBytes + 1]))
+        .andExpect(status().isContentTooLarge());
+
+    verify(soht2Service, never()).upload(any(UUID.class), anyLong(), any(), any());
+    verify(soht2Service, never()).exchange(any(UUID.class), any(), any());
+  }
+
+  @Test
+  void upload_withinLimit_OK() throws Exception {
+    val id = UUID.randomUUID();
+    val bytesIn = UTHelper.createBinData(1024 * 1024);
+    doReturn(true).when(soht2Service).isConnectionOwner(any(Authentication.class), any(UUID.class));
+    doReturn(Try.success(null)).when(soht2Service).upload(any(UUID.class), anyLong(), any(), any());
+
+    mockMvc
+        .perform(
+            post("/api/connection/" + id + "/upload")
+                .header("X-SOHT2-Client", "soht2-client")
+                .header("X-SOHT2-Seq", "1")
+                .contentType(APPLICATION_OCTET_STREAM)
+                .content(bytesIn))
+        .andExpect(status().isNoContent());
+
+    verify(soht2Service).upload(id, 1L, bytesIn, null);
+  }
+
+  @Test
+  void upload_oversizedUnauthenticated_UNAUTHORIZED() throws Exception {
+    val maxBytes = (int) soht2ServerConfig.getMaxRequestSize().toBytes();
+    mockMvc
+        .perform(
+            post("/api/connection/" + UUID.randomUUID() + "/upload")
+                .with(anonymous())
+                .header("X-SOHT2-Client", "soht2-client")
+                .header("X-SOHT2-Seq", "1")
+                .contentType(APPLICATION_OCTET_STREAM)
+                .content(new byte[maxBytes + 1]))
         .andExpect(status().isUnauthorized());
 
     verifyNoInteractions(soht2Service);

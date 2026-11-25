@@ -25,4 +25,9 @@ public class DeflateCompressor extends BaseIOStreamCompressor {
   public byte[] decompress(byte[] data) {
     return decompress(data, InflaterInputStream::new);
   }
+
+  @Override
+  public byte[] decompress(byte[] data, long maxBytes) {
+    return decompress(data, maxBytes, InflaterInputStream::new);
+  }
 }

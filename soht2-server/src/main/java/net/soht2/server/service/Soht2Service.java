@@ -7,6 +7,7 @@ import static java.util.stream.Collectors.toSet;
 import static net.soht2.common.compress.Compressor.compressorCache;
 import static net.soht2.common.util.AuxUtil.peek;
 import static net.soht2.server.service.ExceptionHelper.conflict;
+import static net.soht2.server.service.ExceptionHelper.contentTooLarge;
 import static net.soht2.server.service.ExceptionHelper.gone;
 import static net.soht2.server.service.Soht2UserService.EMPTY_CU;
 import static net.soht2.server.service.Soht2UserService.getCurrentUser;
@@ -24,6 +25,7 @@ import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import net.soht2.common.compress.DecompressedSizeExceededException;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.common.dto.Soht2User;
 import net.soht2.server.config.Soht2ServerConfig;
@@ -154,7 +156,7 @@ public class Soht2Service {
           try {
             sc.lastActivity(LocalDateTime.now(ZoneId.systemDefault()));
             if (ofNullable(data).filter(v -> v.length > 0).isPresent()) {
-              val dataOut = compressorCache.apply(encoding).decompress(data);
+              val dataOut = decompress(sc, data, encoding);
               sc.outputStream().write(dataOut);
               sc.outputStream().flush();
               sc.addBytesWritten(dataOut.length);
@@ -275,7 +277,7 @@ public class Soht2Service {
 
     sc.lastActivity(LocalDateTime.now(ZoneId.systemDefault()));
     if (data != null && data.length > 0) {
-      val dataOut = compressorCache.apply(encoding).decompress(data);
+      val dataOut = decompress(sc, data, encoding);
       try {
         sc.outputStream().write(dataOut);
         sc.outputStream().flush();
@@ -286,6 +288,21 @@ public class Soht2Service {
     }
     sc.lastUploadSeq().set(seq);
     sc.lastActivity(LocalDateTime.now(ZoneId.systemDefault()));
+  }
+
+  /**
+   * Decompresses request data, bounded by {@code soht2.server.max-request-size}.
+   *
+   * @throws ResponseStatusException with {@code 413 Payload Too Large} if the limit is exceeded
+   */
+  private byte[] decompress(ServerConnection sc, byte[] data, @Nullable String encoding) {
+    val maxBytes = soht2ServerConfig.getMaxRequestSize().toBytes();
+    try {
+      return compressorCache.apply(encoding).decompress(data, maxBytes);
+    } catch (DecompressedSizeExceededException e) {
+      throw contentTooLarge(
+          connectionIdMsg(sc.soht2().id(), "request exceeds " + maxBytes + " bytes"));
+    }
   }
 
   private DownloadResult answerDownload(ServerConnection sc, long seq) {

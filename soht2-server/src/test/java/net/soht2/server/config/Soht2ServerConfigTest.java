@@ -13,6 +13,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
+import org.springframework.util.unit.DataSize;
 
 class Soht2ServerConfigTest {
 
@@ -50,5 +51,42 @@ class Soht2ServerConfigTest {
     assertThatIllegalArgumentException()
         .isThrownBy(config::afterPropertiesSet)
         .withMessageContaining("soht2.server.download-hold-timeout");
+  }
+
+  @Test
+  void maxRequestSize_default() {
+    assertThat(new Soht2ServerConfig().getMaxRequestSize()).isEqualTo(DataSize.ofMegabytes(4));
+  }
+
+  @Test
+  void maxRequestSize_binding() {
+    val source =
+        new MapConfigurationPropertySource(Map.of("soht2.server.max-request-size", "512KB"));
+    val config = new Binder(source).bind("soht2.server", Soht2ServerConfig.class).get();
+    assertThat(config.getMaxRequestSize()).isEqualTo(DataSize.ofKilobytes(512));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"0B", "-1B"})
+  void afterPropertiesSet_nonPositive_maxRequestSize(String value) {
+    val config = validConfig();
+    config.setMaxRequestSize(DataSize.parse(value));
+    assertThatIllegalArgumentException()
+        .isThrownBy(config::afterPropertiesSet)
+        .withMessageContaining("soht2.server.max-request-size");
+  }
+
+  @Test
+  void cors_default_empty() {
+    assertThat(new Soht2ServerConfig().getCors().getAllowedOrigins()).isEmpty();
+  }
+
+  @Test
+  void cors_binding() {
+    val source =
+        new MapConfigurationPropertySource(
+            Map.of("soht2.server.cors.allowed-origins", "http://localhost:5173"));
+    val config = new Binder(source).bind("soht2.server", Soht2ServerConfig.class).get();
+    assertThat(config.getCors().getAllowedOrigins()).containsExactly("http://localhost:5173");
   }
 }

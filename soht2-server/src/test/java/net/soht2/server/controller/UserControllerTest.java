@@ -24,8 +24,6 @@ import net.soht2.server.service.Soht2UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.actuate.autoconfigure.endpoint.web.CorsEndpointProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -36,7 +34,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
 
 @WebMvcTest({SecurityConfig.class, Soht2ServerConfig.class, UserController.class})
-@EnableConfigurationProperties(CorsEndpointProperties.class)
 @ActiveProfiles("test")
 @WithMockUser(username = "system", password = "test", authorities = "ADMIN")
 class UserControllerTest {

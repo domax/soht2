@@ -25,4 +25,9 @@ public class GZIPCompressor extends BaseIOStreamCompressor {
   public byte[] decompress(byte[] data) {
     return decompress(data, GZIPInputStream::new);
   }
+
+  @Override
+  public byte[] decompress(byte[] data, long maxBytes) {
+    return decompress(data, maxBytes, GZIPInputStream::new);
+  }
 }

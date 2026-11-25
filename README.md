@@ -86,6 +86,7 @@ Both the client and server components can be run using Java, so on both sides yo
     soht2.server:
       socket-read-timeout: PT0.1S                  # Timeout for socket read operations
       read-buffer-size: 1MB                        # Size of the read buffer for socket connections
+      max-request-size: 4MB                        # Max tunnel request body (received and decompressed)
       user-cache-ttl: PT10M                        # TTL for user and verified-credential cache
       database-path: ./soht2                       # Path to the database file
       admin-username: "${SOHT2_USR}"               # Username for the admin user
@@ -96,6 +97,8 @@ Both the client and server components can be run using Java, so on both sides yo
       abandoned-connections:                       # Settings for abandoned connections
         timeout: PT1M                              # Timeout for abandoned connections
         check-interval: PT5S                       # Interval for checking abandoned connections
+      cors:                                        # Cross-origin access, disabled by default
+        allowed-origins: []                        # e.g. [http://localhost:5173] for UI development
     ```
    All settings are optional, but you have to define `soht2.server.database-path`,
    `soht2.server.admin-username`, and `soht2.server.default-admin-password` to create database and
@@ -105,6 +108,15 @@ Both the client and server components can be run using Java, so on both sides yo
    request for up to `soht2.server.download-hold-timeout`. Any reverse proxy in front of the server
    must allow requests to last longer than this hold time (e.g. Nginx `proxy_read_timeout`, 60s by
    default).
+
+   Tunnel upload and exchange requests larger than `soht2.server.max-request-size`, either as
+   received or after decompression, are rejected with `413`. Keep the client's
+   `soht2.client.read-buffer-size` below the server's `max-request-size`.
+
+   __Breaking change:__ only the actuator `health` endpoint is exposed (anonymously, without
+   details). Other actuator endpoints must be added to `management.endpoints.web.exposure.include`
+   and are available to `ADMIN` users only. Cross-origin access is disabled unless
+   `soht2.server.cors.allowed-origins` lists the origin. See [server tips](doc/tips-server.md).
 3. Run the server with the following command:
     ```shell
     java -jar soht2-server-X.X.X.jar
@@ -124,7 +136,7 @@ Both the client and server components can be run using Java, so on both sides yo
       url: https://${SOHT2_SERVER}/api/connection # URL of the SOHT2 server API endpoint
       transport: duplex               # Tunnel transport (duplex, simple), see "Transport" below
       socket-read-timeout: PT0.1S     # Timeout for reading from socket connections
-      read-buffer-size: 1MB           # Size of the read buffer for socket connections
+      read-buffer-size: 1MB           # Size of the read buffer; keep below server max-request-size
       username: "${SOHT2_USR}"        # Username for authentication on SOHT2 server
       password: "${SOHT2_PWD}"        # Password for authentication on SOHT2 server
       connections:                    # List of connections to establish - at least 1 item required
