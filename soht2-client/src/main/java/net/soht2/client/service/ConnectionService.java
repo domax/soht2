@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.BindException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -134,7 +136,15 @@ public class ConnectionService {
   void connect(HostProperties host, @Nullable Consumer<HostProperties> socketOpenedCallback) {
     log.info("connect: host={}", host);
 
-    try (val serverSocket = new ServerSocket(host.getLocalPort())) {
+    try (val serverSocket = new ServerSocket()) {
+      serverSocket.bind(
+          new InetSocketAddress(InetAddress.getByName(host.getLocalHost()), host.getLocalPort()));
+      log.info("connect: listening on {}", serverSocket.getLocalSocketAddress());
+      if (serverSocket.getInetAddress().isAnyLocalAddress())
+        log.warn(
+            "connect: port {} accepts connections from other hosts (local-host={})",
+            host.getLocalPort(),
+            host.getLocalHost());
       serverSockets.add(serverSocket);
       log.debug("connect: serverSocket={}", serverSocket);
       ofNullable(socketOpenedCallback).ifPresent(cb -> cb.accept(host));

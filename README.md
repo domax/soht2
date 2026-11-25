@@ -140,7 +140,8 @@ Both the client and server components can be run using Java, so on both sides yo
       username: "${SOHT2_USR}"        # Username for authentication on SOHT2 server
       password: "${SOHT2_PWD}"        # Password for authentication on SOHT2 server
       connections:                    # List of connections to establish - at least 1 item required
-      - local-port: ${LOCAL_PORT}     # Local port to listen on
+      - local-host: 127.0.0.1         # Local address to bind; 0.0.0.0 accepts other hosts
+        local-port: ${LOCAL_PORT}     # Local port to listen on
         remote-host: ${REMOTE_HOST}   # Remote host to connect to
         remote-port: ${REMOTE_PORT}   # Port on a remote host to connect to
       compression:                    # Compression settings for the connections
@@ -164,6 +165,11 @@ Both the client and server components can be run using Java, so on both sides yo
     ```
    You have to define `soht2.client.url` and at least one connection in the
    `soht2.client.connections` list. All the rest of properties are optional.
+
+   __Breaking change:__ each connection's local port is bound to `127.0.0.1` by default, so only
+   applications on the same machine can use the tunnel. To share a tunnel with other hosts or
+   containers, set `local-host: 0.0.0.0` (or `::`) on that connection. See
+   [client tips](doc/tips-client.md#local-bind-address).
 
    If you want to use an HTTP proxy, you can define the `soht2.client.proxy` section with
    appropriate values.

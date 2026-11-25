@@ -1,7 +1,9 @@
 /* SOHT2 © Licensed under MIT 2025. */
 package net.soht2.client.config;
 
+import java.net.InetAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
@@ -30,12 +32,19 @@ public class Soht2ClientProperties implements InitializingBean {
   /**
    * Properties for each host connection.
    *
-   * <p>This class holds the properties for a single host connection, including the local port,
-   * remote host, and remote port.
+   * <p>This class holds the properties for a single host connection, including the local bind
+   * address, local port, remote host, and remote port.
    */
   @Data
   public static class HostProperties {
-    /** The host name or IP address of the local machine. */
+    /**
+     * The local address (host name or IP) the local port is bound to. Defaults to the IPv4
+     * loopback, so only applications on the same machine can use the tunnel. Use {@code 0.0.0.0} or
+     * {@code ::} to accept connections from other hosts.
+     */
+    private String localHost = "127.0.0.1";
+
+    /** The port number on the local machine to listen on. */
     private int localPort;
 
     /** The host name or IP address of the remote machine. */
@@ -206,5 +215,17 @@ public class Soht2ClientProperties implements InitializingBean {
         "soht2.client.disconnect-on-idle-timeout must not be negative");
     Assert.isTrue(
         maxHttpConnections >= 1, "soht2.client.max-http-connections must be greater than 0");
+    connections.forEach(c -> validateLocalHost(c.getLocalHost()));
+  }
+
+  @SuppressWarnings("ResultOfMethodCallIgnored")
+  private static void validateLocalHost(String localHost) {
+    Assert.hasText(localHost, "soht2.client.connections[].local-host must not be empty");
+    try {
+      InetAddress.getByName(localHost);
+    } catch (UnknownHostException e) {
+      throw new IllegalArgumentException(
+          "soht2.client.connections[].local-host '" + localHost + "' cannot be resolved", e);
+    }
   }
 }

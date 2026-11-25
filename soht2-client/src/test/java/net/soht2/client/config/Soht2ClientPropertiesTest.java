@@ -88,4 +88,33 @@ class Soht2ClientPropertiesTest {
         .isInstanceOf(BindException.class)
         .hasMessageContaining("soht2.client.transport");
   }
+
+  @Test
+  void localHost_default() {
+    assertThat(new HostProperties().getLocalHost()).isEqualTo("127.0.0.1");
+  }
+
+  @Test
+  void localHost_binding() {
+    val source =
+        new MapConfigurationPropertySource(
+            Map.of(
+                "soht2.client.connections[0].local-host", "0.0.0.0",
+                "soht2.client.connections[0].local-port", "2222"));
+    val props = new Binder(source).bind("soht2.client", Soht2ClientProperties.class).get();
+    assertThat(props.getConnections())
+        .singleElement()
+        .extracting(HostProperties::getLocalHost)
+        .isEqualTo("0.0.0.0");
+  }
+
+  @Test
+  void afterPropertiesSet_unresolvable_local_host() {
+    val props = validProperties();
+    props.getConnections().iterator().next().setLocalHost("no-such-host.invalid");
+    assertThatThrownBy(props::afterPropertiesSet)
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("local-host")
+        .hasMessageContaining("no-such-host.invalid");
+  }
 }

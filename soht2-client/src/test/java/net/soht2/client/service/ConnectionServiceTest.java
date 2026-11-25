@@ -2,14 +2,27 @@
 package net.soht2.client.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import io.vavr.control.Try;
+import java.net.ConnectException;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -25,11 +38,13 @@ import net.soht2.client.test.UTHelper;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.common.dto.Soht2Protocol.TransportType;
 import org.junit.jupiter.api.*;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClient;
 
 @SpringBootTest(classes = ConnectionService.class)
@@ -72,6 +87,7 @@ class ConnectionServiceTest {
     soht2ClientProperties.setDisconnectOnIdleTimeout(Duration.ZERO);
     soht2ClientProperties.setTransport(TransportType.DUPLEX);
     connectionService.stopConnections();
+    host.setLocalHost("127.0.0.1");
   }
 
   @Test
@@ -417,5 +433,62 @@ class ConnectionServiceTest {
     val socketStarted = new AtomicBoolean();
     connectionService.startConnections(h -> socketStarted.set(true));
     await().until(socketStarted::get);
+  }
+
+  @Test
+  @Order(20)
+  void connect_defaultBindsLoopbackOnly() throws Exception {
+    startAndAwait();
+    assertThat(boundAddress().isLoopbackAddress()).isTrue();
+
+    val external = nonLoopbackAddress();
+    assumeTrue(external.isPresent(), "no non-loopback IPv4 address available");
+    try (val socket = new Socket()) {
+      val address = new InetSocketAddress(external.get(), host.getLocalPort());
+      // Refused (or dropped, on some VPN/firewall setups): either way, not accepted.
+      assertThatThrownBy(() -> socket.connect(address, 2000))
+          .isInstanceOfAny(ConnectException.class, SocketTimeoutException.class);
+    }
+  }
+
+  @Test
+  @Order(21)
+  void connect_wildcardBindAcceptsOtherHostsAndWarns() throws Exception {
+    val logger = (Logger) LoggerFactory.getLogger(ConnectionService.class);
+    val appender = new ListAppender<ILoggingEvent>();
+    appender.start();
+    logger.addAppender(appender);
+    host.setLocalHost("0.0.0.0");
+    try {
+      startAndAwait();
+    } finally {
+      logger.detachAppender(appender);
+    }
+    assertThat(boundAddress().isAnyLocalAddress()).isTrue();
+    val warning = "connect: port " + host.getLocalPort() + " accepts connections from other hosts";
+    assertThat(appender.list)
+        .anyMatch(e -> e.getLevel() == Level.WARN && e.getFormattedMessage().startsWith(warning));
+
+    val external = nonLoopbackAddress();
+    assumeTrue(external.isPresent(), "no non-loopback IPv4 address available");
+    try (val ignored = new Socket(external.get(), host.getLocalPort())) {
+      await().until(() -> !connectionService.isSessionClosed(soht2.id()));
+    }
+  }
+
+  @SuppressWarnings({"unchecked", "resource"})
+  private InetAddress boundAddress() {
+    val sockets =
+        (Set<ServerSocket>) ReflectionTestUtils.getField(connectionService, "serverSockets");
+    assertThat(sockets).isNotNull().hasSize(1);
+    return sockets.iterator().next().getInetAddress();
+  }
+
+  private static Optional<InetAddress> nonLoopbackAddress() throws Exception {
+    return NetworkInterface.networkInterfaces()
+        .filter(ni -> Try.of(() -> ni.isUp() && !ni.isLoopback()).getOrElse(false))
+        .flatMap(NetworkInterface::inetAddresses)
+        .filter(a -> a instanceof Inet4Address && !a.isLoopbackAddress() && !a.isLinkLocalAddress())
+        .findFirst();
   }
 }

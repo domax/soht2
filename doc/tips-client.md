@@ -6,6 +6,7 @@ Tips & Tricks for SOHT2 Client
   * [Prerequisites](#prerequisites)
   * [Create a Client Launcher](#create-a-client-launcher)
   * [Duplex Transport](#duplex-transport)
+  * [Local Bind Address](#local-bind-address)
   * [See Also](#see-also)
 <!-- TOC -->
 
@@ -90,6 +91,29 @@ requests in flight, so data flows in both directions without polling delays.
   `soht2.client.transport: simple` in `application-client.yaml` to use the original
   request-per-round-trip transport. The client also falls back to `simple` automatically when the
   server is older and does not support duplex.
+
+Local Bind Address
+------------------
+
+Each connection's local port is bound to `127.0.0.1` by default
+(`soht2.client.connections[].local-host`), so only applications on the same machine can use the
+tunnel with your SOHT2 credentials.
+
+* **Sharing a tunnel with other hosts or containers.** To let other machines, Docker containers,
+  or WSL reach the tunnel, bind that connection to all interfaces:
+  ```yaml
+  soht2.client.connections:
+  - local-host: 0.0.0.0             # or :: for both IPv4 and IPv6 on dual-stack systems
+    local-port: 2222
+    remote-host: ${REMOTE_HOST}
+    remote-port: 22
+  ```
+  The client logs a warning for every port that accepts connections from other hosts. Anyone who
+  can reach that port uses the tunnel with your credentials, so restrict it with a firewall.
+* **IPv6-only `localhost`.** Some applications resolve `localhost` to `::1` only and then get
+  "connection refused". Either connect to `127.0.0.1` explicitly, or set `local-host: ::1` for
+  that connection.
+* **Invalid address.** The client fails to start if `local-host` cannot be resolved.
 
 See Also
 --------
