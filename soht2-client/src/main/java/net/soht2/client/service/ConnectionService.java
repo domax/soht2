@@ -3,6 +3,7 @@ package net.soht2.client.service;
 
 import static java.util.Optional.ofNullable;
 import static java.util.concurrent.CompletableFuture.runAsync;
+import static net.soht2.common.util.AuxUtil.readAvailable;
 
 import io.vavr.control.Try;
 import jakarta.annotation.PreDestroy;
@@ -51,6 +52,7 @@ import org.springframework.web.client.HttpClientErrorException;
 public class ConnectionService {
 
   private static final String ERR_CONN_RESET = "Connection reset";
+  private static final Duration DUPLEX_WAKE_INTERVAL = Duration.ofSeconds(1);
 
   private final Soht2ClientProperties soht2ClientProperties;
   private final Soht2Client soht2Client;
@@ -204,6 +206,7 @@ public class ConnectionService {
     try (socket) {
       socket.setSoTimeout((int) soht2ClientProperties.getSocketReadTimeout().toMillis());
       socket.setKeepAlive(true);
+      socket.setTcpNoDelay(true);
 
       val opened = soht2Client.open(host.getRemoteHost(), host.getRemotePort()).get();
       val state =
@@ -241,7 +244,7 @@ public class ConnectionService {
       readSize.set(0);
       writeSize.set(0);
 
-      Try.of(() -> state.in.read(buffer))
+      Try.of(() -> readAvailable(state.in, buffer, state.in.read(buffer)))
           .filter(bufferLen -> bufferLen >= 0, () -> new SocketException(ERR_CONN_RESET))
           .recover(SocketTimeoutException.class, 0)
           .andThen(readSize::set)
@@ -294,9 +297,24 @@ public class ConnectionService {
    * @param state the session state containing connection and I/O streams
    */
   void duplex(SessionState state) {
+    // the upload loop only wakes up to check the idle timeout, not to poll the server
+    Try.of(() -> ofNullable(state.socket).orElseThrow(() -> new SocketException("Socket is null")))
+        .andThenTry(socket -> socket.setSoTimeout(duplexWakeMillis()))
+        .onFailure(e -> log.debug("duplex: id={} - {}", state.connection.id(), e.toString()));
     Try.run(() -> runAsync(() -> download(state), threadExecutor))
         .onFailure(e -> closeSession(state, "duplex", e));
     upload(state);
+  }
+
+  /**
+   * The socket read timeout of the duplex upload loop: {@code min(1s, disconnect-on-idle-timeout)},
+   * or {@code 1s} when the idle timeout is disabled.
+   */
+  int duplexWakeMillis() {
+    val idle = soht2ClientProperties.getDisconnectOnIdleTimeout();
+    val wake =
+        idle.isZero() || idle.compareTo(DUPLEX_WAKE_INTERVAL) > 0 ? DUPLEX_WAKE_INTERVAL : idle;
+    return (int) Math.max(1, wake.toMillis());
   }
 
   /**
@@ -312,7 +330,7 @@ public class ConnectionService {
     val buffer = new byte[bufferSize];
 
     while (sessions.containsKey(connectionId))
-      Try.of(() -> state.in.read(buffer))
+      Try.of(() -> readAvailable(state.in, buffer, state.in.read(buffer)))
           .filter(bufferLen -> bufferLen >= 0, () -> new SocketException(ERR_CONN_RESET))
           .recover(SocketTimeoutException.class, 0)
           .flatMap(bufferLen ->

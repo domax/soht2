@@ -3,12 +3,15 @@ package net.soht2.common.util;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.val;
 
 /**
  * Utility class providing auxiliary methods.
@@ -39,5 +42,29 @@ public final class AuxUtil {
   /** Generates a UUID using version 7 (Unix Epoch time+random based). */
   public static UUID generateUUIDv7() {
     return UUID_V7.generate();
+  }
+
+  /**
+   * Appends the bytes that are already available on the stream to a buffer that holds the result of
+   * a first (possibly blocking) read, without blocking again. Reading stops when the buffer is
+   * full, the stream reports no available bytes, or a read returns no data.
+   *
+   * @param in the stream to drain
+   * @param buf the buffer whose first {@code firstRead} bytes are already filled
+   * @param firstRead the number of bytes returned by the first read; values {@code <= 0} are
+   *     returned as is, without reading
+   * @return the total number of bytes in {@code buf}, or {@code firstRead} if it is not positive
+   * @throws IOException if reading from the stream fails
+   */
+  public static int readAvailable(InputStream in, byte[] buf, int firstRead) throws IOException {
+    if (firstRead <= 0) return firstRead;
+    var n = firstRead;
+    int available;
+    while (n < buf.length && (available = in.available()) > 0) {
+      val read = in.read(buf, n, Math.min(available, buf.length - n));
+      if (read <= 0) break;
+      n += read;
+    }
+    return n;
   }
 }

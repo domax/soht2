@@ -22,6 +22,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -410,6 +411,79 @@ class ConnectionServiceTest {
     }
     verify(soht2Client, never()).download(any(UUID.class), anyLong());
     verify(soht2Client, never()).upload(any(UUID.class), anyLong(), any());
+  }
+
+  @SuppressWarnings("resource")
+  @Test
+  @Order(13)
+  void serve_acceptedSocketHasTcpNoDelay() throws Exception {
+    openDuplex();
+    stubEmptyDownloads();
+
+    startAndAwait();
+    try (val ignored = new Socket("127.0.0.1", host.getLocalPort())) {
+      await().until(() -> !connectionService.isSessionClosed(soht2.id()));
+      assertThat(sessionSocket().getTcpNoDelay()).isTrue();
+      // duplex upload wakes up once a second at most (idle timeout disabled)
+      assertThat(sessionSocket().getSoTimeout()).isEqualTo(1000);
+    }
+  }
+
+  @SuppressWarnings("resource")
+  @Test
+  @Order(14)
+  void duplex_idleSessionIsClosedAfterIdleTimeout() throws Exception {
+    openDuplex();
+    stubEmptyDownloads();
+    soht2ClientProperties.setDisconnectOnIdleTimeout(Duration.ofMillis(500));
+
+    startAndAwait();
+    try (val ignored = new Socket("127.0.0.1", host.getLocalPort())) {
+      await().until(() -> !connectionService.isSessionClosed(soht2.id()));
+      assertThat(sessionSocket().getSoTimeout()).isEqualTo(500);
+      await()
+          .atMost(Duration.ofSeconds(3))
+          .until(() -> connectionService.isSessionClosed(soht2.id()));
+    }
+    verify(soht2Client, timeout(2000)).close(soht2.id());
+  }
+
+  @Test
+  @Order(15)
+  void duplex_localDataIsUploadedPromptly() throws Exception {
+    openDuplex();
+    stubEmptyDownloads();
+
+    startAndAwait();
+    val bytesIn = UTHelper.createBinData(100);
+    try (val socket = new Socket("127.0.0.1", host.getLocalPort())) {
+      await().until(() -> !connectionService.isSessionClosed(soht2.id()));
+      val started = System.nanoTime();
+      socket.getOutputStream().write(bytesIn);
+      socket.getOutputStream().flush();
+      verify(soht2Client, timeout(1000)).upload(soht2.id(), 1, bytesIn);
+      assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofMillis(500));
+    }
+  }
+
+  @Test
+  @Order(16)
+  void duplexWakeMillis_isBoundedByIdleTimeout() {
+    soht2ClientProperties.setDisconnectOnIdleTimeout(Duration.ZERO);
+    assertThat(connectionService.duplexWakeMillis()).isEqualTo(1000);
+    soht2ClientProperties.setDisconnectOnIdleTimeout(Duration.ofMinutes(5));
+    assertThat(connectionService.duplexWakeMillis()).isEqualTo(1000);
+    soht2ClientProperties.setDisconnectOnIdleTimeout(Duration.ofMillis(250));
+    assertThat(connectionService.duplexWakeMillis()).isEqualTo(250);
+  }
+
+  @SuppressWarnings("unchecked")
+  private Socket sessionSocket() {
+    val sessions =
+        (Map<UUID, ConnectionService.SessionState>)
+            ReflectionTestUtils.getField(connectionService, "sessions");
+    assertThat(sessions).isNotNull().containsKey(soht2.id());
+    return sessions.get(soht2.id()).socket;
   }
 
   private void openDuplex() {

@@ -239,6 +239,11 @@ remote host sends data, closes its connection, or `soht2.server.download-hold-ti
   cheap, but count two HTTP connections per session when sizing proxies and load balancers.
 * **Rollback.** Clients can switch back to the original transport with
   `soht2.client.transport: simple`; no server change is needed.
+* **Target connections.** Opening a tunnel waits up to `soht2.server.target-connect-timeout`
+  (default `PT10S`) for the target host to accept the connection. Lower it to fail fast on
+  unreachable targets; raise it for slow networks.
+* **Buffer size.** `read-buffer-size` (default `1MB` on server and client) caps the data per
+  request. Bursts already waiting on the socket are combined into one request, up to this size.
 
 Actuator Endpoints
 ------------------

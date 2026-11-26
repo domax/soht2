@@ -94,6 +94,7 @@ Both the client and server components can be run using Java, so on both sides yo
       open-api-server-url: https://${SOHT2_SERVER} # Public URL of the OpenAPI server
       enable-history: true                         # Enable gathering connection history
       download-hold-timeout: PT25S                 # Max time a duplex download waits for data
+      target-connect-timeout: PT10S                # Max time to connect to a target host
       abandoned-connections:                       # Settings for abandoned connections
         timeout: PT1M                              # Timeout for abandoned connections
         check-interval: PT5S                       # Interval for checking abandoned connections
@@ -108,6 +109,9 @@ Both the client and server components can be run using Java, so on both sides yo
    request for up to `soht2.server.download-hold-timeout`. Any reverse proxy in front of the server
    must allow requests to last longer than this hold time (e.g. Nginx `proxy_read_timeout`, 60s by
    default).
+
+   Opening a connection to a target host that does not answer fails after
+   `soht2.server.target-connect-timeout` with the same error response as a refused connection.
 
    Tunnel upload and exchange requests larger than `soht2.server.max-request-size`, either as
    received or after decompression, are rejected with `413`. Keep the client's

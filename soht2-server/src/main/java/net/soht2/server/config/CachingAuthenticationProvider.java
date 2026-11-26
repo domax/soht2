@@ -4,6 +4,7 @@ package net.soht2.server.config;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Ticker;
+import io.vavr.control.Try;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
@@ -15,6 +16,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.jspecify.annotations.Nullable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.core.AuthenticationException;
@@ -60,7 +62,8 @@ public class CachingAuthenticationProvider extends DaoAuthenticationProvider {
   }
 
   private final Cache<String, Entry> credentialCache;
-  private final SecretKeySpec processKey;
+  final SecretKeySpec processKey;
+  private final @Nullable Mac prototypeMac;
 
   public CachingAuthenticationProvider(
       UserDetailsService userDetailsService, PasswordEncoder passwordEncoder, Duration ttl) {
@@ -79,6 +82,7 @@ public class CachingAuthenticationProvider extends DaoAuthenticationProvider {
     val key = new byte[32];
     new SecureRandom().nextBytes(key);
     this.processKey = new SecretKeySpec(key, HMAC_ALGORITHM);
+    this.prototypeMac = Try.of(this::newMac).getOrNull();
     log.info("CachingAuthenticationProvider: ttl={}, maxEntries={}", ttl, MAX_ENTRIES);
   }
 
@@ -119,13 +123,28 @@ public class CachingAuthenticationProvider extends DaoAuthenticationProvider {
     return username.toLowerCase(Locale.ROOT);
   }
 
-  private byte[] fingerprint(String key, String password) {
+  byte[] fingerprint(String key, String password) {
     try {
-      val mac = Mac.getInstance(HMAC_ALGORITHM);
-      mac.init(processKey);
-      return mac.doFinal((key + ':' + password).getBytes(StandardCharsets.UTF_8));
+      return mac().doFinal((key + ':' + password).getBytes(StandardCharsets.UTF_8));
     } catch (GeneralSecurityException e) {
       throw new IllegalStateException("Cannot compute credential fingerprint", e);
     }
+  }
+
+  /** A per-call {@code Mac}: a clone of the initialized prototype, or a new one if unsupported. */
+  private Mac mac() throws GeneralSecurityException {
+    if (prototypeMac != null)
+      try {
+        return (Mac) prototypeMac.clone();
+      } catch (CloneNotSupportedException e) {
+        log.trace("mac: clone is not supported, creating a new instance");
+      }
+    return newMac();
+  }
+
+  private Mac newMac() throws GeneralSecurityException {
+    val mac = Mac.getInstance(HMAC_ALGORITHM);
+    mac.init(processKey);
+    return mac;
   }
 }

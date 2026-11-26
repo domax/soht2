@@ -57,6 +57,13 @@ public class Soht2ServerConfig implements InitializingBean {
   private Duration socketReadTimeout = Duration.ofMillis(100);
 
   /**
+   * The maximum time to wait for a connection to a target host to be established. An open request
+   * to a target that does not answer within this time fails like any other target connection
+   * failure.
+   */
+  private Duration targetConnectTimeout = Duration.ofSeconds(10);
+
+  /**
    * The maximum time a duplex download request is held open while the target sends nothing. When it
    * elapses, the request is answered with an empty response and the client issues the next one.
    */
@@ -89,6 +96,11 @@ public class Soht2ServerConfig implements InitializingBean {
             && !downloadHoldTimeout.isZero()
             && !downloadHoldTimeout.isNegative(),
         "soht2.server.download-hold-timeout must be positive");
+    Assert.isTrue(
+        targetConnectTimeout != null
+            && !targetConnectTimeout.isZero()
+            && !targetConnectTimeout.isNegative(),
+        "soht2.server.target-connect-timeout must be positive");
     Assert.isTrue(
         maxRequestSize != null && maxRequestSize.toBytes() > 0,
         "soht2.server.max-request-size must be positive");

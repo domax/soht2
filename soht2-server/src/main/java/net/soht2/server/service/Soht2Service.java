@@ -6,6 +6,7 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static net.soht2.common.compress.Compressor.compressorCache;
 import static net.soht2.common.util.AuxUtil.peek;
+import static net.soht2.common.util.AuxUtil.readAvailable;
 import static net.soht2.server.service.ExceptionHelper.conflict;
 import static net.soht2.server.service.ExceptionHelper.contentTooLarge;
 import static net.soht2.server.service.ExceptionHelper.gone;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -66,6 +68,7 @@ public class Soht2Service {
         ServerConnection.builder()
             .soht2(soht2)
             .socketTimeout((int) soht2ServerConfig.getSocketReadTimeout().toMillis())
+            .connectTimeout((int) soht2ServerConfig.getTargetConnectTimeout().toMillis())
             .readBufferSize((int) soht2ServerConfig.getReadBufferSize().toBytes())
             .postCloseAction(this::postCloseAction)
             .build();
@@ -161,8 +164,10 @@ public class Soht2Service {
               sc.outputStream().flush();
               sc.addBytesWritten(dataOut.length);
             }
+            // a held download may have left a longer timeout; the read lock is held here
+            sc.soTimeout((int) soht2ServerConfig.getSocketReadTimeout().toMillis());
             val buffer = sc.readBuffer();
-            val bufferLen = sc.inputStream().read(buffer);
+            val bufferLen = readAvailable(sc.inputStream(), buffer, sc.inputStream().read(buffer));
             if (bufferLen <= 0) return EMPTY;
             sc.addBytesRead(bufferLen);
             // the buffer is reused by the connection, so always return a copy
@@ -316,7 +321,11 @@ public class Soht2Service {
     if (seq != lastSeq + 1) throw sequenceConflict(sc, "download", seq, lastSeq);
 
     sc.lastActivity(LocalDateTime.now(ZoneId.systemDefault()));
-    val result = readTarget(sc);
+
+    sc.downloadInFlight().set(true);
+    val result =
+        Try.of(() -> readTarget(sc)).andFinallyTry(() -> sc.downloadInFlight().set(false)).get();
+
     sc.lastDownloadResult().set(result);
     sc.lastDownloadSeq().set(seq);
     sc.lastActivity(LocalDateTime.now(ZoneId.systemDefault()));
@@ -328,8 +337,9 @@ public class Soht2Service {
   }
 
   /**
-   * Reads the target with the short socket timeout until data is read, the target closes, the hold
-   * timeout elapses, or the connection is closed by another thread.
+   * Blocks on the target read for the remaining hold time until data is read, the target closes,
+   * the hold timeout elapses, or the connection is closed by another thread (which releases the
+   * blocked read with an exception).
    */
   @SuppressWarnings({"java:S3776"})
   private DownloadResult readTarget(ServerConnection sc) {
@@ -340,12 +350,15 @@ public class Soht2Service {
     while (true) {
       if (!sc.isOpened()) throw gone(connectionIdMsg(id));
 
+      val remainingNanos = deadline - System.nanoTime();
+      if (remainingNanos <= 0) return DownloadResult.EMPTY;
+
       final int bufferLen;
       try {
-        bufferLen = sc.inputStream().read(buffer);
+        sc.soTimeout((int) Math.max(1, TimeUnit.NANOSECONDS.toMillis(remainingNanos)));
+        bufferLen = readAvailable(sc.inputStream(), buffer, sc.inputStream().read(buffer));
       } catch (SocketTimeoutException e) {
         sc.lastActivity(LocalDateTime.now(ZoneId.systemDefault()));
-        if (System.nanoTime() - deadline >= 0) return DownloadResult.EMPTY;
         continue;
       } catch (IOException e) {
         if (!sc.isOpened()) throw gone(connectionIdMsg(id));
@@ -407,6 +420,8 @@ public class Soht2Service {
     val ttl = soht2ServerConfig.getAbandonedConnections().getTimeout();
     connections.values().stream()
         .filter(ServerConnection::isOpened)
+        // a held download is live activity even if it has not touched the connection for a while
+        .filter(sc -> !sc.downloadInFlight().get())
         .peek(sc ->
             log.atDebug()
                 .setMessage("closeAbandonedConnections: id={}, age={}/{}")

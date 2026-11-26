@@ -156,6 +156,37 @@ class ConnectionControllerTest {
   }
 
   @SuppressWarnings("resource")
+  @ParameterizedTest
+  @ValueSource(strings = {"connect-refused", "connect-timeout"})
+  void open_targetConnectFailure_propagatesSameWay(String failure) {
+    val cause =
+        "connect-timeout".equals(failure)
+            ? new java.net.SocketTimeoutException("Connect timed out")
+            : new java.net.ConnectException("Connection refused");
+    doReturn(true)
+        .when(soht2Service)
+        .isTargetAllowed(any(Authentication.class), anyString(), anyInt());
+    doAnswer(
+            inv -> {
+              throw cause;
+            })
+        .when(soht2Service)
+        .open(any(Soht2Connection.class), any(Authentication.class));
+
+    val result =
+        Try.of(() ->
+            mockMvc.perform(
+                post("/api/connection")
+                    .header("X-SOHT2-Client", "soht2-client")
+                    .queryParam("host", "targetHost")
+                    .queryParam("port", "12345")));
+
+    // not mapped by the application: the servlet container answers 500 for both failures
+    assertThat(result.isFailure()).isTrue();
+    assertThat(result.getCause()).hasRootCauseInstanceOf(cause.getClass());
+  }
+
+  @SuppressWarnings("resource")
   @Test
   void open_withNonBrowserClientHeader_OK() throws Exception {
     val randomUUID = UUID.randomUUID();

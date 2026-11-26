@@ -10,6 +10,7 @@ import static org.mockito.Mockito.doReturn;
 
 import io.vavr.control.Try;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -38,6 +39,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.server.ResponseStatusException;
 
 @SuppressWarnings("java:S2925")
@@ -57,6 +59,7 @@ class Soht2ServiceTest {
   int bufferSize;
   Authentication authentication;
   Duration downloadHoldTimeout;
+  Duration abandonedTimeout;
 
   @BeforeEach
   void beforeEach() {
@@ -64,6 +67,7 @@ class Soht2ServiceTest {
     bufferSize = (int) soht2ServerConfig.getReadBufferSize().toBytes();
     authentication = SecurityContextHolder.getContext().getAuthentication();
     downloadHoldTimeout = soht2ServerConfig.getDownloadHoldTimeout();
+    abandonedTimeout = soht2ServerConfig.getAbandonedConnections().getTimeout();
 
     doReturn(Optional.of(UserEntity.builder().name("system").role(UserEntity.ROLE_ADMIN).build()))
         .when(soht2UserService)
@@ -73,6 +77,7 @@ class Soht2ServiceTest {
   @AfterEach
   void afterEach() {
     soht2ServerConfig.setDownloadHoldTimeout(downloadHoldTimeout);
+    soht2ServerConfig.getAbandonedConnections().setTimeout(abandonedTimeout);
   }
 
   @Test
@@ -409,6 +414,124 @@ class Soht2ServiceTest {
     }
   }
 
+  @Test
+  void testExchange_afterHeldDownloadUsesShortReadTimeout() {
+    soht2ServerConfig.setDownloadHoldTimeout(Duration.ofMillis(800));
+    try (val ignored = echoServer();
+        val sc = openConnection()) {
+      val id = sc.soht2().id();
+      assertThat(soht2Service.download(id, 1).get().isEmpty()).isTrue();
+
+      // the hold left a long socket timeout; a simple exchange must restore socket-read-timeout
+      val start = System.nanoTime();
+      assertThat(soht2Service.exchange(id, null, null).get()).isEmpty();
+      assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofMillis(600));
+    }
+  }
+
+  @Test
+  void testCloseAbandoned_keepsConnectionWithHeldDownload() throws Exception {
+    soht2ServerConfig.setDownloadHoldTimeout(Duration.ofSeconds(3));
+    soht2ServerConfig.getAbandonedConnections().setTimeout(Duration.ofMillis(200));
+    try (val ignored = echoServer();
+        val sc = openConnection()) {
+      val id = sc.soht2().id();
+      val held = CompletableFuture.supplyAsync(() -> soht2Service.download(id, 1));
+      Thread.sleep(600);
+      assertThat(sc.downloadInFlight().get()).isTrue();
+      assertThat(sc.activityAge()).isGreaterThanOrEqualTo(Duration.ofMillis(200));
+
+      soht2Service.closeAbandonedConnections();
+      assertThat(sc.isOpened()).isTrue();
+
+      val data = "still here".getBytes(StandardCharsets.UTF_8);
+      assertThat(soht2Service.upload(id, 1, data, null).isSuccess()).isTrue();
+      assertThat(held.get(2, TimeUnit.SECONDS).get().data()).isEqualTo(data);
+      assertThat(sc.downloadInFlight().get()).isFalse();
+    }
+  }
+
+  @Test
+  void testCloseAbandoned_closesIdleConnection() throws Exception {
+    soht2ServerConfig.getAbandonedConnections().setTimeout(Duration.ofMillis(200));
+    try (val ignored = echoServer();
+        val sc = openConnection()) {
+      Thread.sleep(400);
+      soht2Service.closeAbandonedConnections();
+      assertThat(sc.isOpened()).isFalse();
+    }
+  }
+
+  @Test
+  void testDownload_coalescesBurstIntoOnePayload() throws Exception {
+    val readBufferSize = soht2ServerConfig.getReadBufferSize();
+    soht2ServerConfig.setReadBufferSize(DataSize.ofKilobytes(64));
+    val chunks = List.of(createBinData(10240), createBinData(10240), createBinData(10240));
+    val expected = new ByteArrayOutputStream();
+    for (val c : chunks) expected.write(c);
+    try (val serverSocket = new ServerSocket(PORT_NUMBER);
+        val sc = openConnection()) {
+      try (val target = serverSocket.accept()) {
+        for (val c : chunks) {
+          target.getOutputStream().write(c);
+          target.getOutputStream().flush();
+        }
+        Thread.sleep(200);
+        val result = soht2Service.download(sc.soht2().id(), 1).get();
+        assertThat(result.data()).isEqualTo(expected.toByteArray());
+      }
+    } finally {
+      soht2ServerConfig.setReadBufferSize(readBufferSize);
+    }
+  }
+
+  @Test
+  void testDownload_payloadNeverExceedsReadBufferSize() throws Exception {
+    val data = createBinData(bufferSize * 3 + 123);
+    try (val serverSocket = new ServerSocket(PORT_NUMBER);
+        val sc = openConnection()) {
+      try (val target = serverSocket.accept()) {
+        target.getOutputStream().write(data);
+        target.getOutputStream().flush();
+        Thread.sleep(200);
+        val id = sc.soht2().id();
+        val received = new ByteArrayOutputStream();
+        for (long seq = 1; received.size() < data.length; seq++) {
+          val payload = soht2Service.download(id, seq).get().data();
+          assertThat(payload.length).isLessThanOrEqualTo(bufferSize);
+          received.write(payload);
+        }
+        assertThat(received.toByteArray()).isEqualTo(data);
+      }
+    }
+  }
+
+  @Test
+  void testOpen_setsTcpNoDelay() {
+    try (val ignored = echoServer();
+        val sc = openConnection()) {
+      assertThat(sc.isTcpNoDelay()).isTrue();
+    }
+  }
+
+  @Test
+  void testOpen_unreachableTargetFailsWithinConnectTimeout() {
+    val connectTimeout = soht2ServerConfig.getTargetConnectTimeout();
+    soht2ServerConfig.setTargetConnectTimeout(Duration.ofSeconds(1));
+    try {
+      val start = System.nanoTime();
+      // a non-routable address: connection attempts are silently dropped (or rejected at once)
+      val result = Try.of(() -> openConnection("10.255.255.1", PORT_NUMBER));
+      val elapsed = Duration.ofNanos(System.nanoTime() - start);
+      assertThat(result.isFailure()).isTrue();
+      assertThat(result.getCause()).isInstanceOf(IOException.class);
+      assertThat(elapsed).isLessThan(Duration.ofSeconds(3));
+      assertThat(soht2Service.list(authentication)).isEmpty();
+    } finally {
+      soht2ServerConfig.setTargetConnectTimeout(connectTimeout);
+    }
+  }
+
   EchoServer echoServer() {
     return EchoServer.builder()
         .portNumber(PORT_NUMBER)
@@ -418,12 +541,17 @@ class Soht2ServiceTest {
   }
 
   ServerConnection openConnection() {
+    return openConnection("localhost", PORT_NUMBER);
+  }
+
+  @SuppressWarnings("SameParameterValue")
+  ServerConnection openConnection(String targetHost, int targetPort) {
     return soht2Service.open(
         Soht2Connection.builder()
             .user(Soht2User.builder().username("system").build())
             .clientHost("localhost")
-            .targetHost("localhost")
-            .targetPort(PORT_NUMBER)
+            .targetHost(targetHost)
+            .targetPort(targetPort)
             .build(),
         authentication);
   }

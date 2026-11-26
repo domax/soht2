@@ -7,11 +7,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.github.benmanes.caffeine.cache.Ticker;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.IntStream;
 import lombok.val;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -133,5 +138,44 @@ class CachingAuthenticationProviderTest {
     provider.authenticate(token("user", "secret"));
 
     verify(passwordEncoder, times(2)).matches(any(), any());
+  }
+
+  /** The fingerprint as computed before {@code Mac} reuse: a new, initialized instance per call. */
+  private byte[] referenceFingerprint(String key, String password) throws Exception {
+    val mac = javax.crypto.Mac.getInstance("HmacSHA256");
+    mac.init(provider.processKey);
+    return mac.doFinal((key + ':' + password).getBytes(StandardCharsets.UTF_8));
+  }
+
+  @Test
+  void fingerprint_matchesFreshMacForFixedInputs() throws Exception {
+    for (val input : List.of("user:secret", "admin:p@ss:word", ":", "üser:пароль")) {
+      val sep = input.indexOf(':');
+      val key = input.substring(0, sep);
+      val password = input.substring(sep + 1);
+      assertThat(provider.fingerprint(key, password))
+          .isEqualTo(referenceFingerprint(key, password))
+          // repeated calls on the reused prototype are not affected by earlier ones
+          .isEqualTo(provider.fingerprint(key, password));
+    }
+  }
+
+  @Test
+  void fingerprint_isThreadSafe() throws Exception {
+    val expected = new HashMap<String, byte[]>();
+    for (int i = 0; i < 16; i++)
+      expected.put("user" + i, referenceFingerprint("user" + i, "pw" + i));
+    try (val executor = Executors.newVirtualThreadPerTaskExecutor()) {
+      val futures =
+          IntStream.range(0, 2000)
+              .mapToObj(n ->
+                  executor.submit(() -> {
+                    val i = n % 16;
+                    return Arrays.equals(
+                        provider.fingerprint("user" + i, "pw" + i), expected.get("user" + i));
+                  }))
+              .toList();
+      for (val f : futures) assertThat(f.get()).isTrue();
+    }
   }
 }

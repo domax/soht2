@@ -26,6 +26,8 @@ public class EchoServer implements Closeable, Runnable {
   @Getter private final int bufferSize;
 
   private final AtomicBoolean isRunning;
+  private final AtomicBoolean isStopped;
+  private final ServerSocket serverSocket;
   private final CompletableFuture<Void> future;
 
   @Builder
@@ -35,6 +37,9 @@ public class EchoServer implements Closeable, Runnable {
     this.socketTimeout = socketTimeout;
     this.bufferSize = bufferSize;
     isRunning = new AtomicBoolean();
+    isStopped = new AtomicBoolean();
+    // bound before returning, so a connection attempt right after the build is never refused
+    serverSocket = new ServerSocket(portNumber);
     future = runAsync(this);
     log.info("EchoServer: portNumber={}", portNumber);
   }
@@ -42,23 +47,26 @@ public class EchoServer implements Closeable, Runnable {
   @SneakyThrows
   @Override
   public void run() {
-    try (val serverSocket = new ServerSocket(portNumber);
+    try (serverSocket;
         val clientSocket = serverSocket.accept();
         val out = clientSocket.getOutputStream();
         val in = clientSocket.getInputStream()) {
       clientSocket.setSoTimeout(socketTimeout);
       isRunning.set(true);
-      while (isRunning.get()) {
-        val buffer = new byte[bufferSize];
-        final IntSupplier readBuffer =
-            () -> Try.of(() -> in.read(buffer)).recover(SocketTimeoutException.class, 0).get();
+      val buffer = new byte[bufferSize];
+      final IntSupplier readBuffer =
+          () -> Try.of(() -> in.read(buffer)).recover(SocketTimeoutException.class, 0).get();
+      while (!isStopped.get()) {
         int bufferLen;
         while ((bufferLen = readBuffer.getAsInt()) > 0) {
           log.info("EchoServer <->: {}", bufferLen);
           out.write(buffer, 0, bufferLen);
           out.flush();
         }
+        if (bufferLen < 0) break;
       }
+    } finally {
+      isRunning.set(false);
     }
   }
 
@@ -66,11 +74,12 @@ public class EchoServer implements Closeable, Runnable {
     return isRunning.get();
   }
 
-  @SneakyThrows
   @Override
   public void close() {
-    isRunning.set(false);
-    if (!future.isDone()) future.join();
+    isStopped.set(true);
+    // releases a pending accept when no client has connected
+    Try.run(serverSocket::close);
+    Try.run(future::join);
     log.info("EchoServer: stopped");
   }
 }

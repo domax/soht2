@@ -3,9 +3,11 @@ package net.soht2.server.service;
 
 import io.vavr.control.Try;
 import java.io.Closeable;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -22,6 +24,7 @@ import lombok.Getter;
 import lombok.Value;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import net.soht2.common.dto.Soht2Connection;
 
 /**
@@ -64,6 +67,9 @@ public class ServerConnection implements Closeable {
   /** Whether the target has closed its side of the connection (end-of-stream was read). */
   AtomicBoolean targetEof = new AtomicBoolean();
 
+  /** Whether a duplex download is currently held on the target read. */
+  AtomicBoolean downloadInFlight = new AtomicBoolean();
+
   @Getter(AccessLevel.NONE)
   AtomicReference<LocalDateTime> lastActivity =
       new AtomicReference<>(LocalDateTime.now(ZoneId.systemDefault()));
@@ -81,15 +87,18 @@ public class ServerConnection implements Closeable {
   private ServerConnection(
       Soht2Connection soht2,
       int socketTimeout,
+      int connectTimeout,
       int readBufferSize,
       Consumer<ServerConnection> postCloseAction) {
     log.debug("new: connection={}", soht2);
     this.soht2 = new AtomicReference<>(soht2);
     socket =
         Try.of(() -> InetAddress.getByName(soht2.targetHost()))
-            .mapTry(inet -> new Socket(inet, soht2.targetPort()))
+            .mapTry(
+                inet -> connect(new InetSocketAddress(inet, soht2.targetPort()), connectTimeout))
             .andThenTry(s -> s.setSoTimeout(socketTimeout))
             .andThenTry(s -> s.setKeepAlive(true))
+            .andThenTry(s -> s.setTcpNoDelay(true))
             .get();
     log.debug("new: socket={}", socket);
     inputStream = Try.of(socket::getInputStream).get();
@@ -97,6 +106,33 @@ public class ServerConnection implements Closeable {
     readBuffer = new byte[readBufferSize];
     this.postCloseAction = postCloseAction;
     isOpened.set(true);
+  }
+
+  private static Socket connect(InetSocketAddress address, int connectTimeout) {
+    val socket = new Socket();
+    return Try.run(() -> socket.connect(address, connectTimeout))
+        .mapTo(socket)
+        .onFailure(IOException.class, e -> Try.run(socket::close))
+        .get();
+  }
+
+  /**
+   * Checks whether Nagle's algorithm is disabled on the target socket.
+   *
+   * @return {@code true} if {@code TCP_NODELAY} is enabled on the target socket
+   */
+  public boolean isTcpNoDelay() {
+    return Try.of(socket::getTcpNoDelay).getOrElse(false);
+  }
+
+  /**
+   * Sets the read timeout of the target socket. Callers must hold {@link #readLock()}.
+   *
+   * @param timeoutMillis the read timeout in milliseconds; must be positive
+   * @throws java.net.SocketException if the socket is closed
+   */
+  public void soTimeout(int timeoutMillis) throws java.net.SocketException {
+    socket.setSoTimeout(timeoutMillis);
   }
 
   public Soht2Connection soht2() {

@@ -54,6 +54,29 @@ class Soht2ServerConfigTest {
   }
 
   @Test
+  void targetConnectTimeout_default() {
+    assertThat(new Soht2ServerConfig().getTargetConnectTimeout()).isEqualTo(Duration.ofSeconds(10));
+  }
+
+  @Test
+  void targetConnectTimeout_binding() {
+    val source =
+        new MapConfigurationPropertySource(Map.of("soht2.server.target-connect-timeout", "PT2S"));
+    val config = new Binder(source).bind("soht2.server", Soht2ServerConfig.class).get();
+    assertThat(config.getTargetConnectTimeout()).isEqualTo(Duration.ofSeconds(2));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"PT0S", "-PT1S"})
+  void afterPropertiesSet_nonPositive_targetConnectTimeout(String value) {
+    val config = validConfig();
+    config.setTargetConnectTimeout(Duration.parse(value));
+    assertThatIllegalArgumentException()
+        .isThrownBy(config::afterPropertiesSet)
+        .withMessageContaining("soht2.server.target-connect-timeout");
+  }
+
+  @Test
   void maxRequestSize_default() {
     assertThat(new Soht2ServerConfig().getMaxRequestSize()).isEqualTo(DataSize.ofMegabytes(4));
   }
