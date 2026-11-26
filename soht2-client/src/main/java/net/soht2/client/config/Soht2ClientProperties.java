@@ -120,7 +120,10 @@ public class Soht2ClientProperties implements InitializingBean {
   public enum ProxyAuth {
     /** Basic authentication scheme. */
     BASIC,
-    /** NTLM authentication scheme. */
+    /**
+     * NTLM authentication scheme. It is deprecated upstream by Apache HttpClient 5 and may be
+     * removed in a future release; prefer {@link #BASIC} where the proxy allows it.
+     */
     NTLM
   }
 
@@ -197,8 +200,9 @@ public class Soht2ClientProperties implements InitializingBean {
   private Duration disconnectOnIdleTimeout = Duration.ZERO;
 
   /**
-   * The maximum number of concurrent HTTP connections to the SOHT2 server. It is applied to the
-   * HTTP client used in proxy and SSL-verification-disabled modes.
+   * The maximum number of concurrent HTTP connections to the SOHT2 server (both in total and per
+   * route). It is applied to the HTTP client in every mode: direct, proxy, and SSL verification
+   * disabled.
    */
   private int maxHttpConnections = 100;
 

@@ -161,7 +161,7 @@ Both the client and server components can be run using Java, so on both sides yo
         domain: ${PROXY_DOMAIN}       # Optional, only if NTLM proxy requires domain name
       disable-ssl-verification: false # Disable SSL verification for the connections
       disconnect-on-idle-timeout: P0D # Timeout for closing idle connections; P0D means never
-      max-http-connections: 100       # Max concurrent HTTP connections to the server
+      max-http-connections: 100       # Max concurrent HTTP connections to the server (any mode)
     ```
    You have to define `soht2.client.url` and at least one connection in the
    `soht2.client.connections` list. All the rest of properties are optional.
@@ -172,7 +172,13 @@ Both the client and server components can be run using Java, so on both sides yo
    [client tips](doc/tips-client.md#local-bind-address).
 
    If you want to use an HTTP proxy, you can define the `soht2.client.proxy` section with
-   appropriate values.
+   appropriate values. _NTLM proxy authentication is deprecated upstream by Apache HttpClient 5;
+   prefer `basic` where the proxy allows it._
+
+   The client always talks to the server through Apache HttpClient 5, so
+   `soht2.client.max-http-connections` (pool size, total and per route) and
+   `spring.http.clients.read-timeout` apply in every mode: direct, through an HTTP proxy, and with
+   `disable-ssl-verification`.
 
    The client automatically sends `X-SOHT2-Client: soht2-client` on tunnel requests so it can
    operate with the server's browser CSRF protection. Do not remove or override this header when

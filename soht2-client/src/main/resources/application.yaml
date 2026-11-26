@@ -22,6 +22,8 @@ spring:
   # A duplex download is held by the server for up to soht2.server.download-hold-timeout (25s by
   # default), so the read timeout of the default HTTP client must be longer than that.
   http.clients.read-timeout: PT60S
+  # Apache HttpClient 5 is the only transport; HttpClientConfig customizes it for every mode.
+  http.clients.imperative.factory: http-components
 
 logging.level:
   root: info
