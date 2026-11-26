@@ -1,6 +1,6 @@
 <!doctype html>
-<!--suppress HtmlUnknownTarget -->
-<html lang="en">
+<!--suppress HtmlUnknownTarget, ThymeleafObsoleteInlineAttributeInspection -->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8"/>
   <link rel="manifest" href="./manifest.json" />
@@ -22,7 +22,7 @@
   <meta name="theme-color" content="#2B507F">
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SOHT2 Server</title>
-  <script>
+  <script th:inline="javascript">
     globalThis.__CONTEXT_PATH__ = /*[[${contextPath}]]*/ '/';
     globalThis.__SWAGGER_URL__ = /*[[${swaggerUrl}]]*/ '';
   </script>

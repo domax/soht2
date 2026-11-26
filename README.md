@@ -86,7 +86,7 @@ Both the client and server components can be run using Java, so on both sides yo
     soht2.server:
       socket-read-timeout: PT0.1S                  # Timeout for socket read operations
       read-buffer-size: 1MB                        # Size of the read buffer for socket connections
-      max-request-size: 4MB                        # Max tunnel request body (received and decompressed)
+      max-request-size: 4MB                        # Max request body (received and decompressed)
       user-cache-ttl: PT10M                        # TTL for user and verified-credential cache
       database-path: ./soht2                       # Path to the database file
       admin-username: "${SOHT2_USR}"               # Username for the admin user
