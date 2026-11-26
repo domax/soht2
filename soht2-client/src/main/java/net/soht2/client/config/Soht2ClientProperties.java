@@ -52,6 +52,12 @@ public class Soht2ClientProperties implements InitializingBean {
 
     /** The port number on the remote machine to connect to. */
     private int remotePort;
+
+    /**
+     * Compression of tunnel requests for this connection. Defaults to no compression, which suits
+     * encrypted or already compressed traffic (e.g. SSH, TLS).
+     */
+    private CompressionProperties compression = new CompressionProperties();
   }
 
   /** Defines the strategy for polling the server for updates. */
@@ -65,10 +71,11 @@ public class Soht2ClientProperties implements InitializingBean {
   }
 
   /**
-   * Properties for request compression.
+   * Properties for request compression of a single connection.
    *
    * <p>This class holds the properties related to request compression, including what is a
-   * compression type, and the minimum request size for compression to be applied.
+   * compression type, and the minimum request size for compression to be applied. They are set per
+   * connection in {@code soht2.client.connections[].compression}.
    */
   @Data
   public static class CompressionProperties {
@@ -146,9 +153,6 @@ public class Soht2ClientProperties implements InitializingBean {
   /** The list of host properties for connections to be established. */
   private Set<HostProperties> connections = new HashSet<>();
 
-  /** Properties for compression of requests. */
-  private CompressionProperties compression = new CompressionProperties();
-
   /** The transport used to tunnel sessions: {@code duplex} (default) or {@code simple}. */
   private TransportType transport = TransportType.DUPLEX;
 
@@ -192,7 +196,22 @@ public class Soht2ClientProperties implements InitializingBean {
         "soht2.client.disconnect-on-idle-timeout must not be negative");
     Assert.isTrue(
         maxHttpConnections >= 1, "soht2.client.max-http-connections must be greater than 0");
-    connections.forEach(c -> validateLocalHost(c.getLocalHost()));
+    connections.forEach(c -> {
+      validateLocalHost(c.getLocalHost());
+      validateCompression(c.getCompression());
+    });
+  }
+
+  private static void validateCompression(CompressionProperties compression) {
+    Assert.notNull(compression, "soht2.client.connections[].compression must not be null");
+    Assert.notNull(
+        compression.getType(), "soht2.client.connections[].compression.type must not be null");
+    Assert.notNull(
+        compression.getMinRequestSize(),
+        "soht2.client.connections[].compression.min-request-size must not be null");
+    Assert.isTrue(
+        !compression.getMinRequestSize().isNegative(),
+        "soht2.client.connections[].compression.min-request-size must not be negative");
   }
 
   @SuppressWarnings("ResultOfMethodCallIgnored")

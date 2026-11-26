@@ -33,9 +33,6 @@ soht2.client:
   transport: duplex
   socket-read-timeout: PT0.1S
   read-buffer-size: 1MB
-  compression:
-    type: none
-    min-request-size: 2KB
   poll:
     strategy: exponent
     initial-delay: PT0.1S

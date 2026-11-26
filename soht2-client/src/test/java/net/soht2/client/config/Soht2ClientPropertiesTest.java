@@ -10,7 +10,9 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.Map;
 import lombok.val;
+import net.soht2.client.config.Soht2ClientProperties.CompressionProperties;
 import net.soht2.client.config.Soht2ClientProperties.HostProperties;
+import net.soht2.common.compress.CompressionType;
 import net.soht2.common.dto.Soht2Protocol.TransportType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -18,6 +20,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.boot.context.properties.bind.BindException;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
+import org.springframework.util.unit.DataSize;
 
 class Soht2ClientPropertiesTest {
 
@@ -116,5 +119,81 @@ class Soht2ClientPropertiesTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("local-host")
         .hasMessageContaining("no-such-host.invalid");
+  }
+
+  @Test
+  void compression_default() {
+    val compression = new HostProperties().getCompression();
+    assertThat(compression.getType()).isEqualTo(CompressionType.NONE);
+    assertThat(compression.getMinRequestSize()).isEqualTo(DataSize.ofKilobytes(2));
+  }
+
+  @Test
+  void compression_binding() {
+    val source =
+        new MapConfigurationPropertySource(
+            Map.of(
+                "soht2.client.connections[0].local-port", "2222",
+                "soht2.client.connections[0].compression.type", "gzip",
+                "soht2.client.connections[0].compression.min-request-size", "4KB"));
+    val props = new Binder(source).bind("soht2.client", Soht2ClientProperties.class).get();
+    assertThat(props.getConnections())
+        .singleElement()
+        .extracting(HostProperties::getCompression)
+        .satisfies(c -> {
+          assertThat(c.getType()).isEqualTo(CompressionType.GZIP);
+          assertThat(c.getMinRequestSize()).isEqualTo(DataSize.ofKilobytes(4));
+        });
+  }
+
+  @Test
+  void compression_partial_binding_keeps_default_min_request_size() {
+    val source =
+        new MapConfigurationPropertySource(
+            Map.of(
+                "soht2.client.connections[0].local-port", "2222",
+                "soht2.client.connections[0].compression.type", "gzip"));
+    val props = new Binder(source).bind("soht2.client", Soht2ClientProperties.class).get();
+    assertThat(props.getConnections())
+        .singleElement()
+        .extracting(HostProperties::getCompression)
+        .satisfies(c -> {
+          assertThat(c.getType()).isEqualTo(CompressionType.GZIP);
+          assertThat(c.getMinRequestSize()).isEqualTo(DataSize.ofKilobytes(2));
+        });
+  }
+
+  @Test
+  void compression_legacy_top_level_key_is_ignored() {
+    val source =
+        new MapConfigurationPropertySource(
+            Map.of(
+                "soht2.client.compression.type", "gzip",
+                "soht2.client.connections[0].local-port", "2222"));
+    val props = new Binder(source).bind("soht2.client", Soht2ClientProperties.class).get();
+    assertThat(props.getConnections())
+        .singleElement()
+        .extracting(h -> h.getCompression().getType())
+        .isEqualTo(CompressionType.NONE);
+  }
+
+  @Test
+  void afterPropertiesSet_null_compression() {
+    val props = validProperties();
+    props.getConnections().iterator().next().setCompression(null);
+    assertThatThrownBy(props::afterPropertiesSet)
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("soht2.client.connections[].compression");
+  }
+
+  @Test
+  void afterPropertiesSet_negative_min_request_size() {
+    val props = validProperties();
+    val compression = new CompressionProperties();
+    compression.setMinRequestSize(DataSize.ofBytes(-1));
+    props.getConnections().iterator().next().setCompression(compression);
+    assertThatThrownBy(props::afterPropertiesSet)
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("soht2.client.connections[].compression.min-request-size");
   }
 }

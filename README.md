@@ -148,9 +148,9 @@ Both the client and server components can be run using Java, so on both sides yo
         local-port: ${LOCAL_PORT}     # Local port to listen on
         remote-host: ${REMOTE_HOST}   # Remote host to connect to
         remote-port: ${REMOTE_PORT}   # Port on a remote host to connect to
-      compression:                    # Compression settings for the connections
-        type: none                    # Compression type for the connections (none, gzip, deflate)
-        min-request-size: 2KB         # Minimum request size to apply compression
+        compression:                  # Compression settings for this connection
+          type: none                  # Compression type (none, gzip, deflate)
+          min-request-size: 2KB       # Minimum request size to apply compression
       poll:                           # Polling settings - used by the simple transport only
         strategy: exponent            # Polling strategy for connections (exponent, linear, fixed)
         initial-delay: PT0.1S         # Initial delay before the first poll retry
@@ -172,6 +172,11 @@ Both the client and server components can be run using Java, so on both sides yo
    applications on the same machine can use the tunnel. To share a tunnel with other hosts or
    containers, set `local-host: 0.0.0.0` (or `::`) on that connection. See
    [client tips](doc/tips-client.md#local-bind-address).
+
+   __Breaking change:__ compression is configured per connection.
+   `soht2.client.compression` moved to `soht2.client.connections[].compression`, and the old
+   top-level key is ignored, so connections that do not set it run without compression. See
+   [client tips](doc/tips-client.md#per-connection-compression).
 
    If you want to use an HTTP proxy, you can define the `soht2.client.proxy` section with
    appropriate values. When `username` is set, the client uses Basic proxy authentication.

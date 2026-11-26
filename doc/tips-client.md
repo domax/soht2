@@ -7,6 +7,7 @@ Tips & Tricks for SOHT2 Client
   * [Create a Client Launcher](#create-a-client-launcher)
   * [Duplex Transport](#duplex-transport)
   * [Local Bind Address](#local-bind-address)
+  * [Per-Connection Compression](#per-connection-compression)
   * [NTLM Proxies](#ntlm-proxies)
   * [See Also](#see-also)
 <!-- TOC -->
@@ -117,6 +118,57 @@ tunnel with your SOHT2 credentials.
   "connection refused". Either connect to `127.0.0.1` explicitly, or set `local-host: ::1` for
   that connection.
 * **Invalid address.** The client fails to start if `local-host` cannot be resolved.
+
+Per-Connection Compression
+--------------------------
+
+Compression is configured separately for each connection
+(`soht2.client.connections[].compression`), because its value depends on the traffic:
+
+* **Encrypted or already compressed streams** (SSH, TLS/HTTPS, RDP, archives, media) gain nothing:
+  their bytes look random, so gzip/deflate cannot shrink them and only cost CPU on both ends.
+  Leave such connections without a `compression` block (the default is `type: none`).
+* **Plain-text protocols** (HTTP, SQL, LDAP, SMTP, etc.) often compress well, so `gzip` may save
+  bandwidth on slow links.
+
+```yaml
+soht2.client.connections:
+- local-port: 2222                  # SSH: no compression (default)
+  remote-host: ${SSH_HOST}
+  remote-port: 22
+- local-port: 8080                  # Plain HTTP: compress requests and responses
+  remote-host: ${HTTP_HOST}
+  remote-port: 80
+  compression:
+    type: gzip                      # none, gzip, deflate
+    min-request-size: 2KB           # Smaller requests are sent uncompressed
+```
+
+With `deflate`, only client requests are compressed; with `gzip`, both client requests and server
+responses are.
+
+__Migration from older versions.__ The top-level `soht2.client.compression` block is no longer used
+and is silently ignored. Move it under each connection that should use compression:
+
+```yaml
+# Before
+soht2.client:
+  compression:
+    type: gzip
+  connections:
+  - local-port: 8080
+    remote-host: ${HTTP_HOST}
+    remote-port: 80
+
+# After
+soht2.client:
+  connections:
+  - local-port: 8080
+    remote-host: ${HTTP_HOST}
+    remote-port: 80
+    compression:
+      type: gzip
+```
 
 NTLM Proxies
 ------------

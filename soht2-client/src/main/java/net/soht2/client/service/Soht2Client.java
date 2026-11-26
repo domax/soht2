@@ -13,7 +13,7 @@ import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import net.soht2.client.config.Soht2ClientProperties;
+import net.soht2.client.config.Soht2ClientProperties.CompressionProperties;
 import net.soht2.common.dto.Soht2Connection;
 import org.jspecify.annotations.Nullable;
 import org.springframework.core.ParameterizedTypeReference;
@@ -45,7 +45,6 @@ public class Soht2Client {
   private static final String PATH_DOWNLOAD_ID = PATH_ID + "/" + PATH_DOWNLOAD;
 
   private final RestClient restClient;
-  private final Soht2ClientProperties soht2ClientProperties;
 
   /**
    * The result of opening a connection.
@@ -175,14 +174,15 @@ public class Soht2Client {
    * Exchanges data with the server using the specified connection ID.
    *
    * @param connectionId the ID of the connection to use for the exchange
+   * @param compression the compression settings of the connection
    * @param data the data to send to the server
    * @return a {@link Try} containing the response bytes if successful, or an error if it fails
    */
   @SuppressWarnings("LoggingSimilarMessage")
-  public Try<byte[]> exchange(UUID connectionId, byte[] data) {
+  public Try<byte[]> exchange(UUID connectionId, CompressionProperties compression, byte[] data) {
     if (log.isTraceEnabled() && data.length > 0)
       log.trace("exchange: id={}, in.length={}", connectionId, data.length);
-    return Try.of(() -> requestExchangeEntity(data))
+    return Try.of(() -> requestExchangeEntity(compression, data))
         .peek(entity ->
             log.atTrace()
                 .setMessage("exchange: id={}, request.headers={}")
@@ -222,18 +222,20 @@ public class Soht2Client {
    *
    * @param connectionId the ID of the connection
    * @param seq the upload sequence number; the next one for a new request, the same one for a retry
+   * @param compression the compression settings of the connection
    * @param data the data to send to the server
    * @return a {@link Try} containing Void if successful, or an error if it fails
    */
   @SuppressWarnings("java:S1905")
-  public Try<Void> upload(UUID connectionId, long seq, byte[] data) {
+  public Try<Void> upload(
+      UUID connectionId, long seq, CompressionProperties compression, byte[] data) {
     log.atTrace()
         .setMessage("upload: id={}, seq={}, in.length={}")
         .addArgument(connectionId)
         .addArgument(seq)
         .addArgument(data.length)
         .log();
-    return Try.of(() -> requestExchangeEntity(data))
+    return Try.of(() -> requestExchangeEntity(compression, data))
         .mapTry(entity ->
             restClient
                 .post()
@@ -261,16 +263,17 @@ public class Soht2Client {
    * @param connectionId the ID of the connection
    * @param seq the download sequence number; the next one for every new request (including after an
    *     empty response), the same one only to retry a request whose response was lost
+   * @param compression the compression settings of the connection
    * @return a {@link Try} containing the {@link Download} if successful, or an error if it fails
    */
-  public Try<Download> download(UUID connectionId, long seq) {
+  public Try<Download> download(UUID connectionId, long seq, CompressionProperties compression) {
     log.trace("download: id={}, seq={}", connectionId, seq);
     return Try.of(() ->
             restClient
                 .get()
                 .uri(PATH_DOWNLOAD_ID, Map.of("id", connectionId))
                 .header(HEADER_SEQ, Long.toString(seq))
-                .header(ACCEPT_ENCODING, acceptEncoding())
+                .header(ACCEPT_ENCODING, acceptEncoding(compression))
                 .exchange((request, response) -> toDownload(response)))
         .onSuccess(d ->
             log.atTrace()
@@ -302,14 +305,12 @@ public class Soht2Client {
     }
   }
 
-  private String acceptEncoding() {
-    return compressorCache
-        .apply(soht2ClientProperties.getCompression().getType().name())
-        .getAcceptEncoding();
+  private static String acceptEncoding(CompressionProperties compression) {
+    return compressorCache.apply(compression.getType().name()).getAcceptEncoding();
   }
 
-  private HttpEntity<byte[]> requestExchangeEntity(byte[] body) {
-    val compression = soht2ClientProperties.getCompression();
+  private static HttpEntity<byte[]> requestExchangeEntity(
+      CompressionProperties compression, byte[] body) {
     val compressor = compressorCache.apply(compression.getType().name());
     val headers = new HttpHeaders();
     headers.set(ACCEPT_ENCODING, compressor.getAcceptEncoding());

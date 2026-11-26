@@ -16,6 +16,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.val;
 import net.soht2.client.config.HttpClientTestSupport.Mode;
+import net.soht2.client.config.Soht2ClientProperties.CompressionProperties;
 import net.soht2.client.service.Soht2Client;
 import net.soht2.client.test.UTHelper;
 import net.soht2.common.compress.CompressionType;
@@ -60,23 +61,30 @@ class HttpCompressionTest {
     httpServer.stop(0);
   }
 
-  private Soht2ClientProperties clientProperties(CompressionType compression) {
+  private Soht2ClientProperties clientProperties() {
     val props = properties(Mode.DIRECT, 5);
     props.setUrl(
         URI.create("http://127.0.0.1:" + httpServer.getAddress().getPort() + "/api/connection"));
-    props.getCompression().setType(compression);
     return props;
   }
 
+  private static CompressionProperties compression(CompressionType type) {
+    val compression = new CompressionProperties();
+    compression.setType(type);
+    return compression;
+  }
+
   @SuppressWarnings("SameParameterValue")
-  private void download(Soht2ClientProperties props, byte[] expected) {
+  private void download(CompressionType type, byte[] expected) {
+    val props = clientProperties();
     contextRunner(props)
         .run(context -> {
           val restClient =
               new Soht2ClientConfig()
                   .restClient(
                       props, RestClient.builder(), context.getBean(ClientHttpRequestFactory.class));
-          val download = new Soht2Client(restClient, props).download(UUID.randomUUID(), 1).get();
+          val download =
+              new Soht2Client(restClient).download(UUID.randomUUID(), 1, compression(type)).get();
           assertThat(download.status()).isEqualTo(Soht2Client.DownloadStatus.DATA);
           assertThat(download.data()).isEqualTo(expected);
         });
@@ -84,21 +92,21 @@ class HttpCompressionTest {
 
   @Test
   void download_noCompression_advertisesIdentityOnly() {
-    download(clientProperties(CompressionType.NONE), DATA);
+    download(CompressionType.NONE, DATA);
     assertThat(acceptEncoding.get()).isEqualTo("identity");
   }
 
   @Test
   void download_gzip_decodesBodyExactlyOnce() {
     responseEncoding.set("gzip");
-    download(clientProperties(CompressionType.GZIP), DATA);
+    download(CompressionType.GZIP, DATA);
     assertThat(acceptEncoding.get()).isEqualTo("gzip");
   }
 
   @Test
   void transport_keepsContentEncodedBody() {
     responseEncoding.set("gzip");
-    val props = clientProperties(CompressionType.GZIP);
+    val props = clientProperties();
     contextRunner(props)
         .run(context -> {
           val response =

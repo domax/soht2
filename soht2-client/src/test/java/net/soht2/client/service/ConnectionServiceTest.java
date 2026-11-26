@@ -29,6 +29,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.val;
 import net.soht2.client.config.Soht2ClientConfig;
 import net.soht2.client.config.Soht2ClientProperties;
@@ -36,6 +37,7 @@ import net.soht2.client.service.Soht2Client.Download;
 import net.soht2.client.service.Soht2Client.OpenResult;
 import net.soht2.client.test.EchoClient;
 import net.soht2.client.test.UTHelper;
+import net.soht2.common.compress.CompressionType;
 import net.soht2.common.dto.Soht2Connection;
 import net.soht2.common.dto.Soht2Protocol.TransportType;
 import org.junit.jupiter.api.*;
@@ -80,7 +82,9 @@ class ConnectionServiceTest {
         .when(soht2Client)
         .open(anyString(), anyInt());
     doReturn(Try.success((Void) null)).when(soht2Client).close(any(UUID.class));
-    doReturn(Try.success((Void) null)).when(soht2Client).upload(any(UUID.class), anyLong(), any());
+    doReturn(Try.success((Void) null))
+        .when(soht2Client)
+        .upload(any(UUID.class), anyLong(), any(), any());
   }
 
   @AfterEach
@@ -109,7 +113,7 @@ class ConnectionServiceTest {
             Try.success(bytesOut2),
             Try.success(bytesEmpty))
         .when(soht2Client)
-        .exchange(any(UUID.class), any());
+        .exchange(any(UUID.class), any(), any());
 
     val socketStarted = new AtomicBoolean();
     connectionService.startConnections(h -> socketStarted.set(true));
@@ -127,8 +131,8 @@ class ConnectionServiceTest {
     }
 
     verify(soht2Client).open(host.getRemoteHost(), host.getRemotePort());
-    verify(soht2Client).exchange(soht2.id(), bytesIn);
-    verify(soht2Client, atLeast(5)).exchange(soht2.id(), bytesEmpty);
+    verify(soht2Client).exchange(eq(soht2.id()), any(), eq(bytesIn));
+    verify(soht2Client, atLeast(5)).exchange(eq(soht2.id()), any(), eq(bytesEmpty));
     verify(soht2Client).close(soht2.id());
   }
 
@@ -140,7 +144,7 @@ class ConnectionServiceTest {
             Try.success(new OpenResult(soht2, false)))
         .when(soht2Client)
         .open(anyString(), anyInt());
-    doReturn(Try.success(bytesEmpty)).when(soht2Client).exchange(any(UUID.class), any());
+    doReturn(Try.success(bytesEmpty)).when(soht2Client).exchange(any(UUID.class), any(), any());
 
     startAndAwait();
 
@@ -198,10 +202,10 @@ class ConnectionServiceTest {
                     .until(() -> release.await(10, TimeUnit.SECONDS));
                 return Try.success(bytesEmpty);
               }
-              return Try.success(inv.<byte[]>getArgument(1));
+              return Try.success(inv.<byte[]>getArgument(2));
             })
         .when(soht2Client)
-        .exchange(any(UUID.class), any());
+        .exchange(any(UUID.class), any(), any());
 
     startAndAwait();
     val bytesIn = UTHelper.createBinData(bufferSize / 2);
@@ -212,7 +216,7 @@ class ConnectionServiceTest {
             .bufferSize(bufferSize)
             .build()) {
       await().until(() -> !connectionService.isSessionClosed(soht2Blocked.id()));
-      verify(soht2Client, timeout(5000)).exchange(eq(soht2Blocked.id()), any());
+      verify(soht2Client, timeout(5000)).exchange(eq(soht2Blocked.id()), any(), any());
 
       try (val activeClient =
           EchoClient.builder()
@@ -244,24 +248,24 @@ class ConnectionServiceTest {
               return Try.success(Download.EMPTY);
             })
         .when(soht2Client)
-        .download(any(UUID.class), anyLong());
+        .download(any(UUID.class), anyLong(), any());
 
     startAndAwait();
     val bytesIn1 = UTHelper.createBinData(100);
     val bytesIn2 = UTHelper.createBinData(200);
     try (val socket = new Socket("localhost", host.getLocalPort())) {
-      verify(soht2Client, timeout(5000)).download(soht2.id(), 1);
+      verify(soht2Client, timeout(5000)).download(eq(soht2.id()), eq(1L), any());
       socket.getOutputStream().write(bytesIn1);
       socket.getOutputStream().flush();
-      verify(soht2Client, timeout(2000)).upload(soht2.id(), 1, bytesIn1);
+      verify(soht2Client, timeout(2000)).upload(eq(soht2.id()), eq(1L), any(), eq(bytesIn1));
       socket.getOutputStream().write(bytesIn2);
       socket.getOutputStream().flush();
-      verify(soht2Client, timeout(2000)).upload(soht2.id(), 2, bytesIn2);
+      verify(soht2Client, timeout(2000)).upload(eq(soht2.id()), eq(2L), any(), eq(bytesIn2));
       assertThat(release.getCount()).isEqualTo(1);
     } finally {
       release.countDown();
     }
-    verify(soht2Client, never()).exchange(any(UUID.class), any());
+    verify(soht2Client, never()).exchange(any(UUID.class), any(), any());
   }
 
   @SuppressWarnings("java:S2925")
@@ -281,7 +285,7 @@ class ConnectionServiceTest {
               return Try.success(Download.EMPTY);
             })
         .when(soht2Client)
-        .download(any(UUID.class), anyLong());
+        .download(any(UUID.class), anyLong(), any());
 
     startAndAwait();
     try (val socket = new Socket("localhost", host.getLocalPort())) {
@@ -289,7 +293,7 @@ class ConnectionServiceTest {
       val started = System.nanoTime();
       assertThat(socket.getInputStream().readNBytes(bytesOut.length)).isEqualTo(bytesOut);
       assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(1));
-      verify(soht2Client, timeout(2000)).download(soht2.id(), 2);
+      verify(soht2Client, timeout(2000)).download(eq(soht2.id()), eq(2L), any());
     }
   }
 
@@ -300,7 +304,7 @@ class ConnectionServiceTest {
     val bytesOut = UTHelper.createBinData(100);
     doReturn(Try.success(Download.of(bytesOut)), Try.success(Download.EOS))
         .when(soht2Client)
-        .download(any(UUID.class), anyLong());
+        .download(any(UUID.class), anyLong(), any());
 
     startAndAwait();
     try (val socket = new Socket("localhost", host.getLocalPort())) {
@@ -333,7 +337,7 @@ class ConnectionServiceTest {
     stubEmptyDownloads();
     doReturn(Try.failure(new IllegalStateException("upload failed")))
         .when(soht2Client)
-        .upload(any(UUID.class), anyLong(), any());
+        .upload(any(UUID.class), anyLong(), any(), any());
 
     startAndAwait();
     try (val socket = new Socket("localhost", host.getLocalPort())) {
@@ -362,7 +366,7 @@ class ConnectionServiceTest {
                       : Download.EMPTY);
             })
         .when(soht2Client)
-        .download(any(UUID.class), anyLong());
+        .download(any(UUID.class), anyLong(), any());
 
     startAndAwait();
     try (val socket = new Socket("localhost", host.getLocalPort())) {
@@ -390,27 +394,27 @@ class ConnectionServiceTest {
   void transport_simpleSettingUsesExchange() throws Exception {
     openDuplex();
     soht2ClientProperties.setTransport(TransportType.SIMPLE);
-    doReturn(Try.success(bytesEmpty)).when(soht2Client).exchange(any(UUID.class), any());
+    doReturn(Try.success(bytesEmpty)).when(soht2Client).exchange(any(UUID.class), any(), any());
 
     startAndAwait();
     try (val ignored = new Socket("localhost", host.getLocalPort())) {
-      verify(soht2Client, timeout(5000).atLeastOnce()).exchange(eq(soht2.id()), any());
+      verify(soht2Client, timeout(5000).atLeastOnce()).exchange(eq(soht2.id()), any(), any());
     }
-    verify(soht2Client, never()).download(any(UUID.class), anyLong());
-    verify(soht2Client, never()).upload(any(UUID.class), anyLong(), any());
+    verify(soht2Client, never()).download(any(UUID.class), anyLong(), any());
+    verify(soht2Client, never()).upload(any(UUID.class), anyLong(), any(), any());
   }
 
   @Test
   @Order(12)
   void transport_missingOpenHeaderFallsBackToExchange() throws Exception {
-    doReturn(Try.success(bytesEmpty)).when(soht2Client).exchange(any(UUID.class), any());
+    doReturn(Try.success(bytesEmpty)).when(soht2Client).exchange(any(UUID.class), any(), any());
 
     startAndAwait();
     try (val ignored = new Socket("localhost", host.getLocalPort())) {
-      verify(soht2Client, timeout(5000).atLeastOnce()).exchange(eq(soht2.id()), any());
+      verify(soht2Client, timeout(5000).atLeastOnce()).exchange(eq(soht2.id()), any(), any());
     }
-    verify(soht2Client, never()).download(any(UUID.class), anyLong());
-    verify(soht2Client, never()).upload(any(UUID.class), anyLong(), any());
+    verify(soht2Client, never()).download(any(UUID.class), anyLong(), any());
+    verify(soht2Client, never()).upload(any(UUID.class), anyLong(), any(), any());
   }
 
   @SuppressWarnings("resource")
@@ -461,7 +465,7 @@ class ConnectionServiceTest {
       val started = System.nanoTime();
       socket.getOutputStream().write(bytesIn);
       socket.getOutputStream().flush();
-      verify(soht2Client, timeout(1000)).upload(soht2.id(), 1, bytesIn);
+      verify(soht2Client, timeout(1000)).upload(eq(soht2.id()), eq(1L), any(), eq(bytesIn));
       assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofMillis(500));
     }
   }
@@ -500,7 +504,7 @@ class ConnectionServiceTest {
               return Try.success(Download.EMPTY);
             })
         .when(soht2Client)
-        .download(any(UUID.class), anyLong());
+        .download(any(UUID.class), anyLong(), any());
   }
 
   private void startAndAwait() {
@@ -548,6 +552,48 @@ class ConnectionServiceTest {
     try (val ignored = new Socket(external.get(), host.getLocalPort())) {
       await().until(() -> !connectionService.isSessionClosed(soht2.id()));
     }
+  }
+
+  @Test
+  @Order(22)
+  void compression_isAppliedPerConnection() throws Exception {
+    val plainHost = newHost(host.getLocalPort() + 1, "ssh-target", CompressionType.NONE);
+    val gzipHost = newHost(host.getLocalPort() + 2, "http-target", CompressionType.GZIP);
+    soht2ClientProperties.setConnections(Set.of(plainHost, gzipHost));
+    val soht2Plain = Soht2Connection.builder().targetHost("ssh-target").targetPort(22).build();
+    val soht2Gzip = Soht2Connection.builder().targetHost("http-target").targetPort(22).build();
+    doReturn(Try.success(new OpenResult(soht2Plain, false)))
+        .when(soht2Client)
+        .open(eq("ssh-target"), anyInt());
+    doReturn(Try.success(new OpenResult(soht2Gzip, false)))
+        .when(soht2Client)
+        .open(eq("http-target"), anyInt());
+    doReturn(Try.success(bytesEmpty)).when(soht2Client).exchange(any(UUID.class), any(), any());
+
+    val socketsStarted = new AtomicInteger();
+    connectionService.startConnections(h -> socketsStarted.incrementAndGet());
+    await().until(() -> socketsStarted.get() == 2);
+    try (val ignored1 = new Socket("127.0.0.1", plainHost.getLocalPort());
+        val ignored2 = new Socket("127.0.0.1", gzipHost.getLocalPort())) {
+      verify(soht2Client, timeout(5000).atLeastOnce())
+          .exchange(eq(soht2Plain.id()), argThat(c -> c.getType() == CompressionType.NONE), any());
+      verify(soht2Client, timeout(5000).atLeastOnce())
+          .exchange(eq(soht2Gzip.id()), argThat(c -> c.getType() == CompressionType.GZIP), any());
+    }
+    verify(soht2Client, never())
+        .exchange(eq(soht2Plain.id()), argThat(c -> c.getType() != CompressionType.NONE), any());
+    verify(soht2Client, never())
+        .exchange(eq(soht2Gzip.id()), argThat(c -> c.getType() != CompressionType.GZIP), any());
+  }
+
+  private static Soht2ClientProperties.HostProperties newHost(
+      int localPort, String remoteHost, CompressionType compressionType) {
+    val newHost = new Soht2ClientProperties.HostProperties();
+    newHost.setLocalPort(localPort);
+    newHost.setRemoteHost(remoteHost);
+    newHost.setRemotePort(22);
+    newHost.getCompression().setType(compressionType);
+    return newHost;
   }
 
   @SuppressWarnings({"unchecked", "resource"})

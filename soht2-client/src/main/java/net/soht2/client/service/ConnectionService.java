@@ -250,7 +250,9 @@ public class ConnectionService {
           .andThen(readSize::set)
           .flatMap(bufferLen ->
               soht2Client.exchange(
-                  connectionId, bufferLen < bufferSize ? Arrays.copyOf(buffer, bufferLen) : buffer))
+                  connectionId,
+                  state.host.getCompression(),
+                  bufferLen < bufferSize ? Arrays.copyOf(buffer, bufferLen) : buffer))
           .flatMapTry(bytes ->
               Optional.of(bytes)
                   .filter(b -> b.length > 0)
@@ -340,6 +342,7 @@ public class ConnectionService {
                       .upload(
                           connectionId,
                           state.uploadSeq.incrementAndGet(),
+                          state.host.getCompression(),
                           bufferLen < bufferSize ? Arrays.copyOf(buffer, bufferLen) : buffer)
                       .map(v -> bufferLen))
           .andThen(bufferLen -> {
@@ -361,7 +364,7 @@ public class ConnectionService {
 
     while (sessions.containsKey(connectionId))
       soht2Client
-          .download(connectionId, state.downloadSeq.incrementAndGet())
+          .download(connectionId, state.downloadSeq.incrementAndGet(), state.host.getCompression())
           .andThenTry(d -> {
             switch (d.status()) {
               case DATA -> {

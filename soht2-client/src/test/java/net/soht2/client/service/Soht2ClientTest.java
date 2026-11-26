@@ -5,6 +5,7 @@ import static net.soht2.common.compress.Compressor.compressorCache;
 import static net.soht2.common.dto.Soht2Protocol.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.springframework.http.HttpHeaders.ACCEPT_ENCODING;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.HttpHeaders.CONTENT_ENCODING;
 import static org.springframework.http.HttpMethod.*;
@@ -15,7 +16,9 @@ import java.util.UUID;
 import lombok.val;
 import net.soht2.client.config.Soht2ClientConfig;
 import net.soht2.client.config.Soht2ClientProperties;
+import net.soht2.client.config.Soht2ClientProperties.CompressionProperties;
 import net.soht2.client.test.UTHelper;
+import net.soht2.common.compress.CompressionType;
 import net.soht2.common.dto.Soht2Connection;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,8 +26,10 @@ import org.springframework.boot.restclient.test.autoconfigure.RestClientTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.client.HttpClientErrorException;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -35,6 +40,8 @@ class Soht2ClientTest {
 
   private static final String CLIENT_HEADER = "X-SOHT2-Client";
   private static final String CLIENT_VALUE = "soht2-client";
+
+  private static final CompressionProperties NO_COMPRESSION = new CompressionProperties();
 
   @Autowired MockRestServiceServer server;
   @Autowired Soht2ClientProperties soht2ClientProperties;
@@ -99,7 +106,69 @@ class Soht2ClientTest {
         .andExpect(content().bytes(bytesIn))
         .andRespond(withNoContent());
 
-    assertThatNoException().isThrownBy(() -> soht2Client.upload(connectionId, 7, bytesIn).get());
+    assertThatNoException()
+        .isThrownBy(() -> soht2Client.upload(connectionId, 7, NO_COMPRESSION, bytesIn).get());
+  }
+
+  private static CompressionProperties gzipCompression() {
+    val compression = new CompressionProperties();
+    compression.setType(CompressionType.GZIP);
+    compression.setMinRequestSize(DataSize.ofKilobytes(2));
+    return compression;
+  }
+
+  @Test
+  void upload_gzip_aboveThreshold_compressesBody() {
+    val connectionId = UUID.randomUUID();
+    val bytesIn = UTHelper.createBinData(4096);
+    val gzip = compressorCache.apply("gzip");
+
+    server
+        .expect(requestTo(soht2ClientProperties.getUrl() + "/" + connectionId + "/upload"))
+        .andExpect(header(ACCEPT_ENCODING, "gzip"))
+        .andExpect(header(CONTENT_ENCODING, "gzip"))
+        .andExpect(request ->
+            assertThat(gzip.decompress(((MockClientHttpRequest) request).getBodyAsBytes()))
+                .isEqualTo(bytesIn))
+        .andRespond(withNoContent());
+
+    assertThatNoException()
+        .isThrownBy(() -> soht2Client.upload(connectionId, 1, gzipCompression(), bytesIn).get());
+  }
+
+  @Test
+  void upload_gzip_belowThreshold_sendsPlainBody() {
+    val connectionId = UUID.randomUUID();
+    val bytesIn = UTHelper.createBinData(1024);
+
+    server
+        .expect(requestTo(soht2ClientProperties.getUrl() + "/" + connectionId + "/upload"))
+        .andExpect(header(ACCEPT_ENCODING, "gzip"))
+        .andExpect(headerDoesNotExist(CONTENT_ENCODING))
+        .andExpect(content().bytes(bytesIn))
+        .andRespond(withNoContent());
+
+    assertThatNoException()
+        .isThrownBy(() -> soht2Client.upload(connectionId, 1, gzipCompression(), bytesIn).get());
+  }
+
+  @Test
+  void download_acceptEncoding_followsPerCallCompression() {
+    val connectionId = UUID.randomUUID();
+
+    server
+        .expect(requestTo(soht2ClientProperties.getUrl() + "/" + connectionId + "/download"))
+        .andExpect(header(ACCEPT_ENCODING, "gzip"))
+        .andRespond(withNoContent());
+    server
+        .expect(requestTo(soht2ClientProperties.getUrl() + "/" + connectionId + "/download"))
+        .andExpect(header(ACCEPT_ENCODING, "identity"))
+        .andRespond(withNoContent());
+
+    assertThat(soht2Client.download(connectionId, 1, gzipCompression()).get())
+        .isEqualTo(Soht2Client.Download.EMPTY);
+    assertThat(soht2Client.download(connectionId, 2, NO_COMPRESSION).get())
+        .isEqualTo(Soht2Client.Download.EMPTY);
   }
 
   @Test
@@ -110,7 +179,8 @@ class Soht2ClientTest {
         .expect(requestTo(soht2ClientProperties.getUrl() + "/" + connectionId + "/upload"))
         .andRespond(withStatus(HttpStatus.CONFLICT));
 
-    assertThat(soht2Client.upload(connectionId, 1, new byte[] {1}).isFailure()).isTrue();
+    assertThat(soht2Client.upload(connectionId, 1, NO_COMPRESSION, new byte[] {1}).isFailure())
+        .isTrue();
   }
 
   @Test
@@ -126,7 +196,7 @@ class Soht2ClientTest {
         .andExpect(header(HEADER_SEQ, "3"))
         .andRespond(withSuccess(bytesOut, MediaType.APPLICATION_OCTET_STREAM));
 
-    val download = soht2Client.download(connectionId, 3).get();
+    val download = soht2Client.download(connectionId, 3, NO_COMPRESSION).get();
     assertThat(download.status()).isEqualTo(Soht2Client.DownloadStatus.DATA);
     assertThat(download.data()).isEqualTo(bytesOut);
   }
@@ -143,7 +213,8 @@ class Soht2ClientTest {
             withSuccess(gzip.compress(bytesOut), MediaType.APPLICATION_OCTET_STREAM)
                 .header(CONTENT_ENCODING, gzip.getContentEncoding()));
 
-    assertThat(soht2Client.download(connectionId, 1).get().data()).isEqualTo(bytesOut);
+    assertThat(soht2Client.download(connectionId, 1, NO_COMPRESSION).get().data())
+        .isEqualTo(bytesOut);
   }
 
   @Test
@@ -154,7 +225,8 @@ class Soht2ClientTest {
         .expect(requestTo(soht2ClientProperties.getUrl() + "/" + connectionId + "/download"))
         .andRespond(withNoContent());
 
-    assertThat(soht2Client.download(connectionId, 1).get()).isEqualTo(Soht2Client.Download.EMPTY);
+    assertThat(soht2Client.download(connectionId, 1, NO_COMPRESSION).get())
+        .isEqualTo(Soht2Client.Download.EMPTY);
   }
 
   @Test
@@ -165,7 +237,8 @@ class Soht2ClientTest {
         .expect(requestTo(soht2ClientProperties.getUrl() + "/" + connectionId + "/download"))
         .andRespond(withStatus(HttpStatus.GONE).header(HEADER_EOS, EOS_VALUE));
 
-    assertThat(soht2Client.download(connectionId, 1).get()).isEqualTo(Soht2Client.Download.EOS);
+    assertThat(soht2Client.download(connectionId, 1, NO_COMPRESSION).get())
+        .isEqualTo(Soht2Client.Download.EOS);
   }
 
   @Test
@@ -176,7 +249,8 @@ class Soht2ClientTest {
         .expect(requestTo(soht2ClientProperties.getUrl() + "/" + connectionId + "/download"))
         .andRespond(withStatus(HttpStatus.GONE));
 
-    assertThat(soht2Client.download(connectionId, 1).get()).isEqualTo(Soht2Client.Download.GONE);
+    assertThat(soht2Client.download(connectionId, 1, NO_COMPRESSION).get())
+        .isEqualTo(Soht2Client.Download.GONE);
   }
 
   @Test
@@ -187,7 +261,7 @@ class Soht2ClientTest {
         .expect(requestTo(soht2ClientProperties.getUrl() + "/" + connectionId + "/download"))
         .andRespond(withStatus(HttpStatus.FORBIDDEN));
 
-    assertThat(soht2Client.download(connectionId, 1).getCause())
+    assertThat(soht2Client.download(connectionId, 1, NO_COMPRESSION).getCause())
         .isInstanceOf(HttpClientErrorException.Forbidden.class);
   }
 
@@ -207,7 +281,8 @@ class Soht2ClientTest {
         .andExpect(content().bytes(bytesIn))
         .andRespond(withSuccess(bytesOut, MediaType.APPLICATION_OCTET_STREAM));
 
-    assertThat(soht2Client.exchange(connectionId, bytesIn).get()).isEqualTo(bytesOut);
+    assertThat(soht2Client.exchange(connectionId, NO_COMPRESSION, bytesIn).get())
+        .isEqualTo(bytesOut);
   }
 
   @Test
