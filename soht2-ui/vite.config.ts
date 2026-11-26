@@ -1,7 +1,7 @@
 /* SOHT2 © Licensed under MIT 2025. */
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import packageJson from './package.json';
+import packageJson from './package.json' with { type: 'json' };
 
 // https://vite.dev/config/
 export default defineConfig({
