@@ -106,27 +106,6 @@ public class Soht2ClientProperties implements InitializingBean {
     private int factor = 5;
   }
 
-  /**
-   * Defines the supported authentication schemes for proxy authentication.
-   *
-   * <ul>
-   *   <li>BASIC - Represents Basic Authentication.
-   *   <li>NTLM - Represents NT LAN Manager (NTLM) Authentication.
-   * </ul>
-   *
-   * This enum is used to specify the type of authentication scheme to be used when configuring the
-   * proxy settings.
-   */
-  public enum ProxyAuth {
-    /** Basic authentication scheme. */
-    BASIC,
-    /**
-     * NTLM authentication scheme. It is deprecated upstream by Apache HttpClient 5 and may be
-     * removed in a future release; prefer {@link #BASIC} where the proxy allows it.
-     */
-    NTLM
-  }
-
   @Data
   public static class ProxyProperties {
     /** The host name or IP address of the proxy server. If omitted, then proxy won't be used. */
@@ -136,8 +115,8 @@ public class Soht2ClientProperties implements InitializingBean {
     private int port = 3128;
 
     /**
-     * The optional username for authentication with the proxy server. If omitted, then a proxy
-     * without authentication will be used.
+     * The optional username for Basic authentication with the proxy server. If omitted, then a
+     * proxy without authentication will be used.
      */
     private String username;
 
@@ -147,12 +126,6 @@ public class Soht2ClientProperties implements InitializingBean {
      * SOHT2_CLIENT_PROXY_PASSWORD instead.
      */
     @ToString.Exclude private String password;
-
-    /** The authentication scheme to be used with the proxy server. */
-    private ProxyAuth auth = ProxyAuth.BASIC;
-
-    /** The domain for NTLM authentication with the proxy server. */
-    private String domain;
   }
 
   /** The URL of the SOHT2 server API. */

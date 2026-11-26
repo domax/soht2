@@ -1,6 +1,7 @@
 /* SOHT2 © Licensed under MIT 2026. */
 package net.soht2.client.config;
 
+import static net.soht2.client.config.HttpClientTestSupport.FACTORY;
 import static net.soht2.client.config.HttpClientTestSupport.contextRunner;
 import static net.soht2.client.config.HttpClientTestSupport.field;
 import static net.soht2.client.config.HttpClientTestSupport.httpClient;
@@ -22,21 +23,24 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
 import lombok.val;
 import net.soht2.client.config.HttpClientTestSupport.Mode;
-import net.soht2.client.config.Soht2ClientProperties.ProxyAuth;
 import org.apache.hc.client5.http.auth.AuthSchemeFactory;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.CredentialsProvider;
-import org.apache.hc.client5.http.auth.NTCredentials;
 import org.apache.hc.client5.http.auth.StandardAuthScheme;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.impl.auth.BasicSchemeFactory;
-import org.apache.hc.client5.http.impl.auth.NTLMSchemeFactory;
 import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.config.Lookup;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.http.client.autoconfigure.HttpClientAutoConfiguration;
+import org.springframework.boot.http.client.autoconfigure.imperative.ImperativeHttpClientAutoConfiguration;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.ResourceAccessException;
@@ -109,12 +113,10 @@ class HttpClientConfigTest {
     if (httpsServer != null) httpsServer.stop(0);
   }
 
-  private static Soht2ClientProperties proxyProperties(ProxyAuth auth) {
+  private static Soht2ClientProperties proxyProperties() {
     val props = properties(Mode.PROXY, 5);
     props.getProxy().setUsername("proxy-user");
     props.getProxy().setPassword("proxy-secret");
-    props.getProxy().setDomain("CORP");
-    props.getProxy().setAuth(auth);
     return props;
   }
 
@@ -123,9 +125,9 @@ class HttpClientConfigTest {
   }
 
   @Test
-  @SuppressWarnings({"unchecked", "deprecation"})
-  void proxyMode_registersBasicAndNtlmAuthSchemes() {
-    contextRunner(proxyProperties(ProxyAuth.BASIC))
+  @SuppressWarnings("unchecked")
+  void proxyMode_registersOnlyBasicAuthScheme() {
+    contextRunner(proxyProperties())
         .run(context -> {
           val client =
               httpClient(
@@ -135,14 +137,13 @@ class HttpClientConfigTest {
           val registry = (Lookup<AuthSchemeFactory>) field(client, "authSchemeRegistry");
           assertThat(registry.lookup(StandardAuthScheme.BASIC))
               .isInstanceOf(BasicSchemeFactory.class);
-          assertThat(registry.lookup(StandardAuthScheme.NTLM))
-              .isInstanceOf(NTLMSchemeFactory.class);
+          assertThat(registry.lookup(StandardAuthScheme.DIGEST)).isNull();
         });
   }
 
   @Test
   void proxyMode_basicAuth_usesUsernamePasswordCredentials() {
-    contextRunner(proxyProperties(ProxyAuth.BASIC))
+    contextRunner(proxyProperties())
         .run(context -> {
           val credentials = proxyCredentials(context.getBean(ClientHttpRequestFactory.class));
           assertThat(credentials).isInstanceOf(UsernamePasswordCredentials.class);
@@ -153,18 +154,49 @@ class HttpClientConfigTest {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
-  void proxyMode_ntlmAuth_usesNtCredentials() {
-    contextRunner(proxyProperties(ProxyAuth.NTLM))
+  void proxyMode_withoutUsername_registersNoCredentials() {
+    contextRunner(properties(Mode.PROXY, 5))
         .run(context -> {
-          val credentials = proxyCredentials(context.getBean(ClientHttpRequestFactory.class));
-          assertThat(credentials).isInstanceOf(NTCredentials.class);
-          val ntlm = (NTCredentials) credentials;
-          assertThat(ntlm.getUserName()).isEqualTo("proxy-user");
-          assertThat(ntlm.getDomain()).isEqualTo("CORP");
-          assertThat(ntlm.getPassword()).isEqualTo("proxy-secret".toCharArray());
+          val client =
+              httpClient(
+                  (HttpComponentsClientHttpRequestFactory)
+                      context.getBean(ClientHttpRequestFactory.class));
+          assertThat(field(field(client, "routePlanner"), "proxy")).isEqualTo(PROXY);
+          assertThat(proxyCredentials(context.getBean(ClientHttpRequestFactory.class))).isNull();
         });
   }
+
+  @Test
+  void proxyMode_legacyAuthAndDomainKeys_areIgnored() {
+    new ApplicationContextRunner()
+        .withConfiguration(
+            AutoConfigurations.of(
+                HttpClientAutoConfiguration.class, ImperativeHttpClientAutoConfiguration.class))
+        .withUserConfiguration(PropertiesConfig.class, HttpClientConfig.class)
+        .withPropertyValues(
+            FACTORY,
+            "soht2.client.username=user",
+            "soht2.client.password=secret",
+            "soht2.client.connections[0].local-port=22222",
+            "soht2.client.connections[0].remote-host=localhost",
+            "soht2.client.connections[0].remote-port=22",
+            "soht2.client.proxy.host=proxy.example",
+            "soht2.client.proxy.username=proxy-user",
+            "soht2.client.proxy.password=proxy-secret",
+            "soht2.client.proxy.auth=ntlm",
+            "soht2.client.proxy.domain=CORP")
+        .run(context -> {
+          assertThat(context).hasNotFailed();
+          val credentials = proxyCredentials(context.getBean(ClientHttpRequestFactory.class));
+          assertThat(credentials).isInstanceOf(UsernamePasswordCredentials.class);
+          assertThat(((UsernamePasswordCredentials) credentials).getUserName())
+              .isEqualTo("proxy-user");
+        });
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  @EnableConfigurationProperties(Soht2ClientProperties.class)
+  static class PropertiesConfig {}
 
   @Test
   void sslDisabled_trustsSelfSignedCertificate() {
@@ -179,6 +211,7 @@ class HttpClientConfigTest {
         });
   }
 
+  @SuppressWarnings("java:S5778")
   @Test
   void sslEnabled_rejectsSelfSignedCertificate() {
     contextRunner(properties(Mode.DIRECT, 5))

@@ -159,10 +159,8 @@ Both the client and server components can be run using Java, so on both sides yo
       proxy:                          # HTTP proxy configuration
         host: ${PROXY_HOST}           # If defined, the client sets up an HTTP proxy to this host
         port: 3128                    # Port of the HTTP proxy host
-        auth: basic                   # Proxy authentication type (basic, ntlm)
-        username: "${PROXY_USR}"      # Optional, only for BASIC or NTLM proxy authentication
-        password: "${PROXY_PWD}"      # Optional, only for BASIC or NTLM proxy authentication
-        domain: ${PROXY_DOMAIN}       # Optional, only if NTLM proxy requires domain name
+        username: "${PROXY_USR}"      # Optional, enables Basic proxy authentication
+        password: "${PROXY_PWD}"      # Optional, enables Basic proxy authentication
       disable-ssl-verification: false # Disable SSL verification for the connections
       disconnect-on-idle-timeout: P0D # Timeout for closing idle connections; P0D means never
       max-http-connections: 100       # Max concurrent HTTP connections to the server (any mode)
@@ -176,8 +174,13 @@ Both the client and server components can be run using Java, so on both sides yo
    [client tips](doc/tips-client.md#local-bind-address).
 
    If you want to use an HTTP proxy, you can define the `soht2.client.proxy` section with
-   appropriate values. _NTLM proxy authentication is deprecated upstream by Apache HttpClient 5;
-   prefer `basic` where the proxy allows it._
+   appropriate values. When `username` is set, the client uses Basic proxy authentication.
+
+   __Breaking change:__ NTLM proxy authentication and the `soht2.client.proxy.auth` and
+   `soht2.client.proxy.domain` properties were removed; leftover keys are ignored. To pass through
+   an NTLM proxy, run a local NTLM proxy such as [JNTLM](https://github.com/domax/jntlm) or
+   [CNTLM](https://cntlm.sourceforge.net/) and point `soht2.client.proxy` to it. See
+   [client tips](doc/tips-client.md#ntlm-proxies).
 
    The client always talks to the server through Apache HttpClient 5, so
    `soht2.client.max-http-connections` (pool size, total and per route) and

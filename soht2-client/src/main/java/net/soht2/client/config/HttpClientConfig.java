@@ -1,27 +1,20 @@
 /* SOHT2 © Licensed under MIT 2026. */
 package net.soht2.client.config;
 
-import static java.util.Optional.ofNullable;
-
 import io.vavr.control.Try;
-import java.net.InetAddress;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLContext;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import net.soht2.client.config.Soht2ClientProperties.ProxyAuth;
 import net.soht2.client.config.Soht2ClientProperties.ProxyProperties;
 import org.apache.hc.client5.http.auth.AuthSchemeFactory;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.Credentials;
-import org.apache.hc.client5.http.auth.NTCredentials;
 import org.apache.hc.client5.http.auth.StandardAuthScheme;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
 import org.apache.hc.client5.http.impl.auth.BasicSchemeFactory;
-import org.apache.hc.client5.http.impl.auth.DigestSchemeFactory;
-import org.apache.hc.client5.http.impl.auth.NTLMSchemeFactory;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.apache.hc.client5.http.ssl.DefaultClientTlsStrategy;
 import org.apache.hc.client5.http.ssl.HostnameVerificationPolicy;
@@ -50,8 +43,8 @@ import org.springframework.util.StringUtils;
  *       soht2.client.max-http-connections};
  *   <li>disables automatic response decompression, because SOHT2 negotiates and decodes tunnel
  *       compression itself;
- *   <li>routes requests through {@code soht2.client.proxy.host} with Basic or NTLM credentials,
- *       when configured;
+ *   <li>routes requests through {@code soht2.client.proxy.host} with Basic credentials, when
+ *       configured;
  *   <li>trusts any server certificate and host name when {@code
  *       soht2.client.disable-ssl-verification} is set.
  * </ul>
@@ -63,20 +56,18 @@ public class HttpClientConfig {
   static final long VALIDATE_AFTER_INACTIVITY_SECONDS = 2;
 
   @Bean
-  @SuppressWarnings("deprecation")
   ClientHttpRequestFactoryBuilderCustomizer<HttpComponentsClientHttpRequestFactoryBuilder>
       soht2HttpClientCustomizer(Soht2ClientProperties properties) {
     val maxConnections = properties.getMaxHttpConnections();
     val proxy = properties.getProxy();
     val proxyHost = StringUtils.hasText(proxy.getHost()) ? proxy.getHost() : null;
-    val proxyAuth =
-        proxyHost != null && StringUtils.hasText(proxy.getUsername()) ? proxy.getAuth() : null;
+    val basicAuth = proxyHost != null && StringUtils.hasText(proxy.getUsername());
     log.info(
         "soht2HttpClientCustomizer: maxHttpConnections={}, proxy={}, proxyAuth={},"
             + " disableSslVerification={}",
         maxConnections,
         proxyHost != null ? proxyHost + ":" + proxy.getPort() : "none",
-        ofNullable(proxyAuth).map(Enum::name).orElse("none"),
+        basicAuth ? "basic" : "none",
         properties.isDisableSslVerification());
 
     return builder -> {
@@ -92,10 +83,9 @@ public class HttpClientConfig {
         val httpHost = new HttpHost(proxyHost, proxy.getPort());
         result =
             result
-                .withHttpClientCustomizer(b -> configureProxy(b, httpHost, proxy, proxyAuth))
-                .withDefaultRequestConfigCustomizer(rc ->
-                    rc.setProxyPreferredAuthSchemes(
-                        List.of(StandardAuthScheme.BASIC, StandardAuthScheme.NTLM)));
+                .withHttpClientCustomizer(b -> configureProxy(b, httpHost, proxy, basicAuth))
+                .withDefaultRequestConfigCustomizer(
+                    rc -> rc.setProxyPreferredAuthSchemes(List.of(StandardAuthScheme.BASIC)));
       }
       if (properties.isDisableSslVerification()) {
         val sslContext = trustAllSslContext();
@@ -109,34 +99,24 @@ public class HttpClientConfig {
   }
 
   private static void configureProxy(
-      HttpClientBuilder builder, HttpHost httpHost, ProxyProperties proxy, ProxyAuth proxyAuth) {
+      HttpClientBuilder builder, HttpHost httpHost, ProxyProperties proxy, boolean basicAuth) {
     builder.setProxy(httpHost).setDefaultAuthSchemeRegistry(authSchemeRegistry());
-    if (proxyAuth != null) {
+    if (basicAuth) {
       val credentialsProvider = new BasicCredentialsProvider();
       credentialsProvider.setCredentials(new AuthScope(httpHost), proxyCredentials(proxy));
       builder.setDefaultCredentialsProvider(credentialsProvider);
     }
   }
 
-  @SuppressWarnings("deprecation")
   static Lookup<AuthSchemeFactory> authSchemeRegistry() {
     return RegistryBuilder.<AuthSchemeFactory>create()
         .register(StandardAuthScheme.BASIC, BasicSchemeFactory.INSTANCE)
-        .register(StandardAuthScheme.DIGEST, DigestSchemeFactory.INSTANCE)
-        .register(StandardAuthScheme.NTLM, NTLMSchemeFactory.INSTANCE)
         .build();
   }
 
-  @SuppressWarnings("deprecation")
   static Credentials proxyCredentials(ProxyProperties proxy) {
-    val password = ofNullable(proxy.getPassword()).orElse("").toCharArray();
-    return proxy.getAuth() == ProxyAuth.NTLM
-        ? new NTCredentials(
-            proxy.getUsername(),
-            password,
-            Try.of(() -> InetAddress.getLocalHost().getHostName()).getOrNull(),
-            proxy.getDomain())
-        : new UsernamePasswordCredentials(proxy.getUsername(), password);
+    val password = proxy.getPassword() != null ? proxy.getPassword().toCharArray() : new char[0];
+    return new UsernamePasswordCredentials(proxy.getUsername(), password);
   }
 
   static SSLContext trustAllSslContext() {

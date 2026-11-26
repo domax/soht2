@@ -7,6 +7,7 @@ Tips & Tricks for SOHT2 Client
   * [Create a Client Launcher](#create-a-client-launcher)
   * [Duplex Transport](#duplex-transport)
   * [Local Bind Address](#local-bind-address)
+  * [NTLM Proxies](#ntlm-proxies)
   * [See Also](#see-also)
 <!-- TOC -->
 
@@ -89,8 +90,6 @@ requests in flight, so data flows in both directions without polling delays.
   default). The client's HTTP read timeout (`spring.http.clients.read-timeout`, `60s` by default)
   and any HTTP proxy on the way must allow requests to last longer than that. The read timeout
   applies with `soht2.client.proxy` too.
-* **NTLM proxies.** NTLM proxy authentication still works but is deprecated upstream by Apache
-  HttpClient 5; prefer `soht2.client.proxy.auth: basic` where the proxy allows it.
 * **Rollback.** If a proxy drops long requests, or anything else goes wrong, set
   `soht2.client.transport: simple` in `application-client.yaml` to use the original
   request-per-round-trip transport. The client also falls back to `simple` automatically when the
@@ -118,6 +117,31 @@ tunnel with your SOHT2 credentials.
   "connection refused". Either connect to `127.0.0.1` explicitly, or set `local-host: ::1` for
   that connection.
 * **Invalid address.** The client fails to start if `local-host` cannot be resolved.
+
+NTLM Proxies
+------------
+The client supports only Basic proxy authentication. When `soht2.client.proxy.username` is set,
+the client sends Basic credentials to the proxy; otherwise, it uses the proxy without
+authentication.
+
+To go through a corporate proxy that requires NTLM, run a local NTLM proxy, such as
+[JNTLM](https://github.com/domax/jntlm) or [CNTLM](https://cntlm.sourceforge.net/), on the
+client machine. It authenticates to the upstream NTLM proxy on your behalf and exposes a plain
+HTTP proxy on a local port:
+
+1. Install JNTLM or CNTLM and configure it with the corporate proxy as its upstream, plus your
+   domain, username, and password (see the project's documentation).
+2. Start it so that it listens on a local port, for example `127.0.0.1:3128`.
+3. Point the SOHT2 client to the local proxy in `application-client.yaml`:
+   ```yaml
+   soht2.client:
+     proxy:
+       host: 127.0.0.1
+       port: 3128
+       # username/password only if the local proxy itself requires Basic authentication
+   ```
+4. Remove the `auth: ntlm` and `domain` keys left over from older client versions; they are
+   ignored.
 
 See Also
 --------

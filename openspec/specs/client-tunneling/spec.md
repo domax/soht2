@@ -174,19 +174,42 @@ proxy is configured or SSL verification is disabled.
 - **WHEN** the server does not answer a request for 10 s
 - **THEN** the client request fails with a timeout after about 5 s
 
-### Requirement: Proxy authentication is preserved
-The client SHALL authenticate to the configured proxy with Basic or NTLM authentication according
-to `soht2.client.proxy.auth`, using the configured username, password, and (for NTLM) domain.
+### Requirement: Proxy authentication is Basic only
+When `soht2.client.proxy.username` is set, the client SHALL authenticate to the configured
+proxy with Basic authentication, using the configured username and password. No
+authentication-type setting is required or read. The client SHALL NOT answer NTLM or other
+non-Basic proxy authentication challenges.
 
 #### Scenario: Basic proxy authentication
-- **GIVEN** `soht2.client.proxy.auth` is `basic` with a username and password
+- **GIVEN** a proxy username and password are set
 - **WHEN** the proxy answers the first request with a Basic authentication challenge
 - **THEN** the client retries with Basic proxy credentials and the tunnel request succeeds
 
-#### Scenario: NTLM proxy authentication
-- **GIVEN** `soht2.client.proxy.auth` is `ntlm` with a username, password, and domain
-- **WHEN** the proxy answers with an NTLM authentication challenge
-- **THEN** the client completes the NTLM handshake and the tunnel request succeeds
+#### Scenario: Proxy without credentials
+- **GIVEN** a proxy host is set and no proxy username is set
+- **WHEN** the client sends a tunnel request through a proxy that does not require
+  authentication
+- **THEN** the request succeeds without any proxy credentials
+
+#### Scenario: Legacy auth keys are ignored
+- **GIVEN** a configuration that still contains `soht2.client.proxy.auth` or
+  `soht2.client.proxy.domain`
+- **WHEN** the client starts
+- **THEN** startup succeeds and those keys have no effect on proxy authentication
+
+#### Scenario: NTLM-only proxy
+- **GIVEN** a proxy that offers only NTLM authentication
+- **WHEN** the client sends a tunnel request through it
+- **THEN** the client does not attempt an NTLM handshake and the request fails with the proxy's
+  `407 Proxy Authentication Required` response
+
+#### Scenario: NTLM proxy through a local NTLM proxy
+- **GIVEN** a local NTLM proxy (for example JNTLM or CNTLM) that authenticates to the upstream
+  NTLM proxy
+- **AND** `soht2.client.proxy` points to the local proxy, without credentials or with Basic
+  credentials
+- **WHEN** the client opens a tunnel
+- **THEN** the tunnel request succeeds
 
 ### Requirement: Disabled SSL verification trusts any server certificate
 When `soht2.client.disable-ssl-verification` is `true`, the client SHALL accept the server's TLS
